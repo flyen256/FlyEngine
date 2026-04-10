@@ -1,6 +1,6 @@
 using Silk.NET.Maths;
 
-namespace Flyeng;
+namespace FlyEngine.Components.Common;
 
 public class Component : Object
 {
@@ -23,16 +23,16 @@ public class Component : Object
 
     public T? GetComponent<T>() where T : Component
     {
-        return GameObject != null ? GameObject.Components.GetComponent<T>() : null;
+        return GameObject != null ? GameObject.ComponentStore.GetComponent<T>() : null;
     }
 
     public T? AddComponent<T>() where T : Component
     {
-        return GameObject != null ? GameObject.Components.AddComponent<T>() : null;
+        return GameObject != null ? GameObject.ComponentStore.AddComponent<T>() : null;
     }
 
     public T? AddComponent<T>(T component) where T : Component
     {
-        return GameObject != null ? GameObject.Components.AddComponent(component) : null;
+        return GameObject != null ? GameObject.ComponentStore.AddComponent(component) : null;
     }
 }

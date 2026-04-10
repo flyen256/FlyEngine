@@ -1,7 +1,8 @@
 using System.Numerics;
+using FlyEngine.Components.Common;
 using Silk.NET.Maths;
 
-namespace Flyeng
+namespace FlyEngine.Components.Renderer._2D
 {
     public static class MathHelper
     {
@@ -20,34 +21,31 @@ namespace Flyeng
         public Matrix4x4 ViewMatrix => _viewMatrix;
         public Matrix4x4 ProjectionMatrix => _projectionMatrix;
 
-        private Vector3D<float> _initialPosition;
+        private readonly Vector3D<float> _initialPosition;
 
         public Camera2D(Vector3D<float> initialPosition)
         {
-            if (initialPosition != null)
-                _initialPosition = initialPosition;
+            _initialPosition = initialPosition;
         }
 
         protected override void OnInitialize()
         {
-            if(Transform == null) return;
             Transform.Position = _initialPosition;
         }
 
         public void UpdateMatrices(int windowWidth, int windowHeight)
         {
-            if (GameObject == null) return;
-            float aspectRatio = (float)windowWidth / windowHeight;
-            float viewHeight = 2.0f / Zoom;
-            float viewWidth = viewHeight * aspectRatio;
+            var aspectRatio = (float)windowWidth / windowHeight;
+            var viewHeight = 2.0f / Zoom;
+            var viewWidth = viewHeight * aspectRatio;
 
             _projectionMatrix = Matrix4x4.CreateOrthographicOffCenter(
                 -viewWidth / 2, viewWidth / 2,
                 -viewHeight / 2, viewHeight / 2,
                 -1.0f, 1.0f);
 
-            Matrix4x4 translationMatrix = Matrix4x4.CreateTranslation(-GameObject.Transform.Position.X, -GameObject.Transform.Position.Y, 0);
-            Matrix4x4 rotationMatrix = Matrix4x4.CreateRotationZ(MathHelper.DegreesToRadians(Rotation));
+            var translationMatrix = Matrix4x4.CreateTranslation(-GameObject.Transform.Position.X, -GameObject.Transform.Position.Y, 0);
+            var rotationMatrix = Matrix4x4.CreateRotationZ(MathHelper.DegreesToRadians(Rotation));
 
             _viewMatrix = rotationMatrix * translationMatrix;
         }

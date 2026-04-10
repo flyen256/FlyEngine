@@ -1,25 +1,32 @@
 using System.Numerics;
-using Flyeng.Test;
-using Flyeng.UI;
+using FlyEngine.Components.Common;
+using FlyEngine.Components.Renderer._2D;
+using FlyEngine.Physics;
+using FlyEngine.Physics.Colliders;
+using FlyEngine.Renderer;
+using FlyEngine.Test;
+using FlyEngine.UI;
+using FlyEngine.UI.ImGui;
 using Silk.NET.Maths;
 using Silk.NET.OpenGL;
 using Silk.NET.Windowing;
+using Texture = FlyEngine.Renderer.Texture;
 
-namespace Flyeng;
+namespace FlyEngine;
 
 public class Application
 {
-    private IWindow _window;
-    private OpenGL? _gl;
+    private readonly IWindow _window;
+    private OpenGl? _gl;
     private Camera2D? _camera;
     public float AspectRatio;
-    public static List<Behaviour> Behaviours = new();
-    public static List<GameObject> GameObjects = new();
-    public static List<Element> Elements = new();
+    public static readonly List<Behaviour> Behaviours = new();
+    public static readonly List<GameObject> GameObjects = new();
+    public static readonly List<Element> Elements = new();
 
     public Application()
     {
-        WindowOptions windowOptions = WindowOptions.Default with
+        var windowOptions = WindowOptions.Default with
         {
             Size = new Vector2D<int>(800, 600),
             Title = "My first silk.net window"
@@ -37,14 +44,14 @@ public class Application
     private void OnResize(Vector2D<int> newSize)
     {
         if(_gl == null) return;
-        _gl.GL.Viewport(0, 0, (uint)newSize.X, (uint)newSize.Y);
+        _gl.Gl.Viewport(0, 0, (uint)newSize.X, (uint)newSize.Y);
         AspectRatio = (float)newSize.X / newSize.Y;
         _gl.UpdateProjectionMatrix();
     }
 
     private unsafe void OnLoad()
     {
-        _gl = new OpenGL(_window, this);
+        _gl = new OpenGl(_window, this);
         _gl.Initialize();
         _gl.BindBuffers();
         _gl.ProcessShaders();
@@ -57,7 +64,7 @@ public class Application
             new Vector4(0f, 0f, 0f, 0f),
             texture,
             [new Camera2D(Vector3D<float>.Zero)]
-        ).Components.GetComponent<Camera2D>();
+        ).ComponentStore.GetComponent<Camera2D>();
 
         new GameObject(
             new Vector3D<float>(0, 0, 0f),
@@ -89,7 +96,7 @@ public class Application
         if (Input.InputContext != null)
         {
             ImGui.Initialize(
-                _gl.GL,
+                _gl.Gl,
                 _window,
                 Input.InputContext
             );
@@ -105,19 +112,19 @@ public class Application
     private unsafe void OnRender(double deltaTime)
     {
         if (_gl == null || _camera == null) return;
-        _gl.GL.Clear(ClearBufferMask.ColorBufferBit);
+        _gl.Gl.Clear(ClearBufferMask.ColorBufferBit);
 
         _camera.UpdateMatrices(_window.Size.X, _window.Size.Y);
 
-        Matrix4x4 projection = _camera.ProjectionMatrix;
-        Matrix4x4 view = _camera.ViewMatrix;
+        var projection = _camera.ProjectionMatrix;
+        var view = _camera.ViewMatrix;
 
-        _gl.GL.UseProgram(_gl.Program);
-        int projLoc = _gl.GL.GetUniformLocation(_gl.Program, "uProjection");
-        int viewLoc = _gl.GL.GetUniformLocation(_gl.Program, "uView");
+        _gl.Gl.UseProgram(_gl.Program);
+        var projLoc = _gl.Gl.GetUniformLocation(_gl.Program, "uProjection");
+        var viewLoc = _gl.Gl.GetUniformLocation(_gl.Program, "uView");
 
-        _gl.GL.UniformMatrix4(projLoc, 1, false, (float*)&projection);
-        _gl.GL.UniformMatrix4(viewLoc, 1, false, (float*)&view);
+        _gl.Gl.UniformMatrix4(projLoc, 1, false, (float*)&projection);
+        _gl.Gl.UniformMatrix4(viewLoc, 1, false, (float*)&view);
 
         foreach (var gameObject in GameObjects)
             gameObject.BeginDraw(_gl);

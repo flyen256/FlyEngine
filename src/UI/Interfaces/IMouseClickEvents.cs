@@ -1,6 +1,6 @@
 using Silk.NET.Input;
 
-namespace Flyeng.Events;
+namespace FlyEngine.UI.Interfaces;
 
 public interface IMouseClickEvents
 {

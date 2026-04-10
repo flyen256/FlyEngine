@@ -1,4 +1,6 @@
-namespace Flyeng;
+using FlyEngine.Physics;
+
+namespace FlyEngine.Components.Common;
 
 public class Behaviour : Component
 {

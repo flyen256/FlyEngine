@@ -1,21 +1,21 @@
-namespace Flyeng;
+namespace FlyEngine.Components.Common;
 
-public class Components
+public class ComponentStore
 {
-    private GameObject _gameObject;
+    private readonly GameObject _gameObject;
     public GameObject GameObject => _gameObject;
-    protected List<Component> _components = new();
-    public IReadOnlyList<Component> List => _components;
+    protected readonly List<Component> Components = new();
+    public IReadOnlyList<Component> List => Components;
 
-    public Components(GameObject gameObject)
+    public ComponentStore(GameObject gameObject)
     {
         _gameObject = gameObject;
     }
 
     public T? GetComponent<T>() where T : Component
     {
-        T? component = _components.Find((c) => c.GetType() == typeof(T)) as T;
-        T? componentAsT = _components.Find((c) => c as T != null) as T ?? null;
+        var component = Components.Find((c) => c.GetType() == typeof(T)) as T;
+        var componentAsT = Components.Find((c) => c as T != null) as T ?? null;
         if (component != null)
             return component;
         if(componentAsT != null)
@@ -28,7 +28,7 @@ public class Components
         var instance = Activator.CreateInstance(typeof(T)) as Component;
         if (instance != null)
         {
-            _components.Add(instance);
+            Components.Add(instance);
             instance.GameObject = GameObject;
         }
         return GetComponent<T>();
@@ -38,7 +38,7 @@ public class Components
     {
         if(component != null)
         {
-            _components.Add(component);
+            Components.Add(component);
             component.GameObject = GameObject;
         }
         return GetComponent<T>();

@@ -1,8 +1,8 @@
-namespace Flyeng.Reactive;
+namespace FlyEngine.Reactive;
 
 public class ReactiveList<T>
 {
-    private List<T> _values = new();
+    private readonly List<T> _values = new();
     public IReadOnlyList<T> Values => _values;
 
     public Action<T>? OnAdd;

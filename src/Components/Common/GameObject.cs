@@ -1,17 +1,19 @@
 using System.Numerics;
+using FlyEngine.Renderer;
 using Silk.NET.Maths;
 using Silk.NET.OpenGL;
+using Texture = FlyEngine.Renderer.Texture;
 
-namespace Flyeng;
+namespace FlyEngine.Components.Common;
 
 public class GameObject : Object
 {
     public string Name;
-    public Transform Transform;
+    public readonly Transform Transform;
     public Texture? Texture { get; private set; }
     public Vector4 Color;
 
-    public Components Components;
+    public readonly ComponentStore ComponentStore;
 
     public GameObject() : this(default, default, default, null)
     { }
@@ -26,9 +28,9 @@ public class GameObject : Object
     )
     {
         Name = name;
-        Transform = new();
+        Transform = new Transform();
         Transform.GameObject = this;
-        Components = new(this);
+        ComponentStore = new ComponentStore(this);
         Application.GameObjects.Add(this);
         Transform.Position = position;
         Transform.Size = size;
@@ -37,34 +39,34 @@ public class GameObject : Object
         if (components != null)
         {
             foreach (var component in components)
-                Components.AddComponent(component);
+                ComponentStore.AddComponent(component);
         }
     }
 
-    public virtual unsafe void BeginDraw(OpenGL openGL)
+    public virtual unsafe void BeginDraw(OpenGl openGl)
     {
-        Matrix4x4 model = Matrix4x4.CreateScale(Transform.Size.X, Transform.Size.Y, 1.0f) *
-            Matrix4x4.CreateTranslation(Transform.Position.X, Transform.Position.Y, 0.0f);
+        var model = Matrix4x4.CreateScale(Transform.Size.X, Transform.Size.Y, 1.0f) *
+                    Matrix4x4.CreateTranslation(Transform.Position.X, Transform.Position.Y, 0.0f);
 
-        int modelLoc = openGL.GL.GetUniformLocation(openGL.Program, "uModel");
-        int colorLoc = openGL.GL.GetUniformLocation(openGL.Program, "uColor");
+        var modelLoc = openGl.Gl.GetUniformLocation(openGl.Program, "uModel");
+        var colorLoc = openGl.Gl.GetUniformLocation(openGl.Program, "uColor");
 
-        float* modelPtr = (float*)&model;
-        openGL.GL.UniformMatrix4(modelLoc, 1, false, modelPtr);
+        var modelPtr = (float*)&model;
+        openGl.Gl.UniformMatrix4(modelLoc, 1, false, modelPtr);
 
-        openGL.GL.Uniform4(colorLoc, Color);
-        Draw(openGL);
+        openGl.Gl.Uniform4(colorLoc, Color);
+        Draw(openGl);
     }
 
-    public virtual unsafe void Draw(OpenGL openGL)
+    public virtual unsafe void Draw(OpenGl openGl)
     {
-        openGL.GL.BindVertexArray(openGL.vao);
-        openGL.GL.UseProgram(openGL.Program);
+        openGl.Gl.BindVertexArray(openGl.Vao);
+        openGl.Gl.UseProgram(openGl.Program);
         if (Texture != null)
         {
-            openGL.GL.ActiveTexture(TextureUnit.Texture0);
-            openGL.GL.BindTexture(TextureTarget.Texture2D, Texture.ID);
+            openGl.Gl.ActiveTexture(TextureUnit.Texture0);
+            openGl.Gl.BindTexture(TextureTarget.Texture2D, Texture.Id);
         }
-        openGL.GL.DrawElements(PrimitiveType.Triangles, 6, DrawElementsType.UnsignedInt, (void*)0);
+        openGl.Gl.DrawElements(PrimitiveType.Triangles, 6, DrawElementsType.UnsignedInt, (void*)0);
     }
 }

@@ -6,6 +6,8 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <AssemblyName>FlyEngine</AssemblyName>
+    <RootNamespace>FlyEngine</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
@@ -40,6 +42,15 @@
     <PackageReference Include="Silk.NET.XAudio" Version="2.22.0" />
     <PackageReference Include="Silk.NET.XInput" Version="2.22.0" />
     <PackageReference Include="StbImageSharp" Version="2.30.15" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Remove="src\Renderer\Shaders\vertex.vert" />
+    <EmbeddedResource Include="src\Renderer\Shaders\vertex.vert" />
+    <None Remove="src\Renderer\Shaders\fragment.frag" />
+    <EmbeddedResource Include="src\Renderer\Shaders\fragment.frag" />
+    <None Remove="silk.jpg" />
+    <EmbeddedResource Include="silk.jpg" />
   </ItemGroup>
 
 </Project>

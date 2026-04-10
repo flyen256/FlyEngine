@@ -1,7 +1,8 @@
 using System.Drawing;
+using FlyEngine.Physics.Colliders;
 using Silk.NET.Maths;
 
-namespace Flyeng;
+namespace FlyEngine.Components.Common;
 
 public class Transform : Component
 {
@@ -23,22 +24,22 @@ public class Transform : Component
             _position = newPosition;
             return;
         }
-        Vector3D<float> testPosX = new Vector3D<float>(
+        var testPosX = new Vector3D<float>(
             newPosition.X,
             _position.Y,
             _position.Z);
 
-        bool canMoveX = true;
-        RectangleF testBoxX = new RectangleF(
+        var canMoveX = true;
+        var testBoxX = new RectangleF(
             testPosX.X,
             testPosX.Y,
             Size.X,
             Size.Y);
 
-        var targetObjects = Application.GameObjects.FindAll((g) => g.Components.GetComponent<Collider>() != null);
+        var targetObjects = Application.GameObjects.FindAll((g) => g.ComponentStore.GetComponent<Collider>() != null);
         foreach (var obj in targetObjects)
         {
-            Collider? objCollider = obj.Components.GetComponent<Collider>();
+            var objCollider = obj.ComponentStore.GetComponent<Collider>();
             if(objCollider == null) return;
             if (obj != GameObject &&
                 testBoxX.IntersectsWith(objCollider.Collider2D))
@@ -48,14 +49,14 @@ public class Transform : Component
             }
         }
 
-        Vector3D<float> testPosY = new Vector3D<float>(
+        var testPosY = new Vector3D<float>(
             Position.X,
             newPosition.Y,
             Position.Z
         );
 
-        bool canMoveY = true;
-        RectangleF testBoxY = new RectangleF(
+        var canMoveY = true;
+        var testBoxY = new RectangleF(
             testPosY.X,
             testPosY.Y,
             Size.X,
@@ -63,7 +64,7 @@ public class Transform : Component
 
         foreach (var obj in targetObjects)
         {
-            Collider? objCollider = obj.Components.GetComponent<Collider>();
+            var objCollider = obj.ComponentStore.GetComponent<Collider>();
             if(objCollider == null) return;
             if (obj != GameObject && objCollider != null &&
                 testBoxY.IntersectsWith(objCollider.Collider2D))

@@ -1,23 +1,24 @@
 using System.Drawing;
-using Silk.NET.Maths;
+using FlyEngine.Components.Common;
+using FlyEngine.Physics.Colliders;
 
-namespace Flyeng;
+namespace FlyEngine.Physics;
 
 public class PhysicsManager : Behaviour
 {
     public override void OnUpdate(double deltaTime)
     {
-        var targetObject = Application.GameObjects.FindAll((g) => g.Components.GetComponent<Collider>() != null);
-        for (int i = 0; i < targetObject.Count; i++)
+        var targetObject = Application.GameObjects.FindAll((g) => g.ComponentStore.GetComponent<Collider>() != null);
+        for (var i = 0; i < targetObject.Count; i++)
         {
-            for (int o = i + 1; o < targetObject.Count; o++)
+            for (var o = i + 1; o < targetObject.Count; o++)
             {
                 var go1 = targetObject[i];
                 var go2 = targetObject[o];
-                if (go1.Components.GetComponent<Collider>() == null || go2.Components.GetComponent<Collider>() == null)
+                if (go1.ComponentStore.GetComponent<Collider>() == null || go2.ComponentStore.GetComponent<Collider>() == null)
                     return;
-                var firstCollider = go1.Components.GetComponent<Collider>();
-                var secondCollider = go2.Components.GetComponent<Collider>();
+                var firstCollider = go1.ComponentStore.GetComponent<Collider>();
+                var secondCollider = go2.ComponentStore.GetComponent<Collider>();
                 if (firstCollider == null || secondCollider == null)
                     return;
                 var testCollision = TestCollision(
@@ -25,10 +26,10 @@ public class PhysicsManager : Behaviour
                     secondCollider);
                 if (testCollision.IsColliding)
                 {
-                    foreach (var c1 in go1.Components.List)
+                    foreach (var c1 in go1.ComponentStore.List)
                         if (c1 is Behaviour behaviour)
                             behaviour.OnCollision(testCollision);
-                    foreach (var c2 in go2.Components.List)
+                    foreach (var c2 in go2.ComponentStore.List)
                         if (c2 is Behaviour behaviour1)
                             behaviour1.OnCollision(testCollision);
                 }
@@ -38,11 +39,11 @@ public class PhysicsManager : Behaviour
 
     private CollisionResult TestCollision(Collider a, Collider b)
     {
-        RectangleF aBox = a.Collider2D;
-        RectangleF bBox = b.Collider2D;
+        var aBox = a.Collider2D;
+        var bBox = b.Collider2D;
 
-        float overlapX = Math.Min(aBox.Right - bBox.Left, bBox.Right - aBox.Left);
-        float overlapY = Math.Min(aBox.Bottom - bBox.Top, bBox.Bottom - aBox.Top);
+        var overlapX = Math.Min(aBox.Right - bBox.Left, bBox.Right - aBox.Left);
+        var overlapY = Math.Min(aBox.Bottom - bBox.Top, bBox.Bottom - aBox.Top);
 
         if (overlapX > 0 && overlapY > 0)
         {

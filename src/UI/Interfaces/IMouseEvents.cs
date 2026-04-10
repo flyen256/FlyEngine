@@ -1,7 +1,7 @@
 using System.Numerics;
 using Silk.NET.Input;
 
-namespace Flyeng.Events;
+namespace FlyEngine.UI.Interfaces;
 
 public interface IMouseEvents
 {

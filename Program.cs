@@ -1,4 +1,4 @@
-namespace Flyeng;
+namespace FlyEngine;
 
 public class Program
 {
@@ -6,6 +6,6 @@ public class Program
 
     public static void Main(string[] args)
     {
-        _main = new();
+        _main = new Application();
     }
 }

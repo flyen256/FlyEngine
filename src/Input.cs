@@ -1,11 +1,11 @@
 using System.Numerics;
+using FlyEngine.UI;
+using FlyEngine.UI.Interfaces;
 using Silk.NET.Input;
 using Silk.NET.Maths;
 using Silk.NET.Windowing;
-using Flyeng.Events;
-using Flyeng.UI;
 
-namespace Flyeng;
+namespace FlyEngine;
 
 public static class Input
 {
@@ -23,10 +23,10 @@ public static class Input
 
     private static IInputContext? _inputContext;
     public static IInputContext? InputContext => _inputContext;
-    private static List<Key> _pressedKeys = new();
+    private static readonly List<Key> _pressedKeys = new();
 
-    private static List<IMouseEvents> _hoveredObjects = new();
-    private static List<ClickedElement> _clickedObjects = new();
+    private static readonly List<IMouseEvents> _hoveredObjects = new();
+    private static readonly List<ClickedElement> _clickedObjects = new();
 
     public static void Initialize(IWindow window)
     {
@@ -48,7 +48,7 @@ public static class Input
     {
         foreach (var behaviour in Application.Behaviours)
         {
-            Element? element = behaviour.GetComponent<Element>();
+            var element = behaviour.GetComponent<Element>();
             if (!(element is IMouseEvents elementEvents)) return;
             elementEvents.OnMouseMove(mouse, mousePosition);
             if (element != null && element.Transform != null)
@@ -83,9 +83,9 @@ public static class Input
     {
         foreach (var behaviour in Application.Behaviours)
         {
-            Element? element = behaviour.GetComponent<Element>();
+            var element = behaviour.GetComponent<Element>();
             if (!(element is IMouseClickEvents elementEvents)) return;
-            ClickedElement clickedElement = new ClickedElement(elementEvents, button);
+            var clickedElement = new ClickedElement(elementEvents, button);
             if (_clickedObjects.Contains(clickedElement)) return;
             if (element != null && element.Transform != null)
             {
@@ -109,9 +109,9 @@ public static class Input
     {
         foreach (var behaviour in Application.Behaviours)
         {
-            Element? element = behaviour.GetComponent<Element>();
+            var element = behaviour.GetComponent<Element>();
             if (!(element is IMouseClickEvents elementEvents)) return;
-            ClickedElement clickedElement = new ClickedElement(elementEvents, button);
+            var clickedElement = new ClickedElement(elementEvents, button);
             if (!_clickedObjects.Contains(clickedElement)) return;
             if (element != null && element.Transform != null)
             {
@@ -151,10 +151,10 @@ public static class Input
     public static Vector2D<float> GetMoveInput()
     {
         Vector2D<float> vector = new(0f, 0f);
-        bool leftKey = GetKey(Key.A);
-        bool rightKey = GetKey(Key.D);
-        bool upKey = GetKey(Key.W);
-        bool downKey = GetKey(Key.S);
+        var leftKey = GetKey(Key.A);
+        var rightKey = GetKey(Key.D);
+        var upKey = GetKey(Key.W);
+        var downKey = GetKey(Key.S);
         if (leftKey && !rightKey)
             vector.X = -1;
         if (!leftKey && rightKey)
