@@ -1,3 +1,4 @@
+using FlyEngine.Extensions;
 using ImGuiNET;
 using Silk.NET.Input;
 using Silk.NET.OpenGL;
@@ -26,8 +27,11 @@ public static class ImGui
         if (_controller == null) return;
         _controller.Update(deltaTime);
         var pOpen = true;
-        ImGuiNet.Begin("UI", ref pOpen, ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoDecoration | ImGuiWindowFlags.NoMove);
-        ImGuiNet.Button("Test");
+        var currentCamera = Application.Instance.CurrentCamera;
+        ImGuiNet.Begin("UI", ref pOpen, ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoDecoration | ImGuiWindowFlags.NoMove | ImGuiWindowFlags.AlwaysAutoResize);
+        ImGuiNet.Text($"Fps {(int)(1f / deltaTime)}");
+        ImGuiNet.Text($"Current camera position: {currentCamera.Transform.Position.ToString()}");
+        ImGuiNet.Text($"Current camera rotation: {currentCamera.Transform.Rotation.ToEulerAngles().ToString()}");
         ImGuiNet.End();
         _controller.Render();
     }

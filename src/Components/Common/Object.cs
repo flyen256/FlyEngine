@@ -1,6 +1,6 @@
 namespace FlyEngine.Components.Common;
 
-public class Object
+public abstract class Object
 {
-
+    public abstract void Destroy();
 }

@@ -1,6 +1,6 @@
 using FlyEngine.Components.Common;
 
-namespace FlyEngine.Network.Components;
+namespace FlyEngine.Network;
 
 public class NetworkBehaviour : Behaviour
 {

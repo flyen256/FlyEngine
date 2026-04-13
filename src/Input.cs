@@ -1,6 +1,4 @@
 using System.Numerics;
-using FlyEngine.UI;
-using FlyEngine.UI.Interfaces;
 using Silk.NET.Input;
 using Silk.NET.Maths;
 using Silk.NET.Windowing;
@@ -9,190 +7,124 @@ namespace FlyEngine;
 
 public static class Input
 {
-    private struct ClickedElement
-    {
-        public IMouseClickEvents Events;
-        public MouseButton Button;
+    public static IInputContext? InputContext { get; private set; }
 
-        public ClickedElement(IMouseClickEvents events, MouseButton button)
+    private static readonly List<Key> PressedKeys = [];
+
+    public static float MouseSmoothing { get; set; } = 0.35f;
+
+    private static Vector2 _mouseDeltaAccumulated;
+    private static Vector2 _mouseDeltaPreviousFrame;
+
+    public static Vector2 MouseInput { get; private set; } = new();
+    public static Vector2 MousePosition { get; private set; } = new();
+
+    private static bool _cursorLocked;
+    private static bool _cursorVisible = true;
+
+    public static bool CursorLocked
+    {
+        get => _cursorLocked;
+        set
         {
-            Events = events;
-            Button = button;
+            _cursorLocked = value;
+            CenterMouse();
         }
     }
 
-    private static IInputContext? _inputContext;
-    public static IInputContext? InputContext => _inputContext;
-    private static readonly List<Key> _pressedKeys = new();
-
-    private static readonly List<IMouseEvents> _hoveredObjects = new();
-    private static readonly List<ClickedElement> _clickedObjects = new();
+    public static bool CursorVisible
+    {
+        get => _cursorVisible;
+        set
+        {
+            _cursorVisible = value;
+            if (InputContext == null) return;
+            foreach (var mouse in InputContext.Mice)
+                mouse.Cursor.CursorMode = value ? CursorMode.Normal : CursorMode.Hidden;
+        }
+    }
 
     public static void Initialize(IWindow window)
     {
-        _inputContext = window.CreateInput();
-        foreach (var keyboard in _inputContext.Keyboards)
+        InputContext = window.CreateInput();
+        foreach (var mouse in InputContext.Mice)
+            mouse.Cursor.CursorMode = _cursorVisible ? CursorMode.Disabled : CursorMode.Normal;
+        foreach (var keyboard in InputContext.Keyboards)
         {
             keyboard.KeyDown += OnKeyDown;
             keyboard.KeyUp += OnKeyUp;
         }
-        foreach (var mouse in _inputContext.Mice)
-        {
+        foreach (var mouse in InputContext.Mice)
             mouse.MouseMove += OnMouseMove;
-            mouse.MouseDown += OnMouseDown;
-            mouse.MouseUp += OnMouseUp;
+    }
+
+    public static void Update(double deltaTime)
+    {
+        var raw = _mouseDeltaAccumulated;
+        _mouseDeltaAccumulated = Vector2.Zero;
+
+        if (MouseSmoothing <= 0f)
+        {
+            MouseInput = raw;
+            _mouseDeltaPreviousFrame = raw;
+            return;
+        }
+
+        var t = System.Math.Clamp(MouseSmoothing, 0f, 0.95f);
+        MouseInput = raw * (1f - t) + _mouseDeltaPreviousFrame * t;
+        _mouseDeltaPreviousFrame = raw;
+    }
+
+    private static void CenterMouse()
+    {
+        if (InputContext == null) return;
+
+        var centerX = Application.Instance.Window.Size.X / 2;
+        var centerY = Application.Instance.Window.Size.Y / 2;
+
+        foreach (var mouse in InputContext.Mice)
+        {
+            mouse.Position = new Vector2(centerX, centerY);
+            MousePosition = mouse.Position;
         }
     }
 
     private static void OnMouseMove(IMouse mouse, Vector2 mousePosition)
     {
-        foreach (var behaviour in Application.Behaviours)
-        {
-            var element = behaviour.GetComponent<Element>();
-            if (!(element is IMouseEvents elementEvents)) return;
-            elementEvents.OnMouseMove(mouse, mousePosition);
-            if (element != null && element.Transform != null)
-            {
-                Vector3D<float>? position = element.Position;
-                Vector3D<float>? size = element.Size;
-                if (position != null && size != null)
-                {
-                    var elementRect = new Rectangle<float>(position.Value.X, position.Value.Y, size.Value.X, size.Value.Y);
-                    if (
-                        !elementRect.Contains(new Vector2D<float>(mouse.Position.X, mouse.Position.Y)) &&
-                        _hoveredObjects.Contains(elementEvents)
-                    )
-                    {
-                        elementEvents.OnMouseExit(mouse, mousePosition);
-                        _hoveredObjects.Remove(elementEvents);
-                    }
-                    else if (
-                        elementRect.Contains(new Vector2D<float>(mouse.Position.X, mouse.Position.Y)) &&
-                        !_hoveredObjects.Contains(elementEvents)
-                    )
-                    {
-                        elementEvents.OnMouseEnter(mouse, mousePosition);
-                        _hoveredObjects.Add(elementEvents);
-                    }
-                }
-            }
-        }
-    }
+        var deltaX = mousePosition.X - MousePosition.X;
+        var deltaY = MousePosition.Y - mousePosition.Y;
 
-    private static void OnMouseDown(IMouse mouse, MouseButton button)
-    {
-        foreach (var behaviour in Application.Behaviours)
-        {
-            var element = behaviour.GetComponent<Element>();
-            if (!(element is IMouseClickEvents elementEvents)) return;
-            var clickedElement = new ClickedElement(elementEvents, button);
-            if (_clickedObjects.Contains(clickedElement)) return;
-            if (element != null && element.Transform != null)
-            {
-                Vector3D<float>? position = element.Position;
-                Vector3D<float>? size = element.Size;
-                if (position != null && size != null)
-                {
-                    var elementRect = new Rectangle<float>(position.Value.X, position.Value.Y, size.Value.X, size.Value.Y);
-                    if (elementRect.Contains(new Vector2D<float>(mouse.Position.X, mouse.Position.Y)))
-                    {
-                        elementEvents.OnMouseDown(mouse, button);
-                        if (!_clickedObjects.Contains(clickedElement))
-                            _clickedObjects.Add(clickedElement);
-                    }
-                }
-            }
-        }
-    }
+        MousePosition = mousePosition;
 
-    private static void OnMouseUp(IMouse mouse, MouseButton button)
-    {
-        foreach (var behaviour in Application.Behaviours)
-        {
-            var element = behaviour.GetComponent<Element>();
-            if (!(element is IMouseClickEvents elementEvents)) return;
-            var clickedElement = new ClickedElement(elementEvents, button);
-            if (!_clickedObjects.Contains(clickedElement)) return;
-            if (element != null && element.Transform != null)
-            {
-                Vector3D<float>? position = element.Position;
-                Vector3D<float>? size = element.Size;
-                if (position != null && size != null)
-                {
-                    var elementRect = new Rectangle<float>(position.Value.X, position.Value.Y, size.Value.X, size.Value.Y);
-                    if (elementRect.Contains(new Vector2D<float>(mouse.Position.X, mouse.Position.Y)))
-                    {
-                        elementEvents.OnMouseUp(mouse, button);
-                        if (_clickedObjects.Contains(clickedElement))
-                            _clickedObjects.Remove(clickedElement);
-                    }
-                }
-            }
-        }
+        _mouseDeltaAccumulated += new Vector2(deltaX, deltaY);
+
+        CenterMouse();
     }
 
     private static void OnKeyDown(IKeyboard keyboard, Key key, int keyCode)
     {
-        if (!_pressedKeys.Contains(key))
-            _pressedKeys.Add(key);
+        if (!PressedKeys.Contains(key))
+            PressedKeys.Add(key);
     }
 
     private static void OnKeyUp(IKeyboard keyboard, Key key, int keyCode)
     {
-        if (_pressedKeys.Contains(key))
-            _pressedKeys.Remove(key);
+        PressedKeys.Remove(key);
     }
 
     private static bool GetKey(Key key)
     {
-        return _pressedKeys.Contains(key);
+        return PressedKeys.Contains(key);
     }
 
     public static Vector2D<float> GetMoveInput()
     {
-        Vector2D<float> vector = new(0f, 0f);
-        var leftKey = GetKey(Key.A);
-        var rightKey = GetKey(Key.D);
-        var upKey = GetKey(Key.W);
-        var downKey = GetKey(Key.S);
-        if (leftKey && !rightKey)
-            vector.X = -1;
-        if (!leftKey && rightKey)
-            vector.X = 1;
-        if (leftKey && rightKey)
-            vector.X = 0;
-        if (!leftKey && !rightKey)
-            vector.X = 0;
-        if (upKey && !downKey)
-            vector.Y = 1;
-        if (!upKey && downKey)
-            vector.Y = -1;
-        if (upKey && downKey)
-            vector.Y = 0;
-        if (!upKey && !downKey)
-            vector.Y = 0;
-        if (upKey && leftKey)
-        {
-            vector.Y = 0.75f;
-            vector.X = -0.75f;
-        }
-        if (upKey && rightKey)
-        {
-            vector.Y = 0.75f;
-            vector.X = 0.75f;
-        }
-        if (downKey && rightKey)
-        {
-            vector.Y = -0.75f;
-            vector.X = 0.75f;
-        }
-        if (downKey && leftKey)
-        {
-            vector.Y = -0.75f;
-            vector.X = -0.75f;
-        }
-        if (!leftKey && !rightKey && !upKey && !downKey)
-            vector = Vector2D<float>.Zero;
-        return vector;
+        var vector = Vector2.Zero;
+        if (GetKey(Key.W)) vector.Y += 1;
+        if (GetKey(Key.S)) vector.Y -= 1;
+        if (GetKey(Key.D)) vector.X += 1;
+        if (GetKey(Key.A)) vector.X -= 1;
+
+        return vector != Vector2.Zero ? Vector2.Normalize(vector).ToGeneric() : vector.ToGeneric();
     }
 }

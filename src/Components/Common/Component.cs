@@ -1,38 +1,52 @@
-using Silk.NET.Maths;
-
 namespace FlyEngine.Components.Common;
 
 public class Component : Object
 {
-    private GameObject _gameObject;
-    public GameObject GameObject
-    {
-        get => _gameObject;
-        set
-        {
-            _gameObject = value;
-            if(_gameObject != null)
-                OnInitialize();
-        }
-    }
+    public bool Enabled { get; set; } = true;
+    public virtual bool AllowMultipleInstances => true;
+    public required GameObject GameObject;
     public Transform Transform => GameObject.Transform;
-    public Vector3D<float> Position => GameObject.Transform.Position;
-    public Vector3D<float> Size => GameObject.Transform.Size;
 
     protected virtual void OnInitialize() { }
 
+    protected internal virtual void OnRemovingFromStore() { }
+
+    public void Initialize() => OnInitialize();
+    
+    public override void Destroy()
+    {
+        GameObject.ComponentStore.RemoveComponent(this);
+    }
+
+    public static T CreateGameObject<T>(string? name = null) where T : Component
+    {
+        var gameObject = GameObject.Create(name ?? typeof(T).Name);
+        var component = gameObject.AddComponent<T>();
+        return component;
+    }
+
+    public bool IsActive()
+    {
+        return Enabled && GameObject.Enabled;
+    }
+    
     public T? GetComponent<T>() where T : Component
     {
-        return GameObject != null ? GameObject.ComponentStore.GetComponent<T>() : null;
+        return GameObject.GetComponent<T>();
     }
 
-    public T? AddComponent<T>() where T : Component
+    public T AddComponent<T>() where T : Component
     {
-        return GameObject != null ? GameObject.ComponentStore.AddComponent<T>() : null;
+        return GameObject.AddComponent<T>();
     }
 
-    public T? AddComponent<T>(T component) where T : Component
+    public T AddComponent<T>(T component) where T : Component
     {
-        return GameObject != null ? GameObject.ComponentStore.AddComponent(component) : null;
+        return GameObject.AddComponent(component);
+    }
+
+    public bool TryGetComponent<T>(out T component) where T : Component
+    {
+        return GameObject.TryGetComponent(out component);
     }
 }

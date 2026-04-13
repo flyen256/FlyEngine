@@ -1,17 +1,15 @@
-using FlyEngine.Physics;
-
 namespace FlyEngine.Components.Common;
 
 public class Behaviour : Component
 {
+    public override bool AllowMultipleInstances => false;
+
     protected override void OnInitialize()
     {
-        base.OnInitialize();
-        Application.Behaviours.Add(this);
+        Application.Instance.Behaviours.Add(this);
     }
 
     public virtual void OnLoad() { }
     public virtual void OnUpdate(double deltaTime) { }
-    public virtual void OnRender(double deltaTime) { }
-    public virtual void OnCollision(CollisionResult result) { }
+    public virtual unsafe void OnRender(double deltaTime) { }
 }
