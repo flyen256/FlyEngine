@@ -61,7 +61,6 @@
     <None Remove="src\Renderer\Shaders\shadow_depth.frag" />
     <EmbeddedResource Include="Engine\Renderer\Shaders\shadow_depth.frag" />
     <None Remove="silk.jpg" />
-    <EmbeddedResource Include="silk.jpg" />
     <None Remove="src\BuiltInResources\blender_suzanne.fbx" />
     <None Remove="src\Resources\sphere.fbx" />
     <EmbeddedResource Include="Engine\Resources\sphere.fbx" />

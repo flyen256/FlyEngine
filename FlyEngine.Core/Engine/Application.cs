@@ -11,7 +11,7 @@ using Silk.NET.Windowing;
 
 namespace FlyEngine.Core;
 
-public class Application
+public class Application : IDisposable
 {
     private static Application? _instance;
     public static Application Instance => _instance ?? throw new NullReferenceException("Application.Instance");
@@ -36,18 +36,10 @@ public class Application
 
     private Action<Application> _scene;
 
-    public Application(Action<Application> scene)
+    public Application(Action<Application> scene, WindowOptions windowOptions)
     {
         _scene = scene;
         _instance = this;
-        var windowOptions = WindowOptions.Default with
-        {
-            Size = new Vector2D<int>(1024, 768),
-            Title = "My first silk.net window",
-            VSync = false,
-            FramesPerSecond = 144,
-            WindowState = WindowState.Fullscreen
-        };
         Window = Silk.NET.Windowing.Window.Create(windowOptions);
         Physics = new Physics.Physics();
         ModelManager = new ModelManager();
@@ -56,8 +48,17 @@ public class Application
         Window.Update += OnUpdate;
         Window.Render += OnRender;
         Window.FramebufferResize += OnResize;
+    }
 
+    public void Run()
+    {
         Window.Run();
+    }
+
+    public void Dispose()
+    {
+        Window.Close();
+        Window.Dispose();
     }
 
     private void OnResize(Vector2D<int> newSize)
@@ -107,10 +108,12 @@ public class Application
     private unsafe void OnRender(double deltaTime)
     {
         var activeCameras = Cameras.Where(camera => camera.IsActive()).ToList();
-        var camera3D = activeCameras.OfType<Camera3D>().First(c => c.IsActive());
+        var camera3D = activeCameras.Count > 0 && activeCameras.OfType<Camera3D>().Any() ?
+            activeCameras.OfType<Camera3D>().First(c => c.IsActive()) :
+            null;
         CurrentCamera = camera3D;
 
-        camera3D.UpdateMatrices(AspectRatio);
+        camera3D?.UpdateMatrices(AspectRatio);
         
         Gl.RenderPipeline.Render(deltaTime);
         
