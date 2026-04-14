@@ -1,0 +1,70 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <AssemblyName>FlyEngine.Core</AssemblyName>
+    <RootNamespace>FlyEngine.Core</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="ImGui.NET" Version="1.91.6.1" />
+    <PackageReference Include="JoltPhysicsSharp" Version="2.20.1" />
+    <PackageReference Include="LiteNetLib" Version="2.1.2" />
+    <PackageReference Include="Silk.NET" Version="2.23.0" />
+    <PackageReference Include="Silk.NET.Assimp" Version="2.23.0" />
+    <PackageReference Include="Silk.NET.Direct2D" Version="2.23.0" />
+    <PackageReference Include="Silk.NET.Direct3D.Compilers" Version="2.23.0" />
+    <PackageReference Include="Silk.NET.Direct3D11" Version="2.23.0" />
+    <PackageReference Include="Silk.NET.Direct3D12" Version="2.23.0" />
+    <PackageReference Include="Silk.NET.Direct3D9" Version="2.23.0" />
+    <PackageReference Include="Silk.NET.DirectComposition" Version="2.23.0" />
+    <PackageReference Include="Silk.NET.DirectStorage" Version="2.23.0" />
+    <PackageReference Include="Silk.NET.DXGI" Version="2.23.0" />
+    <PackageReference Include="Silk.NET.DXVA" Version="2.23.0" />
+    <PackageReference Include="Silk.NET.Input" Version="2.23.0" />
+    <PackageReference Include="Silk.NET.Maths" Version="2.23.0" />
+    <PackageReference Include="Silk.NET.OpenAL" Version="2.23.0" />
+    <PackageReference Include="Silk.NET.OpenCL" Version="2.23.0" />
+    <PackageReference Include="Silk.NET.OpenGL" Version="2.23.0" />
+    <PackageReference Include="Silk.NET.OpenGL.Extensions.ImGui" Version="2.23.0" />
+    <PackageReference Include="Silk.NET.OpenGL.Legacy" Version="2.23.0" />
+    <PackageReference Include="Silk.NET.OpenGLES" Version="2.23.0" />
+    <PackageReference Include="Silk.NET.OpenXR" Version="2.23.0" />
+    <PackageReference Include="Silk.NET.Shaderc" Version="2.23.0" />
+    <PackageReference Include="Silk.NET.SPIRV.Cross" Version="2.23.0" />
+    <PackageReference Include="Silk.NET.SPIRV.Reflect" Version="2.23.0" />
+    <PackageReference Include="Silk.NET.Vulkan" Version="2.23.0" />
+    <PackageReference Include="Silk.NET.WebGPU" Version="2.23.0" />
+    <PackageReference Include="Silk.NET.Windowing" Version="2.23.0" />
+    <PackageReference Include="Silk.NET.XAudio" Version="2.23.0" />
+    <PackageReference Include="Silk.NET.XInput" Version="2.23.0" />
+    <PackageReference Include="StbImageSharp" Version="2.30.15" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Engine\Resources\suzanne.fbx" />
+    <None Remove="src\Renderer\Shaders\vertex.vert" />
+    <EmbeddedResource Include="Engine\Renderer\Shaders\vertex.vert" />
+    <None Remove="src\Renderer\Shaders\fragment.frag" />
+    <EmbeddedResource Include="Engine\Renderer\Shaders\fragment.frag" />
+    <None Remove="src\Renderer\Shaders\deferred_geom.frag" />
+    <EmbeddedResource Include="Engine\Renderer\Shaders\deferred_geom.frag" />
+    <None Remove="src\Renderer\Shaders\deferred_light.vert" />
+    <EmbeddedResource Include="Engine\Renderer\Shaders\deferred_light.vert" />
+    <None Remove="src\Renderer\Shaders\deferred_light.frag" />
+    <EmbeddedResource Include="Engine\Renderer\Shaders\deferred_light.frag" />
+    <None Remove="src\Renderer\Shaders\shadow_depth.vert" />
+    <EmbeddedResource Include="Engine\Renderer\Shaders\shadow_depth.vert" />
+    <None Remove="src\Renderer\Shaders\shadow_depth.frag" />
+    <EmbeddedResource Include="Engine\Renderer\Shaders\shadow_depth.frag" />
+    <None Remove="silk.jpg" />
+    <EmbeddedResource Include="silk.jpg" />
+    <None Remove="src\BuiltInResources\blender_suzanne.fbx" />
+    <None Remove="src\Resources\sphere.fbx" />
+    <EmbeddedResource Include="Engine\Resources\sphere.fbx" />
+  </ItemGroup>
+
+</Project>

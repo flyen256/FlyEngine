@@ -1,16 +1,16 @@
 using System.Numerics;
-using FlyEngine.Behaviours;
-using FlyEngine.Components.Common;
-using FlyEngine.Components.Physics;
-using FlyEngine.Components.Physics.Colliders;
-using FlyEngine.Components.Renderer._3D;
-using FlyEngine.Components.Renderer._3D.Meshes;
-using FlyEngine.Components.Renderer.Lighting;
-using FlyEngine.Extensions;
-using FlyEngine.Network;
+using FlyEngine.Core.Behaviours;
+using FlyEngine.Core.Components.Common;
+using FlyEngine.Core.Components.Physics;
+using FlyEngine.Core.Components.Physics.Colliders;
+using FlyEngine.Core.Components.Renderer._3D;
+using FlyEngine.Core.Components.Renderer._3D.Meshes;
+using FlyEngine.Core.Components.Renderer.Lighting;
+using FlyEngine.Core.Extensions;
+using FlyEngine.Core.Network;
 using JoltPhysicsSharp;
 
-namespace FlyEngine;
+namespace FlyEngine.Core;
 
 public class Program
 {
@@ -19,33 +19,37 @@ public class Program
 
     public static void Main(string[] args)
     {
-        NetworkTestApplication();
+        TestApplication();
     }
 
     private static void TestApplication()
     {
-        _application = new Application();
-        _application.ModelManager.LoadModel("suzanne.fbx");
-        _application.ModelManager.LoadModel("sphere.fbx");
+        _application = new Application(TestScene);
+    }
+
+    private static void TestScene(Application application)
+    {
+        application.ModelManager.LoadModel("suzanne.fbx");
+        application.ModelManager.LoadModel("sphere.fbx");
         
         var camera = Component.CreateGameObject<Camera3D>();
         camera.Transform.Position = new Vector3(0, 1f, 3f);
         camera.AddComponent<CameraController>();
-        camera.AddComponent<Rigidbody>();
-        var cameraCollider = camera.AddComponent<SphereCollider>();
-        cameraCollider.MotionType = MotionType.Kinematic;
-        cameraCollider.Radius = 0.25f;
 
         var cube = Component.CreateGameObject<MeshRenderer>("Cube");
-        cube.Mesh = _application.Gl.CubeMesh;
+        cube.Mesh = application.Gl.CubeMesh;
         cube.Transform.Size = new Vector3(1.5f, 3f, 1.5f);
         cube.AlbedoTint = new Vector3(0.72f, 0.76f, 0.88f);
         cube.Metallic = 0.12f;
         cube.Smoothness = 0.78f;
+        cube.AddComponent<Rigidbody>();
+        var cubeCollider = cube.AddComponent<BoxCollider>();
+        cubeCollider.HalfExtent = cube.Transform.Size;
+        cubeCollider.MotionType = MotionType.Kinematic;
 
         var ground = Component.CreateGameObject<MeshRenderer>("Ground");
-        ground.AddComponent<MeshRenderer>().Mesh = _application.Gl.CubeMesh;
-        ground.Mesh = _application.Gl.CubeMesh;
+        ground.AddComponent<MeshRenderer>().Mesh = application.Gl.CubeMesh;
+        ground.Mesh = application.Gl.CubeMesh;
         ground.Transform.Position = new Vector3(0, -1f, 0);
         ground.Transform.Size = new Vector3(100f, 1f, 100f);
         ground.AlbedoTint = new Vector3(0.2f, 0.24f, 0.19f);
@@ -81,18 +85,23 @@ public class Program
         var suzanne = Component.CreateGameObject<MeshRenderer>();
         suzanne.Transform.Position = new Vector3(0f, 2f, 4);
         suzanne.Transform.Rotation = QuaternionUtils.FromVector3(new Vector3(0f, 0f, 0f));
-        suzanne.Mesh = _application.ModelManager.TryGetModel("suzanne")?[0];
+        suzanne.Mesh = application.ModelManager.TryGetModel("suzanne")?[0];
         
         var physicsSphere = Component.CreateGameObject<MeshRenderer>();
         physicsSphere.Transform.Position = new Vector3(0f, 2f, -4);
-        physicsSphere.Mesh = _application.ModelManager.TryGetModel("sphere")?[0];
+        physicsSphere.Mesh = application.ModelManager.TryGetModel("sphere")?[0];
         physicsSphere.AddComponent<Rigidbody>();
         var physicsSphereCollider = physicsSphere.AddComponent<SphereCollider>();
     }
 
     private static void NetworkTestApplication()
     {
-        _application = new Application();
+        _application = new Application(NetworkScene);
         _networkManager = new NetworkManager(_application);
+    }
+
+    private static void NetworkScene(Application application)
+    {
+        
     }
 }
