@@ -1,6 +1,6 @@
 ﻿using System.Numerics;
 
-namespace FlyEngine.Core.Extensions;
+namespace FlyEngine.Core.Engine.Extensions;
 
 public static class QuaternionUtils
 {

@@ -1,7 +1,7 @@
 ﻿using System.Numerics;
 using Silk.NET.OpenGL;
 
-namespace FlyEngine.Core.Renderer;
+namespace FlyEngine.Core.Engine.Renderer;
 
 public class Shader
 {

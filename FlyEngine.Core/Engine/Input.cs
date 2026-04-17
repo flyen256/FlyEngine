@@ -3,7 +3,7 @@ using Silk.NET.Input;
 using Silk.NET.Maths;
 using Silk.NET.Windowing;
 
-namespace FlyEngine.Core;
+namespace FlyEngine.Core.Engine;
 
 public static class Input
 {
@@ -48,7 +48,7 @@ public static class Input
     {
         InputContext = window.CreateInput();
         foreach (var mouse in InputContext.Mice)
-            mouse.Cursor.CursorMode = _cursorVisible ? CursorMode.Disabled : CursorMode.Normal;
+            mouse.Cursor.CursorMode = _cursorVisible ? CursorMode.Normal : CursorMode.Hidden;
         foreach (var keyboard in InputContext.Keyboards)
         {
             keyboard.KeyDown += OnKeyDown;
@@ -98,20 +98,19 @@ public static class Input
 
         _mouseDeltaAccumulated += new Vector2(deltaX, deltaY);
 
-        CenterMouse();
+        if (_cursorLocked)
+            CenterMouse();
     }
 
     private static void OnKeyDown(IKeyboard keyboard, Key key, int keyCode)
     {
-        if (!PressedKeys.Contains(key))
+        if (PressedKeys.Contains(key)) return;
+        PressedKeys.Add(key);
+        foreach (var behaviour in Application.Instance.Behaviours)
         {
-            PressedKeys.Add(key);
-            foreach (var behaviour in Application.Instance.Behaviours)
-            {
-                var onKeyDownMethod = behaviour.GetType().GetMethod("OnKeyDown");
-                if (onKeyDownMethod == null) continue;
-                onKeyDownMethod.Invoke(behaviour, [key, keyCode]);
-            }
+            var onKeyDownMethod = behaviour.GetType().GetMethod("OnKeyDown");
+            if (onKeyDownMethod == null) continue;
+            onKeyDownMethod.Invoke(behaviour, [key, keyCode]);
         }
     }
 

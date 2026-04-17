@@ -1,9 +1,9 @@
 using System.Numerics;
-using FlyEngine.Core.Components.Common;
-using FlyEngine.Core.Math;
-using FlyEngine.Core.Renderer.Lighting;
+using FlyEngine.Core.Engine.Components.Common;
+using FlyEngine.Core.Engine.Math;
+using FlyEngine.Core.Engine.Renderer.Lighting;
 
-namespace FlyEngine.Core.Components.Renderer.Lighting;
+namespace FlyEngine.Core.Engine.Components.Renderer.Lighting;
 
 public class LightSource : Component
 {
@@ -21,7 +21,7 @@ public class LightSource : Component
         Application.Instance.Lights.Add(this);
     }
 
-    protected internal override void OnRemovingFromStore()
+    protected internal override void OnRemoved()
     {
         Application.Instance.Lights.Remove(this);
     }

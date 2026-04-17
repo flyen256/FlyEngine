@@ -1,7 +1,7 @@
-﻿using FlyEngine.Core.Components.Common;
+﻿using FlyEngine.Core.Engine.Components.Common;
 using JoltPhysicsSharp;
 
-namespace FlyEngine.Core.Components.Physics.Colliders;
+namespace FlyEngine.Core.Engine.Components.Physics.Colliders;
 
 public class Collider : Component
 {

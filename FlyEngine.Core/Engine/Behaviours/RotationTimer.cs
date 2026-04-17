@@ -1,7 +1,7 @@
 ﻿using System.Numerics;
-using FlyEngine.Core.Components.Common;
+using FlyEngine.Core.Engine.Components.Common;
 
-namespace FlyEngine.Core.Behaviours;
+namespace FlyEngine.Core.Engine.Behaviours;
 
 public class RotationTimer : Behaviour
 {

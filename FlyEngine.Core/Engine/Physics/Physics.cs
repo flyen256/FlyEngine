@@ -1,11 +1,11 @@
 ﻿using System.Diagnostics;
 using System.Numerics;
-using FlyEngine.Core.Components.Physics;
-using FlyEngine.Core.Components.Physics.Colliders;
-using FlyEngine.Core.Physics.Cast;
+using FlyEngine.Core.Engine.Components.Physics;
+using FlyEngine.Core.Engine.Components.Physics.Colliders;
+using FlyEngine.Core.Engine.Physics.Cast;
 using JoltPhysicsSharp;
 
-namespace FlyEngine.Core.Physics;
+namespace FlyEngine.Core.Engine.Physics;
 
 public class Physics
 {

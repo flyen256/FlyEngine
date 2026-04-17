@@ -3,7 +3,7 @@ using Silk.NET.OpenGL;
 using StbImageSharp;
 using TextureWrapMode = Silk.NET.OpenGL.TextureWrapMode;
 
-namespace FlyEngine.Core.Renderer;
+namespace FlyEngine.Core.Engine.Renderer;
 
 public class Texture
 {

@@ -1,6 +1,6 @@
 using System.Numerics;
 
-namespace FlyEngine.Core.Renderer.Lighting;
+namespace FlyEngine.Core.Engine.Renderer.Lighting;
 
 public struct DeferredLightPacked
 {

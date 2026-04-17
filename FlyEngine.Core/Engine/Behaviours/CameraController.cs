@@ -1,10 +1,10 @@
 ﻿using System.Numerics;
-using FlyEngine.Core.Components.Common;
-using FlyEngine.Core.Extensions;
+using FlyEngine.Core.Engine.Components.Common;
+using FlyEngine.Core.Engine.Extensions;
 using Silk.NET.Input;
 using Silk.NET.Maths;
 
-namespace FlyEngine.Core.Behaviours;
+namespace FlyEngine.Core.Engine.Behaviours;
 
 public class CameraController : Behaviour
 {

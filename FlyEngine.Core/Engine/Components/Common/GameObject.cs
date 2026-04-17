@@ -1,9 +1,24 @@
-namespace FlyEngine.Core.Components.Common;
+namespace FlyEngine.Core.Engine.Components.Common;
 
 public class GameObject : Object
 {
     public bool Enabled { get; set; } = true;
-    public string Name;
+
+    private string _name;
+    public string Name
+    {
+        get => _name;
+        set
+        {
+            if (Application.Instance.GameObjects.Exists(g => g.Name == value))
+            {
+                var count = Application.Instance.GameObjects.Count(g => g.Name == value);
+                _name = value + $"_{count}";
+            }
+            else
+                _name = value;
+        }
+    }
     public readonly Transform Transform;
 
     public readonly ComponentStore ComponentStore;
@@ -33,6 +48,11 @@ public class GameObject : Object
     {
         return ComponentStore.GetComponent<T>();
     }
+    
+    public Component? GetComponent(Type type)
+    {
+        return ComponentStore.GetComponent(type);
+    }
 
     public T AddComponent<T>() where T : Component
     {
@@ -44,7 +64,7 @@ public class GameObject : Object
         return ComponentStore.AddComponent(component);
     }
 
-    public bool TryGetComponent<T>(out T component) where T : Component
+    public bool TryGetComponent<T>(out T? component) where T : Component
     {
         return ComponentStore.TryGetComponent(out component);
     }

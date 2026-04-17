@@ -1,7 +1,7 @@
 ﻿using System.Numerics;
 using System.Runtime.InteropServices;
 
-namespace FlyEngine.Core.Renderer.Meshes;
+namespace FlyEngine.Core.Engine.Renderer.Meshes;
 
 [StructLayout(LayoutKind.Sequential, Pack = 1)]
 public struct MeshVertex

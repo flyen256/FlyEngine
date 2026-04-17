@@ -1,9 +1,9 @@
 ﻿using System.Numerics;
-using FlyEngine.Core.Components.Common;
-using FlyEngine.Core.Components.Physics.Colliders;
+using FlyEngine.Core.Engine.Components.Common;
+using FlyEngine.Core.Engine.Components.Physics.Colliders;
 using JoltPhysicsSharp;
 
-namespace FlyEngine.Core.Components.Physics;
+namespace FlyEngine.Core.Engine.Components.Physics;
 
 public class Rigidbody : Behaviour
 {
@@ -13,6 +13,7 @@ public class Rigidbody : Behaviour
     
     public override void OnLoad()
     {
+        Console.WriteLine();
         if (!TryGetComponent<Collider>(out var collider)) return;
         _collider = collider;
     }

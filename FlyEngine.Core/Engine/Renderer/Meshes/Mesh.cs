@@ -1,6 +1,6 @@
 ﻿using Silk.NET.OpenGL;
 
-namespace FlyEngine.Core.Renderer.Meshes;
+namespace FlyEngine.Core.Engine.Renderer.Meshes;
 
 public class Mesh
 {

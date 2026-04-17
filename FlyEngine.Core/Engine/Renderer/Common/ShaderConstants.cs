@@ -1,4 +1,4 @@
-﻿namespace FlyEngine.Core.Renderer.Common;
+﻿namespace FlyEngine.Core.Engine.Renderer.Common;
 
 public static class ShaderConstants
 {

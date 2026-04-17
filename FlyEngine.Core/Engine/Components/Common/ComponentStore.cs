@@ -1,4 +1,4 @@
-namespace FlyEngine.Core.Components.Common;
+namespace FlyEngine.Core.Engine.Components.Common;
 
 public class ComponentStore(GameObject gameObject)
 {
@@ -16,12 +16,22 @@ public class ComponentStore(GameObject gameObject)
         var componentAsT = _components.Find((c) => c is T) as T ?? null;
         return component ?? componentAsT;
     }
+    
+    public Component? GetComponent(Type type)
+    {
+        var component = _components.Find((c) => c.GetType() == type);
+        return component;
+    }
 
     public T AddComponent<T>() where T : Component
     {
         var instance = Activator.CreateInstance<T>();
         _components.Add(instance);
         instance.GameObject = GameObject;
+        if (!Application.IsRunning) return instance;
+        instance.Initialize();
+        if (instance is Behaviour behaviour)
+            behaviour.OnLoad();
         return instance;
     }
 
@@ -29,20 +39,23 @@ public class ComponentStore(GameObject gameObject)
     {
         _components.Add(component);
         component.GameObject = GameObject;
+        if (!Application.IsRunning) return component;
+        component.Initialize();
+        if (component is Behaviour behaviour)
+            behaviour.OnLoad();
         return component;
     }
 
-    public bool TryGetComponent<T>(out T component) where T : Component
+    public bool TryGetComponent<T>(out T? component) where T : Component
     {
-#pragma warning disable CS8601 // Possible null reference assignment.
         component = GetComponent<T>();
-#pragma warning restore CS8601 // Possible null reference assignment.
         return component != null;
     }
 
     public void RemoveComponent(Component component)
     {
-        component.OnRemovingFromStore();
+        component.OnRemoved();
+        component.OnDisable();
         _components.Remove(component);
     }
 

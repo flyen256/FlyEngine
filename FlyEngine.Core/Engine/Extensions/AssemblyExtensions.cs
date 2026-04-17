@@ -1,6 +1,6 @@
 ﻿using System.Reflection;
 
-namespace FlyEngine.Core.Extensions;
+namespace FlyEngine.Core.Engine.Extensions;
 
 public static class AssemblyExtensions
 {

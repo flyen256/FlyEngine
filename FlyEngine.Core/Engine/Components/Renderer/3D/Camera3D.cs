@@ -1,7 +1,7 @@
 using System.Numerics;
-using FlyEngine.Core.Math;
+using FlyEngine.Core.Engine.Math;
 
-namespace FlyEngine.Core.Components.Renderer._3D;
+namespace FlyEngine.Core.Engine.Components.Renderer._3D;
 
 public class Camera3D : Camera
 {

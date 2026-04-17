@@ -1,18 +1,40 @@
-namespace FlyEngine.Core.Components.Common;
+namespace FlyEngine.Core.Engine.Components.Common;
 
 public class Component : Object
 {
-    public bool Enabled { get; set; } = true;
+    private bool _enabled = true;
+
+    public bool Enabled
+    {
+        get => _enabled;
+        set
+        {
+            if (value == _enabled) return;
+            _enabled = value;
+            if (_enabled)
+                OnEnable();
+            else
+                OnDisable();
+        }
+    }
     public virtual bool AllowMultipleInstances => true;
     public required GameObject GameObject;
     public Transform Transform => GameObject.Transform;
+    public bool Initialized { get; private set; }
 
     protected virtual void OnInitialize() { }
 
-    protected internal virtual void OnRemovingFromStore() { }
+    protected virtual void OnEnable() { }
+    public virtual void OnDisable() { }
+    protected internal virtual void OnRemoved() { }
 
-    public void Initialize() => OnInitialize();
-    
+    public void Initialize()
+    {
+        if (Initialized) return;
+        Initialized = true;
+        OnInitialize();
+    }
+
     public override void Destroy()
     {
         GameObject.ComponentStore.RemoveComponent(this);
@@ -34,6 +56,11 @@ public class Component : Object
     {
         return GameObject.GetComponent<T>();
     }
+    
+    public Component? GetComponent(Type type)
+    {
+        return GameObject.GetComponent(type);
+    }
 
     public T AddComponent<T>() where T : Component
     {
@@ -45,7 +72,7 @@ public class Component : Object
         return GameObject.AddComponent(component);
     }
 
-    public bool TryGetComponent<T>(out T component) where T : Component
+    public bool TryGetComponent<T>(out T? component) where T : Component
     {
         return GameObject.TryGetComponent(out component);
     }

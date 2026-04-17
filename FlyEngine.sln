@@ -6,6 +6,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FlyEngine.Core", "FlyEngine
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FlyEngine.Game", "FlyEngine.Game\FlyEngine.Game.csproj", "{56D3676E-B60D-418F-A63A-C31E2AA24327}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FlyEngine.Network", "FlyEngine.Network\FlyEngine.Network.csproj", "{51F1C8CF-E0B6-4DF6-8939-7A7B4D7B1C9A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FlyEngine.Editor", "FlyEngine.Editor\FlyEngine.Editor.csproj", "{D602FA90-2DCA-4BAD-B4DE-4E9201050DA8}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -20,6 +24,14 @@ Global
 		{56D3676E-B60D-418F-A63A-C31E2AA24327}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{56D3676E-B60D-418F-A63A-C31E2AA24327}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{56D3676E-B60D-418F-A63A-C31E2AA24327}.Release|Any CPU.Build.0 = Release|Any CPU
+		{51F1C8CF-E0B6-4DF6-8939-7A7B4D7B1C9A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{51F1C8CF-E0B6-4DF6-8939-7A7B4D7B1C9A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{51F1C8CF-E0B6-4DF6-8939-7A7B4D7B1C9A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{51F1C8CF-E0B6-4DF6-8939-7A7B4D7B1C9A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D602FA90-2DCA-4BAD-B4DE-4E9201050DA8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D602FA90-2DCA-4BAD-B4DE-4E9201050DA8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D602FA90-2DCA-4BAD-B4DE-4E9201050DA8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D602FA90-2DCA-4BAD-B4DE-4E9201050DA8}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

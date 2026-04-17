@@ -1,12 +1,12 @@
 ﻿using System.Numerics;
-using FlyEngine.Core.Components.Renderer._3D;
-using FlyEngine.Core.Components.Renderer.Lighting;
-using FlyEngine.Core.Renderer.Common;
-using FlyEngine.Core.Renderer.Lighting;
+using FlyEngine.Core.Engine.Components.Renderer._3D;
+using FlyEngine.Core.Engine.Components.Renderer.Lighting;
+using FlyEngine.Core.Engine.Renderer.Common;
+using FlyEngine.Core.Engine.Renderer.Lighting;
 using Silk.NET.Maths;
 using Silk.NET.OpenGL;
 
-namespace FlyEngine.Core.Renderer.Pipelines;
+namespace FlyEngine.Core.Engine.Renderer.Pipelines;
 
 public class DefaultPipeline(OpenGl openGl) : RenderPipeline(openGl)
 {

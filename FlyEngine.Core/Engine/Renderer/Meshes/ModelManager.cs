@@ -1,8 +1,8 @@
 ﻿using System.Numerics;
-using FlyEngine.Core.Extensions;
+using FlyEngine.Core.Engine.Extensions;
 using Silk.NET.Assimp;
 
-namespace FlyEngine.Core.Renderer.Meshes;
+namespace FlyEngine.Core.Engine.Renderer.Meshes;
 
 public class ModelManager
 {

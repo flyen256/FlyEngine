@@ -2,4 +2,8 @@
 /FlyEngine.Core/bin
 /FlyEngine.Game/obj
 /FlyEngine.Game/bin
+/FlyEngine.Network/obj
+/FlyEngine.Network/bin
+/FlyEngine.Editor/obj
+/FlyEngine.Editor/bin
 /.idea
