@@ -6,7 +6,11 @@
         <Nullable>enable</Nullable>
         <LangVersion>13</LangVersion>
     </PropertyGroup>
-    
+
+    <ItemGroup>
+        <PackageReference Include="LiteNetLib" Version="2.1.2" />
+    </ItemGroup>
+
     <ItemGroup>
         <ProjectReference Include="..\FlyEngine.Core\FlyEngine.Core.csproj"/>
     </ItemGroup>
