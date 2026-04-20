@@ -1,8 +1,11 @@
 ﻿using System.Numerics;
+using System.Runtime.InteropServices;
+using FlyEngine.Core.Engine.Components.Renderer;
 using FlyEngine.Core.Engine.Components.Renderer._3D;
 using FlyEngine.Core.Engine.Components.Renderer.Lighting;
 using FlyEngine.Core.Engine.Renderer.Common;
 using FlyEngine.Core.Engine.Renderer.Lighting;
+using FlyEngine.Core.Engine.SceneManagement;
 using Silk.NET.Maths;
 using Silk.NET.OpenGL;
 
@@ -14,12 +17,12 @@ public class DefaultPipeline(OpenGl openGl) : RenderPipeline(openGl)
     public Shader DeferredLightShader { get; private set; }
     public Shader ShadowDepthShader { get; private set; }
     
-    private uint _gbufferFbo;
+    private uint _gBufferFbo;
     private uint _gAlbedoMetallic;
     private uint _gNormalSmoothness;
     private uint _gDepth;
-    private int _gbufferW;
-    private int _gbufferH;
+    private int _gBufferW;
+    private int _gBufferH;
 
     private uint _deferredLightVao;
     private uint _deferredLightVbo;
@@ -29,15 +32,24 @@ public class DefaultPipeline(OpenGl openGl) : RenderPipeline(openGl)
 
     private uint _skyCubemap;
     
+    private uint _finalFbo;
+    public uint FinalTexture { get; private set; }
+    
     public override void Render(double deltaTime)
     {
-        var application = OpenGl.Application;
-        if (application.CurrentCamera is not Camera3D camera3D) return;
+        if (Application.Window == null || !Application.IsRunning) return;
+        if (Camera.CurrentCamera is not Camera3D camera3D) return;
         var projection = camera3D.ProjectionMatrix;
         var view = camera3D.ViewMatrix;
         BeginDeferredGeometryPass(projection, view);
-        foreach (var behaviour in application.Behaviours.Where(behaviour => behaviour.IsActive()))
+        if (Application.Scene == null) return;
+        var behaviours = CollectionsMarshal.AsSpan(Application.Scene.Behaviours.ToList());
+        for (var i = 0; i < behaviours.Length; i++)
+        {
+            var behaviour = behaviours[i];
+            if (!behaviour.IsActive()) continue;
             behaviour.OnRender(deltaTime);
+        }
 
         var camPos = camera3D.Transform.Position;
         var camPosSys = new Vector3(camPos.X, camPos.Y, camPos.Z);
@@ -45,7 +57,7 @@ public class DefaultPipeline(OpenGl openGl) : RenderPipeline(openGl)
         var lightCount = 0;
         var sunLightIndex = -1;
         LightSource? sunLight = null;
-        foreach (var light in application.Lights)
+        foreach (var light in Application.Scene.Lights)
         {
             if (!light.IsActive()) continue;
             if (lightCount >= OpenGl.MaxDeferredLights) return;
@@ -77,18 +89,23 @@ public class DefaultPipeline(OpenGl openGl) : RenderPipeline(openGl)
 
         RenderShadowPass(lightSpace, dt =>
         {
-            foreach (var behaviour in application.Behaviours.Where(behaviour => behaviour.IsActive()))
-                behaviour.OnRender(dt);
+            var behaviours = CollectionsMarshal.AsSpan(Application.Scene.Behaviours.ToList());
+            for (var i = 0; i < behaviours.Length; i++)
+            {
+                var behaviour = behaviours[i];
+                if (!behaviour.IsActive()) continue;
+                behaviour.OnRender(deltaTime);
+            }
         }, deltaTime);
 
         FinishDeferredLightingPass(
             projection,
             view,
-            application.Window.Size,
+            Application.Window.Handle.Size,
             camPosSys,
             lightBuf[..lightCount],
             1f,
-            application.Environment,
+            SceneManager.CurrentScene != null ? SceneManager.CurrentScene.Environment : DeferredEnvironment.Default,
             sunLightIndex,
             sunDirection,
             lightSpace);
@@ -101,16 +118,36 @@ public class DefaultPipeline(OpenGl openGl) : RenderPipeline(openGl)
         BuildShadowProgram();
         CreateShadowFramebuffer();
         CreateDeferredLightQuad();
+        if (Application.Window is { IsEditor: true })
+            CreateFinalFramebuffer(OpenGl.Window.Size);
         ResizeGBuffer(OpenGl.Window.Size);
+    }
+    
+    private unsafe void CreateFinalFramebuffer(Vector2D<int> viewport)
+    {
+        _finalFbo = Gl.GenFramebuffer();
+        FinalTexture = Gl.GenTexture();
+    
+        Gl.BindTexture(TextureTarget.Texture2D, FinalTexture);
+        Gl.TexImage2D(TextureTarget.Texture2D, 0, InternalFormat.Rgba, (uint)viewport.X, (uint)viewport.Y, 0, PixelFormat.Rgba, PixelType.UnsignedByte, null);
+    
+        Gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Linear);
+        Gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
+
+        Gl.BindFramebuffer(FramebufferTarget.Framebuffer, _finalFbo);
+        Gl.FramebufferTexture2D(FramebufferTarget.Framebuffer, FramebufferAttachment.ColorAttachment0, TextureTarget.Texture2D, FinalTexture, 0);
+
+        if (Gl.CheckFramebufferStatus(FramebufferTarget.Framebuffer) != GLEnum.FramebufferComplete)
+            throw new Exception("Final FBO incomplete");
+
+        Gl.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
     }
 
     public override Shader GetRenderShader()
     {
         return IsShadowPass
             ? ShadowDepthShader
-            : IsDeferredGeometryPass
-                ? DeferredGeometryShader
-                : OpenGl.ForwardGeometryShader;
+            : DeferredGeometryShader;
     }
 
     private void BuildDeferredPrograms(string vertexWorldCode)
@@ -312,16 +349,16 @@ public class DefaultPipeline(OpenGl openGl) : RenderPipeline(openGl)
         if (width <= 0 || height <= 0)
             return;
 
-        _gbufferW = width;
-        _gbufferH = height;
+        _gBufferW = width;
+        _gBufferH = height;
 
-        if (_gbufferFbo != 0)
+        if (_gBufferFbo != 0)
         {
-            Gl.DeleteFramebuffer(_gbufferFbo);
+            Gl.DeleteFramebuffer(_gBufferFbo);
             Gl.DeleteTexture(_gAlbedoMetallic);
             Gl.DeleteTexture(_gNormalSmoothness);
             Gl.DeleteTexture(_gDepth);
-            _gbufferFbo = 0;
+            _gBufferFbo = 0;
         }
 
         unsafe
@@ -358,8 +395,8 @@ public class DefaultPipeline(OpenGl openGl) : RenderPipeline(openGl)
 
             Gl.BindTexture(TextureTarget.Texture2D, 0);
 
-            _gbufferFbo = Gl.GenFramebuffer();
-            Gl.BindFramebuffer(FramebufferTarget.Framebuffer, _gbufferFbo);
+            _gBufferFbo = Gl.GenFramebuffer();
+            Gl.BindFramebuffer(FramebufferTarget.Framebuffer, _gBufferFbo);
             Gl.FramebufferTexture2D(FramebufferTarget.Framebuffer, FramebufferAttachment.ColorAttachment0,
                 TextureTarget.Texture2D, _gAlbedoMetallic, 0);
             Gl.FramebufferTexture2D(FramebufferTarget.Framebuffer, FramebufferAttachment.ColorAttachment1,
@@ -389,8 +426,8 @@ public class DefaultPipeline(OpenGl openGl) : RenderPipeline(openGl)
         Gl.Enable(EnableCap.DepthTest);
         Gl.DepthFunc(DepthFunction.Less);
 
-        Gl.BindFramebuffer(FramebufferTarget.Framebuffer, _gbufferFbo);
-        Gl.Viewport(0, 0, (uint)_gbufferW, (uint)_gbufferH);
+        Gl.BindFramebuffer(FramebufferTarget.Framebuffer, _gBufferFbo);
+        Gl.Viewport(0, 0, (uint)_gBufferW, (uint)_gBufferH);
         Gl.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
 
         IsDeferredGeometryPass = true;
@@ -414,7 +451,8 @@ public class DefaultPipeline(OpenGl openGl) : RenderPipeline(openGl)
         Matrix4x4.Invert(projection, out var invProj);
         Matrix4x4.Invert(view, out var invView);
 
-        Gl.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
+        Gl.BindFramebuffer(FramebufferTarget.Framebuffer,
+            Application.Window is { IsEditor: true } ? _finalFbo : 0);
         Gl.Viewport(0, 0, (uint)viewport.X, (uint)viewport.Y);
         Gl.Clear(ClearBufferMask.ColorBufferBit);
 
@@ -446,7 +484,7 @@ public class DefaultPipeline(OpenGl openGl) : RenderPipeline(openGl)
         DeferredLightShader.SetUniform(ShaderConstants.ShadowEnabled, environment.ShadowEnabled ? 1 : 0);
         DeferredLightShader.SetUniform(ShaderConstants.ShadowDirIndex, sunLightIndex);
         DeferredLightShader.SetUniform(ShaderConstants.LightSpaceMatrix, lightSpaceMatrix);
-        
+
         DeferredLightShader.SetUniform(ShaderConstants.SunDirWorld, sunDirection);
 
         DeferredLightShader.SetUniform(ShaderConstants.FogEnabled, environment.FogEnabled ? 1 : 0);
@@ -500,6 +538,7 @@ public class DefaultPipeline(OpenGl openGl) : RenderPipeline(openGl)
         Gl.BindTexture(TextureTarget.Texture2D, 0);
         Gl.ActiveTexture(TextureUnit.Texture0);
         Gl.BindTexture(TextureTarget.Texture2D, 0);
+        Gl.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
         IsDeferredGeometryPass = false;
     }
 }

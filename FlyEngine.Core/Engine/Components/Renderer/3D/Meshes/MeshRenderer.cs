@@ -1,5 +1,6 @@
 using System.Numerics;
 using FlyEngine.Core.Engine.Components.Common;
+using FlyEngine.Core.Engine.Renderer;
 using FlyEngine.Core.Engine.Renderer.Common;
 using FlyEngine.Core.Engine.Renderer.Meshes;
 using Silk.NET.OpenGL;
@@ -13,10 +14,17 @@ public class MeshRenderer : Behaviour
     public float Smoothness { get; set; }
     public Mesh? Mesh { get; set; }
 
-    public override unsafe void OnRender(double deltaTime)
+    public override void OnRender(double deltaTime)
+    {
+        if (Mesh == null || Application.Window == null || Application.Window.OpenGl == null) return;
+        var gl = Application.Window.OpenGl;
+        var model = Transform.WorldMatrix;
+        Render(gl, model);
+    }
+
+    private unsafe void Render(OpenGl gl, Matrix4x4 model)
     {
         if (Mesh == null) return;
-        var gl = Application.Instance.Gl;
         var shader = gl.RenderPipeline.GetRenderShader();
 
         shader.Use();
@@ -31,11 +39,6 @@ public class MeshRenderer : Behaviour
             shader.SetUniform(ShaderConstants.Metallic, Metallic);
             shader.SetUniform(ShaderConstants.Smoothness, Smoothness);
         }
-
-        var model =
-            Matrix4x4.CreateScale(Transform.Size) *
-            Matrix4x4.CreateFromQuaternion(Transform.Rotation) *
-            Matrix4x4.CreateTranslation(Transform.Position);
 
         shader.SetUniform(ShaderConstants.Model, model);
 

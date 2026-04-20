@@ -7,3 +7,9 @@
 /FlyEngine.Editor/obj
 /FlyEngine.Editor/bin
 /.idea
+/FlyEngine.sln.DotSettings.user
+/FlyEngine.Network/FlyEngine.Network.csproj.DotSettings
+/FlyEngine.Editor/FlyEngine.Editor.csproj.DotSettings
+/FlyEngine.Core/FlyEngine.Core.csproj.DotSettings
+/FlyEngine.Game/FlyEngine.Game.csproj.DotSettings
+/FlyEngine.Game/Temp

@@ -1,19 +1,19 @@
 ﻿using System.Diagnostics;
 using System.Numerics;
-using FlyEngine.Core.Engine.Components.Physics;
-using FlyEngine.Core.Engine.Components.Physics.Colliders;
-using FlyEngine.Core.Engine.Physics.Cast;
+using FlyEngine.Core.Engine.Cast;
+using FlyEngine.Core.Engine.Components;
+using FlyEngine.Core.Engine.Components.Colliders;
 using JoltPhysicsSharp;
 
-namespace FlyEngine.Core.Engine.Physics;
+namespace FlyEngine.Core.Engine;
 
-public class Physics
+public static class Physics
 {
-    public readonly PhysicsSystem System;
-    public readonly BodyInterface BodyInterface;
-    public readonly JobSystem JobSystem;
+    public static readonly PhysicsSystem System;
+    public static readonly BodyInterface BodyInterface;
+    public static readonly JobSystem JobSystem;
 
-    private PhysicsSystemSettings _settings; 
+    private static PhysicsSystemSettings _settings; 
     
     public static class Layers
     {
@@ -27,7 +27,7 @@ public class Physics
         public static readonly BroadPhaseLayer Moving = 1;
     }
 
-    public Physics(int maxBodies = 65536, int maxBodyPairs = 65536, int maxContactConstraints = 65536)
+    static Physics()
     {
         Foundation.SetTraceHandler(Console.WriteLine);
 
@@ -48,9 +48,9 @@ public class Physics
             return;
         _settings = new PhysicsSystemSettings
         {
-            MaxBodies = maxBodies,
-            MaxBodyPairs = maxBodyPairs,
-            MaxContactConstraints = maxContactConstraints,
+            MaxBodies = 65536,
+            MaxBodyPairs = 65536,
+            MaxContactConstraints = 65536,
             NumBodyMutexes = 0
         };
         SetupCollisionFiltering();
@@ -61,7 +61,7 @@ public class Physics
         BodyInterface = System.BodyInterface;
     }
     
-    protected void SetupCollisionFiltering()
+    private static void SetupCollisionFiltering()
     {
         ObjectLayerPairFilterTable objectLayerPairFilter = new(2);
         objectLayerPairFilter.EnableCollision(Layers.NonMoving, Layers.Moving);
@@ -78,7 +78,7 @@ public class Physics
         _settings.ObjectVsBroadPhaseLayerFilter = objectVsBroadPhaseLayerFilter;
     }
     
-    public BodyID CreateBody(Shape shape, Vector3 position, Quaternion rotation, ObjectLayer layer, MotionType motionType = MotionType.Static)
+    public static BodyID CreateBody(Shape shape, Vector3 position, Quaternion rotation, ObjectLayer layer, MotionType motionType = MotionType.Static)
     {
         var settings = new BodyCreationSettings(
             shape,
@@ -90,14 +90,14 @@ public class Physics
         return body.ID;
     }
 
-    public bool Raycast(Vector3 origin, Vector3 direction, float maxDistance, out RaycastHit hit)
+    public static bool Raycast(Vector3 origin, Vector3 direction, float maxDistance, out RaycastHit hit)
     {
         hit = new RaycastHit();
         if (!System.NarrowPhaseQuery.CastRay(new Ray(origin, direction * maxDistance), out var rayCastResult))
             return false;
         hit.Point = origin + direction * (maxDistance * rayCastResult.Fraction);
-        var findGameObject = Application.Instance.GameObjects
-            .Find(o => o.TryGetComponent<Collider>(out var collider) && collider.BodyId == rayCastResult.BodyID);
+        var findGameObject = Application.Scene?.Colliders.ToList()
+            .Find(o => o.BodyId == rayCastResult.BodyID);
         if (findGameObject == null)
             return true;
         var collider = findGameObject.GetComponent<Collider>();
@@ -109,17 +109,17 @@ public class Physics
         return true;
     }
 
-    public void SetPosition(BodyID id, Vector3 position)
+    public static void SetPosition(BodyID id, Vector3 position)
     {
         BodyInterface.SetPosition(id, position, Activation.Activate);
     }
     
-    public Vector3 GetPosition(BodyID id)
+    public static Vector3 GetPosition(BodyID id)
     {
         return BodyInterface.GetPosition(id);
     }
 
-    public Quaternion GetRotation(BodyID id)
+    public static Quaternion GetRotation(BodyID id)
     {
         return BodyInterface.GetRotation(id);
     }

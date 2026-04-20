@@ -1,9 +1,17 @@
-﻿namespace FlyEngine.Editor;
+﻿using FlyEngine.Core.Engine;
+using FlyEngine.Editor.Window;
+using Silk.NET.Maths;
+
+namespace FlyEngine.Editor;
 
 internal static class Program
 {
-    private static void Main(string[] args)
+    private static void Main()
     {
-        var editor = new Editor();
+        var windowOptions = ApplicationWindowOptions.Default with
+        {
+            MinSize = new Vector2D<int>(800, 600)
+        };
+        Editor.Start(new EditorWindow(windowOptions));
     }
 }

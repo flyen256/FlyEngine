@@ -16,16 +16,6 @@ public class LightSource : Component
     public Vector2 AreaHalfSize { get; set; } = new(1f, 0.5f);
     public bool CastShadows { get; set; } = true;
 
-    protected override void OnInitialize()
-    {
-        Application.Instance.Lights.Add(this);
-    }
-
-    protected internal override void OnRemoved()
-    {
-        Application.Instance.Lights.Remove(this);
-    }
-
     public DeferredLightPacked BuildPacked()
     {
         var p = Transform.Position;

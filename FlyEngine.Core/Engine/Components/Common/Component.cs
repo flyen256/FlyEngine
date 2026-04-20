@@ -1,3 +1,5 @@
+using FlyEngine.Core.Engine.SceneManagement;
+
 namespace FlyEngine.Core.Engine.Components.Common;
 
 public class Component : Object
@@ -21,6 +23,7 @@ public class Component : Object
     public required GameObject GameObject;
     public Transform Transform => GameObject.Transform;
     public bool Initialized { get; private set; }
+    public int SceneIndex { get; internal set; } = -1;
 
     protected virtual void OnInitialize() { }
 
@@ -33,6 +36,8 @@ public class Component : Object
         if (Initialized) return;
         Initialized = true;
         OnInitialize();
+        if (Enabled)
+            OnEnable();
     }
 
     public override void Destroy()
@@ -42,21 +47,26 @@ public class Component : Object
 
     public static T CreateGameObject<T>(string? name = null) where T : Component
     {
-        var gameObject = GameObject.Create(name ?? typeof(T).Name);
-        var component = gameObject.AddComponent<T>();
-        return component;
+        var instance = Activator.CreateInstance<T>();
+        GameObject.Create(name ?? typeof(T).Name, [instance]);
+        return instance;
     }
 
     public bool IsActive()
     {
-        return Enabled && GameObject.Enabled;
+        return Enabled && GameObject is { Enabled: true, IsDestroyed: false };
     }
-    
-    public T? GetComponent<T>() where T : Component
+
+    public T? GetComponent<T>() where T : class
     {
         return GameObject.GetComponent<T>();
     }
-    
+
+    public List<T> GetComponents<T>() where T : class
+    {
+        return GameObject.GetComponents<T>();
+    }
+
     public Component? GetComponent(Type type)
     {
         return GameObject.GetComponent(type);

@@ -1,8 +1,8 @@
 ﻿using System.Numerics;
-using FlyEngine.Core.Engine.Components.Physics;
-using FlyEngine.Core.Engine.Components.Physics.Colliders;
+using FlyEngine.Core.Engine.Components;
+using FlyEngine.Core.Engine.Components.Colliders;
 
-namespace FlyEngine.Core.Engine.Physics.Cast;
+namespace FlyEngine.Core.Engine.Cast;
 
 public struct RaycastHit
 {

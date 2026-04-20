@@ -1,54 +1,76 @@
+using FlyEngine.Core.Engine.SceneManagement;
+using MemoryPack;
+
 namespace FlyEngine.Core.Engine.Components.Common;
 
-public class GameObject : Object
+[MemoryPackable]
+public partial class GameObject : Object
 {
+    [MemoryPackInclude]
     public bool Enabled { get; set; } = true;
+    [MemoryPackIgnore]
+    public bool IsDestroyed { get; private set; }
 
+    [MemoryPackInclude]
     private string _name;
+    [MemoryPackIgnore]
     public string Name
     {
         get => _name;
         set
         {
-            if (Application.Instance.GameObjects.Exists(g => g.Name == value))
+            if (Application.Scene != null && Application.Scene.ObjectExistsWithName(value))
             {
-                var count = Application.Instance.GameObjects.Count(g => g.Name == value);
+                var count = Application.Scene.GameObjects.Count(g => g.Name == value);
                 _name = value + $"_{count}";
             }
             else
                 _name = value;
         }
     }
-    public readonly Transform Transform;
-
-    public readonly ComponentStore ComponentStore;
+    [MemoryPackInclude]
+    public required Transform Transform;
+    [MemoryPackIgnore]
+    public ComponentStore ComponentStore;
 
     private GameObject(string name = "New game object")
     {
+        _name = name;
         Name = name;
-        Transform = new Transform();
         ComponentStore = new ComponentStore(this);
     }
 
-    public static GameObject Create(string name)
+    public static GameObject Create(string name, Component[]? components = null)
     {
-        var gameObject = new GameObject(name);
-        Application.Instance.GameObjects.Add(gameObject);
+        if (SceneManager.CurrentScene == null)
+            throw new InvalidOperationException("No scene loaded");
+        var gameObject = new GameObject(name)
+        {
+            Transform = new Transform()
+        };
+        foreach (var component in components ?? [])
+            gameObject.AddComponent(component);
+        SceneManager.CurrentScene.AddGameObject(gameObject);
         return gameObject;
     }
 
     public override void Destroy()
     {
-        for (var i = ComponentStore.List.Count - 1; i >= 0; i--)
-            ComponentStore.RemoveComponent(ComponentStore.List[i]);
-        Application.Instance.GameObjects.Remove(this);
+        foreach (var component in ComponentStore.List)
+            ComponentStore.RemoveComponent(component);
+        IsDestroyed = true;
     }
 
-    public T? GetComponent<T>() where T : Component
+    public T? GetComponent<T>() where T : class
     {
         return ComponentStore.GetComponent<T>();
     }
-    
+
+    public List<T> GetComponents<T>() where T : class
+    {
+        return ComponentStore.GetComponents<T>();
+    }
+
     public Component? GetComponent(Type type)
     {
         return ComponentStore.GetComponent(type);

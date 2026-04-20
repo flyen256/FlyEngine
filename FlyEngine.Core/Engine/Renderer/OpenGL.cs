@@ -15,25 +15,20 @@ public class OpenGl
     public uint DefaultWhiteTexture { get; private set; }
     
     public Mesh CubeMesh { get; }
-    
-    public Shader ForwardGeometryShader { get; private set; }
 
     public int MaxDeferredLights { get; set; } = 24;
     public uint ShadowMapResolution { get; set; } = 4096;
 
     public RenderPipeline RenderPipeline { get; set; }
     
-    public readonly Application Application;
     public readonly IWindow Window;
 
-    public OpenGl(IWindow window, Application application)
+    public OpenGl(IWindow window)
     {
         RenderPipeline = new DefaultPipeline(this);
         Window = window;
         Gl = window.CreateOpenGL();
         CubeMesh = CreateCubeMesh();
-        
-        Application = application;
 
         Textures.OnAdd += texture => texture.Load();
         Textures.OnRemove += texture => texture.UnLoad();
@@ -42,7 +37,6 @@ public class OpenGl
     public unsafe void Initialize()
     {
         Gl.Viewport(0, 0, (uint)Window.Size.X, (uint)Window.Size.Y);
-        Application.AspectRatio = (float)Window.Size.X / Window.Size.Y;
         Gl.Enable(EnableCap.DepthTest);
         Gl.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha);
         Gl.ClearColor(Color.Black);
@@ -126,11 +120,9 @@ public class OpenGl
     public unsafe void ProcessShaders()
     {
         var vertexCode = LoadShaderCode("vertex.vert");
-        var fragmentCode = LoadShaderCode("fragment.frag");
         
-        if (vertexCode == null || fragmentCode == null)
+        if (vertexCode == null)
             throw new Exception("Shaders not found in resources!");
-        ForwardGeometryShader = new Shader(Gl, vertexCode, fragmentCode);
 
         const uint stride = 8 * sizeof(float);
 

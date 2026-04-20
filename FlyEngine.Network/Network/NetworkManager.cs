@@ -2,6 +2,7 @@ using FlyEngine.Core.Engine;
 using FlyEngine.Core.Engine.Components.Common;
 using FlyEngine.Network.Serializable;
 using LiteNetLib;
+using LiteNetLib.Utils;
 
 namespace FlyEngine.Network;
 
@@ -16,19 +17,17 @@ public class NetworkManager : Behaviour
     public bool AutoCreatePlayer { get; set; } = false;
     public Func<GameObject>? PlayerPrefab { get; set; }
 
-    public readonly Dictionary<string, NetworkObject> NetworkObjects = [];
+    public readonly NetworkServer Server;
+    public readonly NetworkClient Client;
 
-    public Application? Application;
+    public IReadOnlyDictionary<int, NetworkObject> NetworkObjects => _networkObjects;
+    public IReadOnlyList<PlayerData> PlayersData => _playersData;
 
-    public NetworkServer Server;
-    public NetworkClient Client;
+    private readonly Dictionary<int, NetworkObject> _networkObjects = [];
+    private readonly List<PlayerData> _playersData = [];
 
     private readonly NetManager _serverNetManager;
     private readonly NetManager _clientNetManager;
-    private readonly EventBasedNetListener _serverListener;
-    private readonly EventBasedNetListener _clientListener;
-    
-    private readonly List<PlayerData> _playersData = [];
 
     public List<NetPeer> ConnectedPeers
     {
@@ -46,39 +45,33 @@ public class NetworkManager : Behaviour
             return connectedPeers;
         }
     }
-    
-    public IReadOnlyList<PlayerData> PlayersData => _playersData;
 
-    public bool Initialized => Application != null;
-
-    public event Action<NetPeer, DisconnectInfo> OnPeerDisconnected
+    public int LocalPlayerId
     {
-        add
+        get
         {
+            if (!Client.IsActive && !Server.IsActive) return -1;
             if (Server.IsActive)
-                Server.OnPeerDisconnectedEvent += value;
-            else if (Client.IsActive)
-                Client.OnPeerDisconnectedEvent += value;
-        }
-        remove
-        {
-            if (Server.IsActive)
-                Server.OnPeerDisconnectedEvent -= value;
-            else if (Client.IsActive)
-                Client.OnPeerDisconnectedEvent -= value;
+                return -1;
+            if (Client.IsActive)
+                return Client.LocalPlayerId;
+            return -1;
         }
     }
+
+    public bool IsConnected => Server.IsActive || Client.IsActive;
 
     public NetworkManager()
     {
         Instance = this;
-        _serverListener = new EventBasedNetListener();
-        _clientListener = new EventBasedNetListener();
-        _serverNetManager = new NetManager(_serverListener);
-        _clientNetManager = new NetManager(_clientListener);
-        Application = Application.Instance;
-        Server = new NetworkServer(this, Application, _serverListener, _serverNetManager, _playersData);
-        Client = new NetworkClient(this, Application, _clientListener, _clientNetManager, _playersData);
+        var serverListener = new EventBasedNetListener();
+        var clientListener = new EventBasedNetListener();
+        _serverNetManager = new NetManager(serverListener);
+        _clientNetManager = new NetManager(clientListener);
+        Server = new NetworkServer(this, serverListener, _serverNetManager, _playersData,
+            _networkObjects);
+        Client = new NetworkClient(this, clientListener, _clientNetManager, _playersData,
+            _networkObjects);
     }
 
     public void Shutdown()
@@ -88,5 +81,24 @@ public class NetworkManager : Behaviour
             Server.Shutdown();
         if (Client is { IsActive: true })
             Client.Shutdown();
+    }
+    
+    public void Broadcast(NetDataWriter writer, DeliveryMethod deliveryMethod)
+    {
+        if (Server.IsActive)
+        {
+            var peers = new List<NetPeer>();
+            _serverNetManager.GetConnectedPeers(peers);
+            foreach (var peer in peers)
+                peer.Send(writer, deliveryMethod);
+        }
+        else if (Client.IsActive)
+            _clientNetManager.FirstPeer?.Send(writer, deliveryMethod);
+    }
+
+    public NetworkTransform? FindNetworkTransform(int networkObjectId)
+    {
+        if (!NetworkObjects.TryGetValue(networkObjectId, out var networkObject)) return null;
+        return networkObject.GetComponent<NetworkTransform>();
     }
 }

@@ -17,9 +17,7 @@ public class BufferObject<TDataType> : IDisposable
         _handle = _gl.GenBuffer();
         Bind();
         fixed (void* d = data)
-        {
             _gl.BufferData(bufferType, (nuint) (data.Length * sizeof(TDataType)), d, BufferUsageARB.StaticDraw);
-        }
     }
 
     public void Bind()

@@ -1,4 +1,5 @@
 ﻿using FlyEngine.Core.Engine;
+using FlyEngine.Network.Packets;
 using FlyEngine.Network.Serializable;
 using LiteNetLib;
 using LiteNetLib.Utils;
@@ -9,19 +10,19 @@ namespace FlyEngine.Network;
 
 public class NetworkClient(
     NetworkManager networkManager,
-    Application application,
     EventBasedNetListener listener,
     NetManager netManager,
-    List<PlayerData> playersData) :
+    List<PlayerData> playersData,
+    Dictionary<int, NetworkObject> networkObjects) :
     NetworkSide(
         networkManager,
-        application,
         listener,
         netManager,
-        playersData)
+        playersData,
+        networkObjects)
 {
     private readonly ILogger _logger = new Logger<NetworkServer>(LoggerFactory.Create(builder => builder.AddConsole()));
-    
+
     private TaskCompletionSource<bool> _connectionTcs = new();
 
     public int LocalPlayerId { get; private set; } = -1;
@@ -54,6 +55,7 @@ public class NetworkClient(
 
     protected override void OnPeerConnected(NetPeer peer)
     {
+        base.OnPeerConnected(peer);
         _connectionTcs.TrySetResult(true);
     }
 
@@ -65,6 +67,7 @@ public class NetworkClient(
 
     protected override void OnNetworkReceive(NetPeer peer, NetDataReader reader, byte channel, DeliveryMethod deliveryMethod)
     {
+        base.OnNetworkReceive(peer, reader, channel, deliveryMethod);
         var packet = (NetworkPacket)reader.GetByte();
 
         switch (packet)
@@ -78,6 +81,9 @@ public class NetworkClient(
                 PlayersData.AddRange(players);
                 break;
             case NetworkPacket.NetworkTransform:
+                var syncData = MemoryPackSerializer.Deserialize<TransformPacket>(reader.GetRemainingBytes());
+                var targetNetTransform = NetworkManager.FindNetworkTransform(syncData.NetworkObjectId);
+                targetNetTransform?.ApplySync(syncData);
                 break;
             case NetworkPacket.Rpc:
                 break;

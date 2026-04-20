@@ -16,8 +16,8 @@ public static class Input
     private static Vector2 _mouseDeltaAccumulated;
     private static Vector2 _mouseDeltaPreviousFrame;
 
-    public static Vector2 MouseInput { get; private set; } = new();
-    public static Vector2 MousePosition { get; private set; } = new();
+    public static Vector2 MouseInput { get; private set; } = Vector2.Zero;
+    public static Vector2 MousePosition { get; private set; } = Vector2.Zero;
 
     private static bool _cursorLocked;
     private static bool _cursorVisible = true;
@@ -77,10 +77,10 @@ public static class Input
 
     private static void CenterMouse()
     {
-        if (InputContext == null) return;
+        if (InputContext == null || Application.Window == null) return;
 
-        var centerX = Application.Instance.Window.Size.X / 2;
-        var centerY = Application.Instance.Window.Size.Y / 2;
+        var centerX = Application.Window.Handle.Size.X / 2;
+        var centerY = Application.Window.Handle.Size.Y / 2;
 
         foreach (var mouse in InputContext.Mice)
         {
@@ -106,7 +106,9 @@ public static class Input
     {
         if (PressedKeys.Contains(key)) return;
         PressedKeys.Add(key);
-        foreach (var behaviour in Application.Instance.Behaviours)
+        if (!Application.IsRunning) return;
+        if (Application.Scene == null) return;
+        foreach (var behaviour in Application.Scene.Behaviours)
         {
             var onKeyDownMethod = behaviour.GetType().GetMethod("OnKeyDown");
             if (onKeyDownMethod == null) continue;
@@ -117,11 +119,12 @@ public static class Input
     private static void OnKeyUp(IKeyboard keyboard, Key key, int keyCode)
     {
         PressedKeys.Remove(key);
+        if (!Application.IsRunning) return;
     }
 
     public static bool GetKey(Key key)
     {
-        return PressedKeys.Contains(key);
+        return Application.IsRunning && PressedKeys.Contains(key);
     }
 
     public static Vector2D<float> GetMoveInput()

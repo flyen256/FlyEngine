@@ -1,151 +1,90 @@
-using FlyEngine.Core.Engine.Components.Common;
-using FlyEngine.Core.Engine.Components.Renderer;
-using FlyEngine.Core.Engine.Components.Renderer._3D;
-using FlyEngine.Core.Engine.Components.Renderer.Lighting;
 using FlyEngine.Core.Engine.Renderer;
-using FlyEngine.Core.Engine.Renderer.Lighting;
-using FlyEngine.Core.Engine.Renderer.Meshes;
-using FlyEngine.Core.Engine.UI;
-using FlyEngine.Core.Engine.UI.ImGui;
-using FlyEngine.Core.Engine.UI.Layout.Interfaces;
-using FlyEngine.Core.Engine.Window;
-using Silk.NET.Maths;
-using Silk.NET.Windowing;
+using FlyEngine.Core.Engine.SceneManagement;
+using Scene = FlyEngine.Core.Engine.SceneManagement.Scene;
 
 namespace FlyEngine.Core.Engine;
 
-public class Application : IDisposable
+public static class Application
 {
-    private static Application? _instance;
-    public static Application Instance => _instance ?? throw new NullReferenceException("Application.Instance");
-    
-    public static bool IsRunning { get; private set; }
-    
-    public readonly IWindow Window;
-    public readonly ModelManager ModelManager;
-    public readonly Physics.Physics Physics;
-    
-    public OpenGl Gl { get; private set; }
-    
-    public readonly List<Behaviour> Behaviours = [];
-    public readonly List<GameObject> GameObjects = [];
-    public readonly List<Camera> Cameras = [];
-    public readonly List<LightSource> Lights = [];
-    public readonly List<IUiRenderer> UiRenderers = [];
-    public float AspectRatio;
+    public static Scene? Scene => SceneManager.CurrentScene;
 
-    public DeferredEnvironment Environment { get; set; } = DeferredEnvironment.Default;
+    private static bool _isRunning;
+    public static bool IsRunning => _isRunning && Window is { IsRunning: true, IsLoaded: true };
 
-    public Camera? CurrentCamera { get; private set; }
+    private static BaseWindow? _window;
 
-    private bool _graphicsReady;
-
-    private readonly Action<Application> _scene;
-    private Vector2D<int> _minWindowSize;
-
-    public Application(Action<Application> scene, ApplicationWindowOptions windowOptions)
+    public static BaseWindow? Window
     {
-        _instance = this;
-        _scene = scene;
-        _minWindowSize = windowOptions.MinSize;
-        Window = Silk.NET.Windowing.Window.Create(windowOptions.AsWindowOptions());
-        Physics = new Physics.Physics();
-        ModelManager = new ModelManager();
-
-        Window.Load += OnLoad;
-        Window.Update += OnUpdate;
-        Window.Render += OnRender;
-        Window.Resize += OnResize;
-        Window.FramebufferResize += OnFramebufferResize;
+        get => _window;
+        set
+        {
+            if (_window == value) return;
+            if (_window != null && IsRunning)
+                throw new InvalidOperationException("Window is already running");
+            if (_window != null)
+            {
+                _window.OnUpdateEvent -= OnUpdate;
+            }
+            _window = value;
+            if (_window != null)
+            {
+                _window.OnUpdateEvent += OnUpdate;
+            }
+        }
     }
+    public static OpenGl? OpenGl => Window?.OpenGl;
 
-    public void Run()
+    private static Scene? _lastLoadedScene;
+
+    private static void OnUpdate(double deltaTime)
     {
-        IsRunning = true;
-        Window.Run();
-    }
-
-    public void Dispose()
-    {
-        IsRunning = false;
-        Window.Close();
-        Window.Dispose();
-    }
-
-    private void OnResize(Vector2D<int> newSize)
-    {
-        var targetSize = newSize;
-        if (newSize.X < _minWindowSize.X)
-            targetSize.X = _minWindowSize.X;
-        if (newSize.Y < _minWindowSize.Y)
-            targetSize.Y = _minWindowSize.Y;
-        Window.Size = targetSize;
-    }
-
-    private void OnFramebufferResize(Vector2D<int> newSize)
-    {
-        var targetSize = newSize;
-        AspectRatio = (float)targetSize.X / targetSize.Y;
-        if (!_graphicsReady) return;
-        Gl.Gl.Viewport(0, 0, (uint)targetSize.X, (uint)targetSize.Y);
-        Gl.RenderPipeline.ResizeGBuffer(targetSize);
-    }
-
-    private void OnLoad()
-    {
-        Gl = new OpenGl(Window, Instance);
-        Gl.Initialize();
-        Gl.ProcessShaders();
-        
-        _scene.Invoke(this);
-
-        foreach (var gameObject in GameObjects)
-            gameObject.ComponentStore.InitializeComponents();
-        
-        Input.Initialize(Window);
-        
-        foreach (var behaviour in Behaviours.Where(behaviour => behaviour.IsActive()))
-            behaviour.OnLoad();
-        
-        if (Input.InputContext != null)
-            ImGui.Initialize(
-                Gl.Gl,
-                Window,
-                Input.InputContext,
-                _minWindowSize
-            );
-        if (ImGui.Initialized)
-            foreach (var uiRenderer in UiRenderers)
-                uiRenderer.OnLoadUi();
-
-        _graphicsReady = true;
-    }
-
-    private void OnUpdate(double deltaTime)
-    {
+        if (!IsRunning) return;
+        if (_lastLoadedScene != Scene && Scene != null && !SceneManager.IsLoading)
+        {
+            _lastLoadedScene = Scene;
+            _lastLoadedScene.OnLoad();
+        }
         Input.Update(deltaTime);
         Physics.System.Update((float)deltaTime, 1, Physics.JobSystem);
-        foreach (var behaviour in Behaviours.Where(behaviour => behaviour.IsActive()))
+        if (Scene == null) return;
+        foreach (var behaviour in Scene.Behaviours.Where(behaviour => behaviour.IsActive()))
             behaviour.OnUpdate(deltaTime);
     }
 
-    private void OnRender(double deltaTime)
+    private static void CleanUp()
     {
-        var activeCameras = Cameras.Where(camera => camera.IsActive()).ToList();
-        var camera3D = activeCameras.Count > 0 && activeCameras.OfType<Camera3D>().Any() ?
-            activeCameras.OfType<Camera3D>().First(c => c.IsActive()) :
-            null;
-        CurrentCamera = camera3D;
+        _lastLoadedScene = null;
+    }
 
-        camera3D?.UpdateMatrices(AspectRatio);
-        
-        Gl.RenderPipeline.Render(deltaTime);
+    public static void OpenWindow()
+    {
+        Window?.Run();
+    }
 
-        if (!ImGui.Initialized || ImGui.Controller == null) return;
-        ImGui.Controller.Update((float)deltaTime);
-        ImGui.Render((float)deltaTime);
-        foreach (var renderer in UiRenderers.Where(renderer => renderer.IsActive()))
-            renderer.Render();
-        ImGui.Controller.Render();
+    public static void Run()
+    {
+        if (Window == null) return;
+        _isRunning = true;
+        if (!Window.IsRunning)
+            OpenWindow();
+    }
+
+    public static void Stop()
+    {
+        _isRunning = false;
+        CleanUp();
+        if (Window is { IsEditor: false })
+            CloseWindow();
+    }
+
+    public static void CloseWindow()
+    {
+        Window?.Close();
+    }
+
+    public static void Quit()
+    {
+        Stop();
+        CloseWindow();
     }
 }

@@ -1,3 +1,5 @@
+using System.Runtime.InteropServices;
+
 namespace FlyEngine.Core.Engine.Components.Common;
 
 public class ComponentStore(GameObject gameObject)
@@ -5,22 +7,41 @@ public class ComponentStore(GameObject gameObject)
     public GameObject GameObject { get; } = gameObject;
 
     public IReadOnlyList<Component> List => _components;
-    
+
     private readonly List<Component> _components = [];
 
     private bool _initialized;
 
-    public T? GetComponent<T>() where T : Component
+    public T? GetComponent<T>() where T : class
     {
-        var component = _components.Find((c) => c.GetType() == typeof(T)) as T;
-        var componentAsT = _components.Find((c) => c is T) as T ?? null;
-        return component ?? componentAsT;
+        var span = CollectionsMarshal.AsSpan(_components);
+        for (int i = 0; i < span.Length; i++)
+        {
+            if (span[i] is T t) return t;
+        }
+        return null;
     }
-    
+
+    public List<T> GetComponents<T>() where T : class
+    {
+        var result = new List<T>();
+        var span = CollectionsMarshal.AsSpan(_components);
+        for (int i = 0; i < span.Length; i++)
+        {
+            if (span[i] is T t) result.Add(t);
+        }
+        return result;
+    }
+
     public Component? GetComponent(Type type)
     {
-        var component = _components.Find((c) => c.GetType() == type);
-        return component;
+        var span = CollectionsMarshal.AsSpan(_components);
+        for (int i = 0; i < span.Length; i++)
+        {
+            var comp = span[i];
+            if (type.IsInstanceOfType(comp)) return comp;
+        }
+        return null;
     }
 
     public T AddComponent<T>() where T : Component

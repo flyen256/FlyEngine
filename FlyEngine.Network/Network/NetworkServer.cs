@@ -1,5 +1,6 @@
 ﻿using FlyEngine.Core.Engine;
 using FlyEngine.Core.Engine.Components.Common;
+using FlyEngine.Network.Packets;
 using FlyEngine.Network.Serializable;
 using LiteNetLib;
 using LiteNetLib.Utils;
@@ -10,19 +11,19 @@ namespace FlyEngine.Network;
 
 public class NetworkServer(
     NetworkManager networkManager,
-    Application application,
     EventBasedNetListener listener,
     NetManager netManager,
-    List<PlayerData> playersData) :
+    List<PlayerData> playersData,
+    Dictionary<int, NetworkObject> networkObjects) :
     NetworkSide(
         networkManager,
-        application,
         listener,
         netManager,
-        playersData)
+        playersData,
+        networkObjects)
 {
     private readonly ILogger _logger = new Logger<NetworkServer>(LoggerFactory.Create(builder => builder.AddConsole()));
-    
+
     private readonly Dictionary<uint, GameObject> _playersObjects = new();
 
     public bool IsHost { get; private set; }
@@ -58,7 +59,7 @@ public class NetworkServer(
             IsHost = true
         });
     }
-    
+
     private PlayerData? AddPlayer(NetPeer peer)
     {
         if (PlayersData.Exists(p => p.PeerId == peer.Id)) return null;
@@ -72,13 +73,6 @@ public class NetworkServer(
         return playerData;
     }
 
-    private void RemovePlayer(NetPeer peer)
-    {
-        var findPlayer = PlayersData.Find(p => p.PeerId == peer.Id);
-        if (findPlayer == null) return;
-        PlayersData.Remove(findPlayer);
-    }
-    
     private uint GetNextAvailableId()
     {
         for (uint i = 0; i < NetworkManager.MaxConnections + 1; i++)
@@ -89,8 +83,18 @@ public class NetworkServer(
         return 0;
     }
     
+    private uint? RemovePlayer(NetPeer peer)
+    {
+        var findPlayer = PlayersData.Find(p => p.PeerId == peer.Id);
+        if (findPlayer == null) return null;
+        var findPlayerId = findPlayer.Id;
+        PlayersData.Remove(findPlayer);
+        return findPlayerId;
+    }
+
     protected override void OnConnectionRequest(ConnectionRequest request)
     {
+        base.OnConnectionRequest(request);
         if (NetManager.ConnectedPeersCount > NetworkManager.MaxConnections)
         {
             var rejectData = new NetDataWriter();
@@ -106,6 +110,7 @@ public class NetworkServer(
 
     protected override void OnPeerConnected(NetPeer peer)
     {
+        base.OnPeerConnected(peer);
         _logger.LogInformation("Connected peer with id {PeerId}", peer.Id);
         var addPlayer = AddPlayer(peer);
         var writer = new NetDataWriter();
@@ -117,7 +122,7 @@ public class NetworkServer(
         NetManager.GetConnectedPeers(connectedPeers);
         if (addPlayer == null) return;
         var addPlayerSerialized = MemoryPackSerializer.Serialize(addPlayer);
-        var newPlayerWriter =  new NetDataWriter();
+        var newPlayerWriter = new NetDataWriter();
         newPlayerWriter.Put((byte)NetworkPacket.AddPlayer);
         newPlayerWriter.Put(addPlayerSerialized);
         foreach (var netPeer in connectedPeers.Where(p => p.Id != peer.Id))
@@ -126,14 +131,13 @@ public class NetworkServer(
 
     protected override void OnPeerDisconnected(NetPeer peer, DisconnectInfo disconnectInfo)
     {
+        base.OnPeerDisconnected(peer, disconnectInfo);
         _logger.LogInformation("Disconnected peer with id {PeerId}, reason {Reason}", peer.Id, disconnectInfo.Reason);
-        var findPlayer = PlayersData.Find(p => p.PeerId == peer.Id);
-        if (findPlayer == null) return;
-        var findPlayerId = findPlayer.Id;
-        PlayersData.Remove(findPlayer);
+        var removePlayerId = RemovePlayer(peer);
+        if (removePlayerId == null) return;
         var writer = new NetDataWriter();
         writer.Put((byte)NetworkPacket.RemovePlayer);
-        writer.Put(findPlayerId);
+        writer.Put(removePlayerId.Value);
         var connectedPeers = new List<NetPeer>();
         NetManager.GetConnectedPeers(connectedPeers);
         foreach (var netPeer in connectedPeers.Where(p => p.Id != peer.Id))
@@ -142,6 +146,31 @@ public class NetworkServer(
 
     protected override void OnNetworkReceive(NetPeer peer, NetDataReader reader, byte channel, DeliveryMethod deliveryMethod)
     {
-        
+        base.OnNetworkReceive(peer, reader, channel, deliveryMethod);
+        var packet = (NetworkPacket)reader.GetByte();
+
+        switch (packet)
+        {
+            case NetworkPacket.NetworkTransform:
+                var syncRawData = reader.GetRemainingBytes();
+                var syncData = MemoryPackSerializer.Deserialize<TransformPacket>(syncRawData);
+                var targetNetTransform = NetworkManager.FindNetworkTransform(syncData.NetworkObjectId);
+                targetNetTransform?.ApplySync(syncData);
+                var connectedPeers = new List<NetPeer>();
+                NetManager.GetConnectedPeers(connectedPeers);
+                foreach (var netPeer in connectedPeers.Where(p => p.Id != peer.Id))
+                    netPeer.Send(syncRawData, deliveryMethod);
+                break;
+            case NetworkPacket.Rpc:
+                break;
+            default:
+                _logger.LogWarning("Unhandled packet type {packetType}", packet);
+                break;
+        }
+    }
+
+    protected override void OnShutdown()
+    {
+        IsHost = false;
     }
 }

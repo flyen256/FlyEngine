@@ -20,7 +20,7 @@ public class CameraController : Behaviour
 
     private void TestRaycast()
     {
-        if (Application.Instance.Physics.Raycast(Transform.Position, Transform.Forward, 5f, out var hit))
+        if (Physics.Raycast(Transform.Position, Transform.Forward, 5f, out var hit))
         {
             hit.Rigidbody?.AddImpulse(Transform.Forward * 100f);
         }

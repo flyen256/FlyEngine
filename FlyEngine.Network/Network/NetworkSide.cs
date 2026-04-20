@@ -12,12 +12,11 @@ public abstract class NetworkSide
     protected readonly EventBasedNetListener Listener;
     protected readonly NetManager NetManager;
 
-    protected readonly Application Application;
-
     protected Thread Thread;
     protected CancellationTokenSource CancellationToken = new();
 
     protected readonly List<PlayerData> PlayersData;
+    protected readonly Dictionary<int, NetworkObject> NetworkObjects;
     
     public bool IsActive { get; protected set; }
     
@@ -26,17 +25,17 @@ public abstract class NetworkSide
 
     protected NetworkSide(
         NetworkManager networkManager,
-        Application application,
         EventBasedNetListener listener,
         NetManager netManager,
-        List<PlayerData> playersData)
+        List<PlayerData> playersData,
+        Dictionary<int, NetworkObject> networkObjects)
     {
         NetworkManager = networkManager;
-        Application = application;
         Listener = listener;
         NetManager = netManager;
         Thread = new Thread(PollEvents);
         PlayersData = playersData;
+        NetworkObjects = networkObjects;
     }
 
     protected void PollEvents(object? cancellationToken)
@@ -95,7 +94,10 @@ public abstract class NetworkSide
         NetManager.Stop();
         CancellationToken.Cancel();
         RemoveListeners();
+        OnShutdown();
     }
+
+    protected virtual void OnShutdown() {}
     
     protected virtual void OnConnectionRequest(ConnectionRequest request) {}
     protected virtual void OnPeerConnected(NetPeer peer) =>

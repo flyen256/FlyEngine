@@ -9,7 +9,7 @@ public class RotationTimer : Behaviour
     
     public override void OnUpdate(double deltaTime)
     {
-        var time = Application.Instance.Window.Time;
+        var time = Application.Window.Handle.Time;
         Transform.Rotation = Quaternion.CreateFromAxisAngle(Axis, (float)(time * 2f));
     }
 }

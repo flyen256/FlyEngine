@@ -1,6 +1,6 @@
 ﻿using JoltPhysicsSharp;
 
-namespace FlyEngine.Core.Engine.Components.Physics.Colliders;
+namespace FlyEngine.Core.Engine.Components.Colliders;
 
 public class SphereCollider : Collider
 {
@@ -8,8 +8,8 @@ public class SphereCollider : Collider
 
     public override BodyID CreateBody()
     {
-        BodyId = Application.Instance.Physics.CreateBody(new SphereShape(Radius), Transform.Position, Transform.Rotation,
-            Engine.Physics.Physics.Layers.Moving, MotionType);
+        BodyId = Physics.CreateBody(new SphereShape(Radius), Transform.Position, Transform.Rotation,
+            Physics.Layers.Moving, MotionType);
         return BodyId;
     }
 }

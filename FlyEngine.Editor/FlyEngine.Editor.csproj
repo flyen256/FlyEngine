@@ -6,11 +6,16 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <LangVersion>13</LangVersion>
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     </PropertyGroup>
     
     <ItemGroup>
-        <ProjectReference Include="..\FlyEngine.Core\FlyEngine.Core.csproj"/>
-        <ProjectReference Include="..\FlyEngine.Network\FlyEngine.Network.csproj"/>
+        <ProjectReference Include="..\FlyEngine.Core\FlyEngine.Core.csproj" />
+        <ProjectReference Include="..\FlyEngine.Network\FlyEngine.Network.csproj" />
+    </ItemGroup>
+    
+    <ItemGroup>
+      <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="5.3.0" />
     </ItemGroup>
 
 </Project>
