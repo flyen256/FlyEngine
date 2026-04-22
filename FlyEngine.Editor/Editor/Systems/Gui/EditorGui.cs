@@ -24,12 +24,13 @@ public class EditorGui : EditorSystem
 
     public EditorGui()
     {
+        AddWindow<EditorGame>();
         AddWindow<EditorScene>();
         AddWindow<EditorFileBrowser>();
         AddWindow<EditorHierarchy>();
         AddWindow<EditorInspector>();
-        AddWindow<EditorNavBar>();
         AddWindow<EditorConsoleGui>();
+        AddWindow<EditorNavBar>();
     }
 
     public override void OnUpdate(double deltaTime)
@@ -56,6 +57,31 @@ public class EditorGui : EditorSystem
         foreach (var window in _windows)
             window.Render(deltaTime);
         RenderTaskModal();
+    }
+    
+    private void RenderTaskModal()
+    {
+        if (Editor.IsRunningTask)
+            ImGuiNet.OpenPopup("TaskOverlay");
+
+        var center = ImGuiNet.GetMainViewport().GetCenter();
+        ImGuiNet.SetNextWindowPos(center, ImGuiCond.Appearing, new Vector2(0.5f, 0.5f));
+
+        if (ImGuiNet.BeginPopupModal("TaskOverlay", ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoMove))
+        {
+            ImGuiNet.Spacing();
+            ImGuiNet.Text($"   {Editor.TaskQueue.CurrentItem?.Message ?? "Running unnamed task"}...   ");
+            ImGuiNet.Spacing();
+            
+            var t = (float)ImGuiNet.GetTime();
+            var dots = new string('.', (int)(t * 2) % 4);
+            ImGuiNet.Text($"Please wait{dots}");
+
+            if (!Editor.IsRunningTask)
+                ImGuiNet.CloseCurrentPopup();
+
+            ImGuiNet.EndPopup();
+        }
     }
 
     private void RenderMainMenuBar()
@@ -101,33 +127,6 @@ public class EditorGui : EditorSystem
         UpDockId = upId;
 
         ImGuiDockingInternal.igDockBuilderFinish(dockspaceId);
-    }
-    
-    private void RenderTaskModal()
-    {
-        if (Editor.IsRunningTask)
-            ImGuiNet.OpenPopup("TaskOverlay");
-
-        var center = ImGuiNet.GetMainViewport().GetCenter();
-        ImGuiNet.SetNextWindowPos(center, ImGuiCond.Appearing, new Vector2(0.5f, 0.5f));
-
-        if (ImGuiNet.BeginPopupModal("TaskOverlay", ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoMove))
-        {
-            ImGuiNet.Spacing();
-            ImGuiNet.Text($"   {Editor.TaskQueue.CurrentItem?.Message ?? "Running unnamed task"}...   ");
-            ImGuiNet.Spacing();
-            
-            var t = (float)ImGuiNet.GetTime();
-            var dots = new string('.', (int)(t * 2) % 4);
-            ImGuiNet.Text($"Please wait{dots}");
-
-            if (!Editor.IsRunningTask)
-            {
-                ImGuiNet.CloseCurrentPopup();
-            }
-
-            ImGuiNet.EndPopup();
-        }
     }
 
     private void AddWindow<T>() where T : EditorGuiWindow

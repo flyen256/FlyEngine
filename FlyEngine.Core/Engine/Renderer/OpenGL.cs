@@ -9,6 +9,8 @@ namespace FlyEngine.Core.Engine.Renderer;
 
 public class OpenGl
 {
+    public static Guid CubeMeshGuid => Guid.Parse("ac8dab28-605c-4020-8e74-7c1a1a5f2a95");
+    
     public readonly GL Gl;
     public readonly ReactiveList<Texture> Textures = new();
     
@@ -22,11 +24,13 @@ public class OpenGl
     public RenderPipeline RenderPipeline { get; set; }
     
     public readonly IWindow Window;
+    public readonly BaseWindow Handle;
 
-    public OpenGl(IWindow window)
+    public OpenGl(IWindow window, BaseWindow handle)
     {
         RenderPipeline = new DefaultPipeline(this);
         Window = window;
+        Handle = handle;
         Gl = window.CreateOpenGL();
         CubeMesh = CreateCubeMesh();
 
@@ -86,7 +90,6 @@ public class OpenGl
             -0.5f,  0.5f,  0.5f,  1.0f, 0.0f,  -1.0f,  0.0f,  0.0f,
             -0.5f, -0.5f,  0.5f,  1.0f, 1.0f,  -1.0f,  0.0f,  0.0f
         ];
-
         uint[] indices =
         [
             0,  1,  2,  2,  3,  0,
@@ -96,8 +99,7 @@ public class OpenGl
             16, 17, 18, 18, 19, 16,
             20, 21, 22, 22, 23, 20
         ];
-
-        return new Mesh(Gl, vertices, indices, (uint)indices.Length);
+        return new Mesh(CubeMeshGuid, Gl, vertices, indices, (uint)indices.Length);
     }
 
     public string? LoadShaderCode(string shader)

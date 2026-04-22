@@ -27,9 +27,13 @@ public abstract class BaseWindow
     
     public Matrix4x4 EditorCameraViewMatrix { get; private set; }
     public Matrix4x4 EditorCameraProjectionMatrix { get; private set; }
+
+    public Vector3 EditorCameraPosition { get; private set; } = Vector3.Zero;
+    public Quaternion EditorCameraRotation { get; private set; } = Quaternion.Identity;
     
-    public Vector3 EditorCameraPosition { get; private set; }
-    public Quaternion EditorCameraRotation { get; private set; }
+    public EditorScriptLoader EditorScriptLoader { get; set; } = new();
+    
+    public Vector2D<int> EditorViewport { get; set; }
 
     protected void UpdateMatrices()
     {
@@ -81,6 +85,7 @@ public abstract class BaseWindow
     {
         IsLoaded = true;
         OnLoadEvent?.Invoke();
+        AspectRatio = (float)Handle.Size.X / Handle.Size.Y;
     }
 
     protected virtual void OnUpdate(double deltaTime)

@@ -5,6 +5,7 @@ using FlyEngine.Core.Engine.Components.Renderer._3D;
 using FlyEngine.Core.Engine.Gui.ImGui;
 using FlyEngine.Core.Engine.Renderer;
 using FlyEngine.Core.Engine.SceneManagement;
+using FlyEngine.Editor.Systems;
 using Microsoft.Extensions.Logging;
 using Silk.NET.Maths;
 using Silk.NET.OpenGL;
@@ -23,7 +24,7 @@ public class EditorWindow(ApplicationWindowOptions windowOptions) : BaseWindow(w
     
     protected override void OnLoad()
     {
-        OpenGl = new OpenGl(Handle);
+        OpenGl = new OpenGl(Handle, this);
         OpenGl.Initialize();
         OpenGl.ProcessShaders();
 
@@ -42,6 +43,7 @@ public class EditorWindow(ApplicationWindowOptions windowOptions) : BaseWindow(w
         if (!_graphicsReady || OpenGl == null) return;
         OpenGl.Gl.Viewport(0, 0, (uint)targetSize.X, (uint)targetSize.Y);
         OpenGl.RenderPipeline.ResizeGBuffer(targetSize);
+        OpenGl.RenderPipeline.CreateFinalFramebuffer(targetSize);
     }
 
     protected override void OnRender(double deltaTime)
@@ -64,18 +66,18 @@ public class EditorWindow(ApplicationWindowOptions windowOptions) : BaseWindow(w
             return;
         }
 
-        OpenGl.RenderPipeline.Render(deltaTime);
+        OpenGl.RenderPipeline.Render(deltaTime, Editor.IsSceneOpened);
 
         if (!ImGui.Initialized || ImGui.Controller == null)
         {
             Scene?.Update(deltaTime);
             return;
         }
-        OpenGl.Gl.Clear(ClearBufferMask.ColorBufferBit);
+        // OpenGl.Gl.Clear(ClearBufferMask.ColorBufferBit);
         ImGui.Controller.Update((float)deltaTime);
         if (Scene != null)
         {
-            var renderers = CollectionsMarshal.AsSpan(Scene.UiWindows.ToList());
+            var renderers = CollectionsMarshal.AsSpan(Scene.GuiWindows.ToList());
             for (var i = 0; i < renderers.Length; i++)
             {
                 var renderer = renderers[i];

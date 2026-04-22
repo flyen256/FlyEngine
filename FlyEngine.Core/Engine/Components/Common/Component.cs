@@ -1,11 +1,16 @@
+using System.Reflection;
 using FlyEngine.Core.Engine.SceneManagement;
+using MemoryPack;
 
 namespace FlyEngine.Core.Engine.Components.Common;
 
-public class Component : Object
+[MemoryPackable]
+public partial class Component : Object
 {
+    [MemoryPackInclude]
     private bool _enabled = true;
 
+    [MemoryPackIgnore]
     public bool Enabled
     {
         get => _enabled;
@@ -13,16 +18,23 @@ public class Component : Object
         {
             if (value == _enabled) return;
             _enabled = value;
-            if (_enabled)
+            if (_enabled && Application.IsRunning)
                 OnEnable();
-            else
+            else if (Application.IsRunning)
                 OnDisable();
         }
     }
+    [MemoryPackIgnore]
     public virtual bool AllowMultipleInstances => true;
-    public required GameObject GameObject;
+    [MemoryPackIgnore]
+    [System.Text.Json.Serialization.JsonIgnore]
+    public GameObject GameObject;
+    [MemoryPackIgnore]
+    [System.Text.Json.Serialization.JsonIgnore]
     public Transform Transform => GameObject.Transform;
+    [MemoryPackIgnore]
     public bool Initialized { get; private set; }
+    [MemoryPackIgnore]
     public int SceneIndex { get; internal set; } = -1;
 
     protected virtual void OnInitialize() { }

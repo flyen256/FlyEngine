@@ -13,12 +13,22 @@ public abstract class EditorGuiWindow
     protected internal virtual void OnUpdate(double deltaTime) { }
     protected virtual void OnRender(double deltaTime) { }
     protected virtual void BeforeBegin() { }
+
+    protected virtual bool Begin()
+    {
+        return ImGuiNet.Begin(Title, Flags);
+    }
+
+    protected virtual void End()
+    {
+        ImGuiNet.End();
+    }
     
-    public void Render(double deltaTime)
+    public virtual void Render(double deltaTime)
     {
         BeforeBegin();
-        ImGuiNet.Begin(Title, Flags);
-        OnRender(deltaTime);
-        ImGuiNet.End();
+        if (Begin())
+            OnRender(deltaTime);
+        End();
     }
 }

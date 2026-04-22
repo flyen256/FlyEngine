@@ -6,6 +6,8 @@ namespace FlyEngine.Core.Engine;
 
 public static class Application
 {
+    public const string ScriptsAssemblyName = "ScriptsAssembly";
+    
     public static Scene? Scene => SceneManager.CurrentScene;
 
     private static bool _isRunning;

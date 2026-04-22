@@ -46,7 +46,6 @@ public static class ModelManager
         }
 
         var meshName = name.Remove(name.Length - 1 - ext.Length, ext.Length + 1);
-        Console.WriteLine(meshName);
         Meshes.Add(meshName, meshes);
         
         return meshes;
@@ -124,7 +123,7 @@ public static class ModelManager
         if (heightMaps.Count != 0)
             textures.AddRange(heightMaps);
 
-        var result = new Mesh(openGl.Gl, vertices, indices, (uint)indices.Count);
+        var result = new Mesh(Guid.NewGuid(), openGl.Gl, vertices, indices, (uint)indices.Count);
         return result;
     }
     

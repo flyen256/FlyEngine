@@ -17,6 +17,8 @@ public partial class Transform
     private Quaternion _localRotation = Quaternion.Identity;
     [MemoryPackInclude]
     private Vector3 _localScale = Vector3.One;
+    [MemoryPackInclude]
+    public Vector3 Euler { get; set; }
 
     [MemoryPackInclude]
     private Matrix4x4 _worldMatrix = Matrix4x4.Identity;

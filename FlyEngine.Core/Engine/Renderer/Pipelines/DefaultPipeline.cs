@@ -1,4 +1,5 @@
-﻿using System.Numerics;
+﻿using System.Diagnostics.CodeAnalysis;
+using System.Numerics;
 using System.Runtime.InteropServices;
 using FlyEngine.Core.Engine.Components.Renderer;
 using FlyEngine.Core.Engine.Components.Renderer._3D;
@@ -6,6 +7,7 @@ using FlyEngine.Core.Engine.Components.Renderer.Lighting;
 using FlyEngine.Core.Engine.Renderer.Common;
 using FlyEngine.Core.Engine.Renderer.Lighting;
 using FlyEngine.Core.Engine.SceneManagement;
+using Microsoft.Extensions.Logging;
 using Silk.NET.Maths;
 using Silk.NET.OpenGL;
 
@@ -13,6 +15,8 @@ namespace FlyEngine.Core.Engine.Renderer.Pipelines;
 
 public class DefaultPipeline(OpenGl openGl) : RenderPipeline(openGl)
 {
+    private static ILogger _logger = new Logger<DefaultPipeline>(LoggerFactory.Create(b => b.AddConsole()));
+    
     public Shader DeferredGeometryShader { get; private set; }
     public Shader DeferredLightShader { get; private set; }
     public Shader ShadowDepthShader { get; private set; }
@@ -32,17 +36,18 @@ public class DefaultPipeline(OpenGl openGl) : RenderPipeline(openGl)
 
     private uint _skyCubemap;
     
-    private uint _finalFbo;
-    public uint FinalTexture { get; private set; }
-    
-    public override void Render(double deltaTime)
+    public override void Render(double deltaTime, bool editor = false)
     {
-        if (Application.Window == null || !Application.IsRunning) return;
-        if (Camera.CurrentCamera is not Camera3D camera3D) return;
-        var projection = camera3D.ProjectionMatrix;
-        var view = camera3D.ViewMatrix;
+        if (Application.Window == null || Application.Scene == null) return;
+        var currentCam = Camera.CurrentCamera as Camera3D;
+        if (!editor && currentCam == null) return;
+        var projection = editor ?
+            Application.Window.EditorCameraProjectionMatrix :
+            currentCam!.ProjectionMatrix;
+        var view = editor ?
+            Application.Window.EditorCameraViewMatrix :
+            currentCam!.ViewMatrix;
         BeginDeferredGeometryPass(projection, view);
-        if (Application.Scene == null) return;
         var behaviours = CollectionsMarshal.AsSpan(Application.Scene.Behaviours.ToList());
         for (var i = 0; i < behaviours.Length; i++)
         {
@@ -51,7 +56,7 @@ public class DefaultPipeline(OpenGl openGl) : RenderPipeline(openGl)
             behaviour.OnRender(deltaTime);
         }
 
-        var camPos = camera3D.Transform.Position;
+        var camPos = editor ? Application.Window.EditorCameraPosition : currentCam!.Transform.Position;
         var camPosSys = new Vector3(camPos.X, camPos.Y, camPos.Z);
         Span<DeferredLightPacked> lightBuf = stackalloc DeferredLightPacked[OpenGl.MaxDeferredLights];
         var lightCount = 0;
@@ -118,14 +123,19 @@ public class DefaultPipeline(OpenGl openGl) : RenderPipeline(openGl)
         BuildShadowProgram();
         CreateShadowFramebuffer();
         CreateDeferredLightQuad();
-        if (Application.Window is { IsEditor: true })
-            CreateFinalFramebuffer(OpenGl.Window.Size);
+        CreateFinalFramebuffer(OpenGl.Window.Size);
         ResizeGBuffer(OpenGl.Window.Size);
     }
     
-    private unsafe void CreateFinalFramebuffer(Vector2D<int> viewport)
+    public override unsafe void CreateFinalFramebuffer(Vector2D<int> viewport)
     {
-        _finalFbo = Gl.GenFramebuffer();
+        if (FinalFbo != 0)
+        {
+            Gl.DeleteFramebuffer(FinalFbo);
+            Gl.DeleteTexture(FinalTexture);
+            FinalFbo = 0;
+        }
+
         FinalTexture = Gl.GenTexture();
     
         Gl.BindTexture(TextureTarget.Texture2D, FinalTexture);
@@ -133,12 +143,14 @@ public class DefaultPipeline(OpenGl openGl) : RenderPipeline(openGl)
     
         Gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Linear);
         Gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
-
-        Gl.BindFramebuffer(FramebufferTarget.Framebuffer, _finalFbo);
+        Gl.BindTexture(TextureTarget.Texture2D, 0);
+        
+        FinalFbo = Gl.GenFramebuffer();
+        Gl.BindFramebuffer(FramebufferTarget.Framebuffer, FinalFbo);
         Gl.FramebufferTexture2D(FramebufferTarget.Framebuffer, FramebufferAttachment.ColorAttachment0, TextureTarget.Texture2D, FinalTexture, 0);
 
         if (Gl.CheckFramebufferStatus(FramebufferTarget.Framebuffer) != GLEnum.FramebufferComplete)
-            throw new Exception("Final FBO incomplete");
+            _logger.LogWarning("Final FBO incomplete");
 
         Gl.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
     }
@@ -451,8 +463,8 @@ public class DefaultPipeline(OpenGl openGl) : RenderPipeline(openGl)
         Matrix4x4.Invert(projection, out var invProj);
         Matrix4x4.Invert(view, out var invView);
 
-        Gl.BindFramebuffer(FramebufferTarget.Framebuffer,
-            Application.Window is { IsEditor: true } ? _finalFbo : 0);
+        var targetFbo = Application.Window is { IsEditor: true } && FinalFbo != 0 ? FinalFbo : 0;
+        Gl.BindFramebuffer(FramebufferTarget.Framebuffer, targetFbo);
         Gl.Viewport(0, 0, (uint)viewport.X, (uint)viewport.Y);
         Gl.Clear(ClearBufferMask.ColorBufferBit);
 

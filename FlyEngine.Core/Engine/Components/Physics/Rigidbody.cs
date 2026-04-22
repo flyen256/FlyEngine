@@ -13,7 +13,6 @@ public class Rigidbody : Behaviour
     
     public override void OnLoad()
     {
-        Console.WriteLine();
         if (!TryGetComponent<Collider>(out var collider)) return;
         _collider = collider;
     }

@@ -34,12 +34,13 @@ public class EditorHierarchy : EditorGuiWindow
         ImGuiNet.SetNextWindowDockID(EditorGui.LeftDockId);
     }
 
-    protected internal override void OnUpdate(double deltaTime)
+    protected internal override async void OnUpdate(double deltaTime)
     {
         var io = ImGuiNet.GetIO();
 
-        if (io.KeyCtrl || ImGuiNet.IsKeyPressed(ImGuiKey.S) && _isDirty)
-            TrySaveScene();
+        if (!io.KeyCtrl && (!ImGuiNet.IsKeyPressed(ImGuiKey.S) || Editor.IsRunningTask)) return;
+        await Editor.TaskQueue.Enqueue(TrySaveScene, "Saving scene");
+        _isDirty = false;
     }
 
     protected override void OnRender(double deltaTime)
@@ -120,12 +121,11 @@ public class EditorHierarchy : EditorGuiWindow
         }
     }
 
-    private void TrySaveScene()
+    private async Task TrySaveScene()
     {
-        if (Scene?.Path == null || Application.IsRunning || Editor.IsRunningTask) return;
-        var data = MemoryPackSerializer.Serialize(Scene);
-        File.WriteAllBytes(Scene.Path, data);
-
-        _isDirty = false;
+        if (Scene?.Path == null || Application.IsRunning) return;
+        var fs = File.Open(Scene.Path, FileMode.Create);
+        await MemoryPackSerializer.SerializeAsync(fs, Scene);
+        fs.Close();
     }
 }

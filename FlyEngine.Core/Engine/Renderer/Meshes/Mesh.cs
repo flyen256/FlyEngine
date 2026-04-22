@@ -1,25 +1,21 @@
-﻿using Silk.NET.OpenGL;
+﻿using FlyEngine.Core.Engine.Assets;
+using Silk.NET.OpenGL;
 
 namespace FlyEngine.Core.Engine.Renderer.Meshes;
 
-public class Mesh
+public class Mesh : Asset
 {
-    public List<MeshVertex> Vertices = [];
-    public List<uint> Indices = [];
-    public uint IndexCount;
+    public readonly List<MeshVertex> Vertices = [];
+    public readonly List<uint> Indices = [];
+    public readonly uint IndexCount;
     
-    public VertexArrayObject<float, uint> Vao;
-    public BufferObject<uint> Ebo;
-    public BufferObject<float> Vbo;
+    public readonly VertexArrayObject<float, uint> Vao;
+    public readonly BufferObject<uint> Ebo;
+    public readonly BufferObject<float> Vbo;
 
     private GL _gl;
-
-    public Mesh(GL gl)
-    {
-        _gl = gl;
-    }
     
-    public Mesh(GL gl, List<MeshVertex> vertices, List<uint> indices, uint indexCount)
+    public Mesh(Guid guid, GL gl, List<MeshVertex> vertices, List<uint> indices, uint indexCount) : base(guid)
     {
         _gl = gl;
         Vertices = vertices;
@@ -34,7 +30,7 @@ public class Mesh
         Vao.Unbind();
     }
     
-    public Mesh(GL gl, float[] vertices, uint[] indices, uint indexCount)
+    public Mesh(Guid guid, GL gl, float[] vertices, uint[] indices, uint indexCount) : base(guid)
     {
         _gl = gl;
         IndexCount = indexCount;

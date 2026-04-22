@@ -1,4 +1,5 @@
 using FlyEngine.Core.Engine;
+using FlyEngine.Core.Engine.Assets;
 using FlyEngine.Core.Engine.Components.Common;
 using FlyEngine.Network.Serializable;
 using LiteNetLib;
@@ -15,7 +16,7 @@ public class NetworkManager : Behaviour
     public int Port { get; set; } = 80;
     public string Key { get; set; } = "";
     public bool AutoCreatePlayer { get; set; } = false;
-    public Func<GameObject>? PlayerPrefab { get; set; }
+    public Prefab? PlayerPrefab { get; set; }
 
     public readonly NetworkServer Server;
     public readonly NetworkClient Client;

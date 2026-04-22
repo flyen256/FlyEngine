@@ -19,7 +19,6 @@ public class Texture
         AssimpPath = path;
         _gl = gl;
         _gl.Textures.Add(this);
-        Console.WriteLine(path.AsString);
         
         // Bind();
         //

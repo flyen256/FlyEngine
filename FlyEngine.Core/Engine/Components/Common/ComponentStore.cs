@@ -1,15 +1,72 @@
+using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using FlyEngine.Core.Engine.SceneManagement;
+using MemoryPack;
 
 namespace FlyEngine.Core.Engine.Components.Common;
 
-public class ComponentStore(GameObject gameObject)
+[MemoryPackable]
+public partial class ComponentStore
 {
-    public GameObject GameObject { get; } = gameObject;
+    [MemoryPackIgnore]
+    public GameObject GameObject { get; init; }
 
+    [MemoryPackIgnore]
     public IReadOnlyList<Component> List => _components;
-
+    
+    [MemoryPackIgnore]
     private readonly List<Component> _components = [];
+    
+    private static readonly JsonSerializerOptions JsonOptions = new()
+    {
+        IncludeFields = true,
+        PropertyNameCaseInsensitive = true,
+        NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals
+    };
 
+    [MemoryPackInclude]
+    private List<ComponentDataHolder> SerializedData
+    {
+        get
+        {
+            var holders = new List<ComponentDataHolder>();
+            foreach (var comp in List)
+            {
+                holders.Add(new ComponentDataHolder
+                {
+                    TypeName = comp.GetType().AssemblyQualifiedName,
+                    JsonPayload = JsonSerializer.Serialize(comp, comp.GetType(), JsonOptions)
+                });
+            }
+
+            return holders;
+        }
+        set
+        {
+            _components.Clear();
+            if (value == null) return;
+
+            foreach (var holder in value)
+            {
+                var type = Type.GetType(holder.TypeName);
+                if (Application.Window is { IsEditor: true } && type == null)
+                    type = Application.Window.EditorScriptLoader.LoadFromAssemblyName(
+                        new AssemblyName(Application.ScriptsAssemblyName)).GetType(holder.TypeName.Split(",")[0]);
+                if (type == null) continue;
+
+                var comp = (Component)JsonSerializer.Deserialize(holder.JsonPayload, type, JsonOptions);
+                if (comp != null)
+                {
+                    comp.GameObject = GameObject;
+                    _components.Add(comp);
+                }
+            }
+        }
+    }
+
+    [MemoryPackIgnore]
     private bool _initialized;
 
     public T? GetComponent<T>() where T : class
@@ -55,6 +112,19 @@ public class ComponentStore(GameObject gameObject)
             behaviour.OnLoad();
         return instance;
     }
+    
+    public Component? AddComponent(Type component)
+    {
+        if (!component.IsSubclassOf(typeof(Component))) return null;
+        if (Activator.CreateInstance(component) is not Component instance) return null;
+        _components.Add(instance);
+        instance.GameObject = GameObject;
+        if (!Application.IsRunning) return instance;
+        instance.Initialize();
+        if (instance is Behaviour behaviour)
+            behaviour.OnLoad();
+        return instance;
+    }
 
     public T AddComponent<T>(T component) where T : Component
     {
@@ -77,6 +147,8 @@ public class ComponentStore(GameObject gameObject)
     {
         component.OnRemoved();
         component.OnDisable();
+        if (SceneManager.CurrentScene != null)
+            SceneManager.CurrentScene.RemoveComponent(component);
         _components.Remove(component);
     }
 

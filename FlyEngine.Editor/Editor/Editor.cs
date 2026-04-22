@@ -1,6 +1,7 @@
 ﻿using System.Reflection;
 using FlyEngine.Core.Engine;
 using FlyEngine.Core.Engine.Components.Common;
+using FlyEngine.Core.Engine.SceneManagement;
 using FlyEngine.Editor.Systems;
 using FlyEngine.Editor.Systems.Console;
 using FlyEngine.Editor.Systems.Gui;
@@ -12,6 +13,7 @@ using LiteNetLib;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.Extensions.Logging;
+using Silk.NET.Maths;
 
 namespace FlyEngine.Editor;
 
@@ -19,8 +21,6 @@ internal abstract class EditorClass;
 
 public static class Editor
 {
-    private const string ScriptsAssemblyName = "ScriptsAssembly";
-    
     private static readonly ILogger Logger = new Logger<EditorClass>(LoggerFactory.Create(b => b.AddConsole()));
     
     private static string? _currentProjectPath;
@@ -41,8 +41,8 @@ public static class Editor
     
     private static string? _tempPath;
     public static string? TempPath => GetTempPath();
-    
-    public static EditorScriptLoader ScriptLoader { get; private set; } = new();
+
+    public static EditorScriptLoader? ScriptLoader => _window?.EditorScriptLoader;
     
     private static FileSystemWatcher? _assetsWatcher;
 
@@ -96,14 +96,30 @@ public static class Editor
 
     private static EditorWindow? _window;
 
-    private static readonly List<EditorSystem> Systems = [new EditorGui(), new EditorConsole()];
+    private static readonly List<EditorSystem> Systems = [
+        new EditorGui(),
+        new EditorConsole(),
+        new EditorCameraMovement()];
 
     public static readonly EditorTaskQueue TaskQueue = new();
     
     public static bool IsRunningTask => TaskQueue.IsProcessing;
     public static bool CompileError { get; private set; }
+    public static event Action? OnCompileScripts; 
 
     private static bool _scriptsDirty;
+
+    public static Vector2D<int>? ViewportSize
+    {
+        get => _window?.EditorViewport;
+        set
+        {
+            if (_window != null && value != null)
+                _window.EditorViewport = value.Value;
+        }
+    }
+
+    public static bool IsSceneOpened { get; set; }
     
     public static void Start(EditorWindow window)
     {
@@ -125,6 +141,8 @@ public static class Editor
     {
         if (_assetsPath == null || _assetsPath != _assetsWatcher?.Path) return;
         _scriptsDirty = true;
+        if (SceneManager.CurrentScene != null && SceneManager.CurrentScene.Path != null && !DirectoryExists(SceneManager.CurrentScene.Path))
+            SceneManager.UnloadScene();
     }
 
     private static void OnFocusChanged(bool value)
@@ -135,7 +153,7 @@ public static class Editor
 
     public static async Task CompileScriptsAsync()
     {
-        if (AssetsPath == null) return;
+        if (AssetsPath == null || _window == null) return;
         if (EditorConsole.Instance != null)
             EditorConsole.Instance.Messages.Clear();
         try
@@ -151,7 +169,7 @@ public static class Editor
                     return CSharpSyntaxTree.ParseText(code, path: f);
                 }).ToList();
 
-                var compilation = CSharpCompilation.Create(ScriptsAssemblyName)
+                var compilation = CSharpCompilation.Create(Application.ScriptsAssemblyName)
                     .WithOptions(new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary)
                         .WithOptimizationLevel(OptimizationLevel.Debug))
                     .AddReferences(GetMetadataReferences())
@@ -174,17 +192,13 @@ public static class Editor
                 CompileError = false;
                 compilationResult.Stream.Seek(0, SeekOrigin.Begin);
                 
-                ScriptLoader.Unload();
-                ScriptLoader = new EditorScriptLoader(); 
-                ScriptLoader.LoadFromStream(compilationResult.Stream);
-                var assembly = ScriptLoader.LoadFromAssemblyName(new AssemblyName(ScriptsAssemblyName));
-                foreach (var type in assembly.GetTypes().Where(t => t.IsSubclassOf(typeof(Behaviour))))
-                {
-                    Console.WriteLine($"Found behaviour: {type}");
-                }
+                _window.EditorScriptLoader.Unload();
+                _window.EditorScriptLoader = new EditorScriptLoader();
+                _window.EditorScriptLoader.LoadFromStream(compilationResult.Stream);
                 
                 await compilationResult.Stream.DisposeAsync();
                 Logger.LogInformation("Scripts compiled successfully!");
+                OnCompileScripts?.Invoke();
             }
             else
             {

@@ -21,7 +21,7 @@ public class OpenGlWindow(ApplicationWindowOptions windowOptions) : BaseWindow(w
     
     protected override void OnLoad()
     {
-        OpenGl = new OpenGl(Handle);
+        OpenGl = new OpenGl(Handle, this);
         OpenGl.Initialize();
         OpenGl.ProcessShaders();
 
@@ -68,7 +68,7 @@ public class OpenGlWindow(ApplicationWindowOptions windowOptions) : BaseWindow(w
         ImGui.Controller.Update((float)deltaTime);
         if (Scene != null)
         {
-            var renderers = CollectionsMarshal.AsSpan(Scene.UiWindows.ToList());
+            var renderers = CollectionsMarshal.AsSpan(Scene.GuiWindows.ToList());
             for (var i = 0; i < renderers.Length; i++)
             {
                 var renderer = renderers[i];

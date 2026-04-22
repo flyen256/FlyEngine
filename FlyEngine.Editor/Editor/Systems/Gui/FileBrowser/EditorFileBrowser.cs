@@ -61,12 +61,14 @@ public class EditorFileBrowser : EditorGuiWindow
                 if (ImGuiNet.Selectable($"[Folder] {Path.GetFileName(dir)}", false))
                     _currentDirectory = dir;
             }
+            CreateFileContextWindow();
 
             foreach (var file in Directory.GetFiles(_currentDirectory))
             {
                 var isSelected = (_selectedFile == file);
                 if (ImGuiNet.Selectable(Path.GetFileName(file), isSelected))
                     _selectedFile = file;
+                FileContextWindow(file);
 
                 if (ImGuiNet.IsItemHovered() && ImGuiNet.IsMouseDoubleClicked(0))
                     HandleFileOpen(file);
@@ -84,8 +86,6 @@ public class EditorFileBrowser : EditorGuiWindow
                 else if (ImGuiNet.IsItemDeactivated() && !ImGuiNet.IsKeyPressed(ImGuiKey.Enter) && !ImGuiNet.IsKeyPressed(ImGuiKey.KeypadEnter))
                     StopCreation();
             }
-
-            CreateFileContextWindow();
         }
         ImGuiNet.EndChild();
     }
@@ -128,9 +128,31 @@ public class EditorFileBrowser : EditorGuiWindow
         }
     }
 
+    private void FileContextWindow(string file)
+    {
+        if (ImGuiNet.BeginPopupContextItem("FileContextMenu" + file))
+        {
+            _selectedFile = file;
+            if (ImGuiNet.MenuItem("Delete File"))
+            {
+                try 
+                {
+                    File.Delete(file);
+                    _logger.LogInformation($"Deleted: {file}");
+                }
+                catch (Exception ex) 
+                {
+                    _logger.LogError($"Delete failed: {ex.Message}");
+                }
+            }
+            if (ImGuiNet.MenuItem("Rename")) { }
+            ImGuiNet.EndPopup();
+        }
+    }
+
     private void CreateFileContextWindow()
     {
-        if (ImGuiNet.BeginPopupContextWindow("FilesContextMenu"))
+        if (ImGuiNet.BeginPopupContextWindow("CreateFileContextMenu"))
         {
             if (ImGuiNet.MenuItem("New Scene"))
             {

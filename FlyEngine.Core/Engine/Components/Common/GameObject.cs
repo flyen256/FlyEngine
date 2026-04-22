@@ -30,14 +30,29 @@ public partial class GameObject : Object
     }
     [MemoryPackInclude]
     public required Transform Transform;
+
     [MemoryPackIgnore]
-    public ComponentStore ComponentStore;
+    private ComponentStore _componentStore;
+
+    [MemoryPackInclude]
+    public ComponentStore ComponentStore
+    {
+        get => _componentStore;
+        set
+        {
+            if (value == null) return;
+            _componentStore = value;
+        }
+    }
 
     private GameObject(string name = "New game object")
     {
         _name = name;
         Name = name;
-        ComponentStore = new ComponentStore(this);
+        ComponentStore = new ComponentStore
+        {
+            GameObject = this
+        };
     }
 
     public static GameObject Create(string name, Component[]? components = null)
@@ -79,6 +94,11 @@ public partial class GameObject : Object
     public T AddComponent<T>() where T : Component
     {
         return ComponentStore.AddComponent<T>();
+    }
+    
+    public Component? AddComponent(Type component)
+    {
+        return ComponentStore.AddComponent(component);
     }
 
     public T AddComponent<T>(T component) where T : Component
