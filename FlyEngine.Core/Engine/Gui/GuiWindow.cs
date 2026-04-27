@@ -1,10 +1,10 @@
 ﻿using System.Numerics;
-using FlyEngine.Core.Engine.Components.Common;
-using FlyEngine.Core.Engine.Gui.Layout;
+using FlyEngine.Core.Components.Common;
+using FlyEngine.Core.Gui.Layout;
 using ImGuiNET;
 using ImGuiNet = ImGuiNET.ImGui;
 
-namespace FlyEngine.Core.Engine.Gui;
+namespace FlyEngine.Core.Gui;
 
 public abstract class GuiWindow : Component
 {

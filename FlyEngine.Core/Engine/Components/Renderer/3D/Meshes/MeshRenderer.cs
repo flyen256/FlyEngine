@@ -1,15 +1,16 @@
 using System.Numerics;
-using FlyEngine.Core.Engine.Components.Common;
-using FlyEngine.Core.Engine.Renderer;
-using FlyEngine.Core.Engine.Renderer.Common;
-using FlyEngine.Core.Engine.Renderer.Meshes;
+using FlyEngine.Core.Assets;
+using FlyEngine.Core.Components.Common;
+using FlyEngine.Core.Renderer;
+using FlyEngine.Core.Renderer.Common;
+using FlyEngine.Core.Renderer.Types;
 using Silk.NET.OpenGL;
 
-namespace FlyEngine.Core.Engine.Components.Renderer._3D.Meshes;
+namespace FlyEngine.Core.Components.Renderer._3D.Meshes;
 
 public class MeshRenderer : Behaviour
 {
-    public Vector3 AlbedoTint { get; set; } = Vector3.One;
+    public Color AlbedoTint { get; set; } = Color.White;
     public float Metallic { get; set; }
     public float Smoothness { get; set; }
     public Mesh? Mesh { get; set; }
@@ -35,7 +36,7 @@ public class MeshRenderer : Behaviour
             gl.Gl.ActiveTexture(TextureUnit.Texture0);
             gl.Gl.BindTexture(TextureTarget.Texture2D, gl.DefaultWhiteTexture);
 
-            shader.SetUniform(ShaderConstants.AlbedoTint, AlbedoTint);
+            shader.SetUniform(ShaderConstants.AlbedoTint, AlbedoTint.ToVector3());
             shader.SetUniform(ShaderConstants.Metallic, Metallic);
             shader.SetUniform(ShaderConstants.Smoothness, Smoothness);
         }

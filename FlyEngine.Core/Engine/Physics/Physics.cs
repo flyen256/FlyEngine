@@ -1,17 +1,22 @@
 ﻿using System.Diagnostics;
 using System.Numerics;
-using FlyEngine.Core.Engine.Cast;
-using FlyEngine.Core.Engine.Components;
-using FlyEngine.Core.Engine.Components.Colliders;
+using FlyEngine.Core.Cast;
+using FlyEngine.Core.Components;
+using FlyEngine.Core.Components.Colliders;
 using JoltPhysicsSharp;
+using Microsoft.Extensions.Logging;
 
-namespace FlyEngine.Core.Engine;
+namespace FlyEngine.Core;
 
 public static class Physics
 {
-    public static readonly PhysicsSystem System;
-    public static readonly BodyInterface BodyInterface;
-    public static readonly JobSystem JobSystem;
+    private abstract class PhysicsClass;
+    
+    private static readonly ILogger Logger = new Logger<PhysicsClass>(LoggerFactory.Create(b => b.AddConsole()));
+    
+    public static PhysicsSystem System;
+    public static BodyInterface BodyInterface;
+    public static JobSystem JobSystem;
 
     private static PhysicsSystemSettings _settings; 
     
@@ -27,7 +32,7 @@ public static class Physics
         public static readonly BroadPhaseLayer Moving = 1;
     }
 
-    static Physics()
+    public static void Init()
     {
         Foundation.SetTraceHandler(Console.WriteLine);
 
@@ -44,7 +49,9 @@ public static class Physics
         });
 #endif
 
-        if (!Foundation.Init())
+        var foundation = Foundation.Init();
+        Logger.LogInformation("Foundation initialized: {foundation}", foundation);
+        if (!foundation)
             return;
         _settings = new PhysicsSystemSettings
         {
@@ -59,6 +66,14 @@ public static class Physics
         System = new PhysicsSystem(_settings);
 
         BodyInterface = System.BodyInterface;
+    }
+
+    public static void Shutdown()
+    {
+        JobSystem.Dispose();
+        System.Dispose();
+        BodyInterface = BodyInterface.Null;
+        Foundation.Shutdown();
     }
     
     private static void SetupCollisionFiltering()
@@ -80,6 +95,17 @@ public static class Physics
     
     public static BodyID CreateBody(Shape shape, Vector3 position, Quaternion rotation, ObjectLayer layer, MotionType motionType = MotionType.Static)
     {
+        Logger.LogInformation("Creating body with data:" +
+                              "{@shape}," +
+                              "{@position}," +
+                              "{@rotation}," +
+                              "{@layer}," +
+                              "{@motiontype}",
+            shape,
+            position,
+            rotation,
+            layer,
+            motionType);
         var settings = new BodyCreationSettings(
             shape,
             position,

@@ -1,4 +1,4 @@
-namespace FlyEngine.Core.Engine.SceneManagement;
+namespace FlyEngine.Core.SceneManagement;
 
 public static class SceneManager
 {
@@ -15,13 +15,6 @@ public static class SceneManager
         LoadingProgress = 1f;
         IsLoading = false;
     }
-
-    public static async Task LoadSceneAsync(byte[] sceneData)
-    {
-        IsLoading = true;
-        LoadingProgress = 0f;
-        
-    }
     
     public static async Task LoadSceneAsync(Scene scene)
     {
@@ -35,6 +28,6 @@ public static class SceneManager
 
     public static void UnloadScene()
     {
-        CurrentScene?.OnUnload();
+        CurrentScene?.Unload();
     }
 }

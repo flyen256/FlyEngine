@@ -1,5 +1,5 @@
-﻿using FlyEngine.Core.Engine;
-using FlyEngine.Core.Engine.SceneManagement;
+﻿using FlyEngine.Core;
+using FlyEngine.Core.SceneManagement;
 using FlyEngine.Editor.SceneManagement;
 using ImGuiNET;
 
@@ -26,8 +26,7 @@ public class EditorNavBar : EditorGuiWindow
             if (Application.IsRunning)
             {
                 Application.Stop();
-                await Editor.TaskQueue.Enqueue(SceneSnapshot.RestoreSnapshotAsync,  "Restoring scene snapshot");
-                SceneSnapshot.DeleteSnapshot();
+                await Editor.TaskQueue.Enqueue(SceneSnapshot.RestoreSnapshotAsync, "Restoring scene snapshot");
             }
             else if (SceneManager.CurrentScene != null)
             {

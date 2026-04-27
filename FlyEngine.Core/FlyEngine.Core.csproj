@@ -66,6 +66,9 @@
     <None Remove="src\BuiltInResources\blender_suzanne.fbx" />
     <None Remove="src\Resources\sphere.fbx" />
     <EmbeddedResource Include="Engine\Resources\sphere.fbx" />
+    <None Update="Resources\Fonts\DejaVuSans.ttf">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 </Project>

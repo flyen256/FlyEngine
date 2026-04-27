@@ -1,5 +1,4 @@
 ﻿using System.Numerics;
-using FlyEngine.Editor.Systems.Console;
 using ImGuiNET;
 using Microsoft.Extensions.Logging;
 using ImGuiNet = ImGuiNET.ImGui;

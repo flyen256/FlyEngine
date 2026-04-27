@@ -1,7 +1,7 @@
 ﻿using Silk.NET.OpenGL;
 using Silk.NET.OpenGL.Extensions.ImGui;
 
-namespace FlyEngine.Core.Engine.Gui.ImGui;
+namespace FlyEngine.Core.Gui.ImGui;
 
 internal class ImGuiTexture : IDisposable
 {

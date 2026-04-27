@@ -1,11 +1,11 @@
 ﻿using System.Numerics;
 using ImGuiNet = ImGuiNET.ImGui;
 
-namespace FlyEngine.Core.Engine.Gui.Layout;
+namespace FlyEngine.Core.Gui.Layout;
 
 public class GuiList<TElement>(
     Func<IEnumerable<TElement>> listGetter,
-    Func<TElement, GuiElement> elementFactory) : GuiElement
+    Func<TElement, GuiElement> elementFactory) : GuiElement where TElement : notnull
 {
     private readonly Dictionary<TElement, GuiElement> _cache = new();
 

@@ -3,7 +3,7 @@ using Silk.NET.Core.Contexts;
 using Silk.NET.Maths;
 using Silk.NET.Windowing;
 
-namespace FlyEngine.Core.Engine;
+namespace FlyEngine.Core;
 
 public struct ApplicationWindowOptions(
     bool isVisible,

@@ -8,7 +8,7 @@ using Silk.NET.OpenGL;
 using Silk.NET.OpenGL.Extensions.ImGui;
 using Silk.NET.Windowing;
 
-namespace FlyEngine.Core.Engine.Gui.ImGui;
+namespace FlyEngine.Core.Gui.ImGui;
 
 public class ImGuiController : IDisposable
 {
@@ -76,7 +76,10 @@ public class ImGuiController : IDisposable
       IntPtr glyph_ranges = getGlyphRange != null ? getGlyphRange(io) : IntPtr.Zero;
       io.Fonts.AddFontFromFileTTF(imGuiFontConfig.Value.FontPath, (float) imGuiFontConfig.Value.FontSize, (ImFontConfigPtr) (ImFontConfig*) null, glyph_ranges);
     }
-    ArialFont = io.Fonts.AddFontFromFileTTF("C:\\Windows\\Fonts\\arial.ttf", 16.0f, null,
+    var currentDir = Directory.GetCurrentDirectory();
+    var resourcesDir = new DirectoryInfo(Path.Combine(currentDir, "Resources"));
+    var fontInfo = new FileInfo(Path.Combine(resourcesDir.FullName, "Fonts", "DejaVuSans.ttf"));
+    ArialFont = io.Fonts.AddFontFromFileTTF(fontInfo.FullName, 16.0f, null,
       io.Fonts.GetGlyphRangesCyrillic());
     if (onConfigureIO != null)
       onConfigureIO();

@@ -15,12 +15,21 @@ public class EditorTaskQueue
     {
         Task.Run(ProcessQueueAsync);
     }
+    
+    public void Enqueue(Action action, string? message = null)
+    {
+        var workItem = new EditorSyncWorkItem(action)
+        {
+            Message = message ?? "Unnamed Task",
+        };
+        _channel.Writer.TryWrite(workItem);
+    }
 
-    public Task<TResult> Enqueue<TResult, TParam>(Func<TParam, Task<TResult>> taskFunc, TParam param, string? name = null)
+    public Task<TResult> Enqueue<TResult, TParam>(Func<TParam, Task<TResult>> taskFunc, TParam param, string? message = null)
     {
         var workItem = new EditorWorkItemResultParam<TResult, TParam>(taskFunc, param) 
         {
-            Message = name ?? "Unnamed Task",
+            Message = message ?? "Unnamed Task",
         };
         _channel.Writer.TryWrite(workItem);
         return workItem.ResultTask;
@@ -36,11 +45,11 @@ public class EditorTaskQueue
         return workItem.ResultTask;
     }
     
-    public Task Enqueue<TParam>(Func<TParam, Task> taskFunc, TParam param, string? name = null)
+    public Task Enqueue<TParam>(Func<TParam, Task> taskFunc, TParam param, string? message = null)
     {
         var workItem = new EditorWorkItemParam<TParam>(taskFunc, param) 
         {
-            Message = name ?? "Unnamed Task",
+            Message = message ?? "Unnamed Task",
         };
         _channel.Writer.TryWrite(workItem);
         return workItem.ResultTask;

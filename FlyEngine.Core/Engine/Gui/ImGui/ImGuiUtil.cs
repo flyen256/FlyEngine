@@ -1,7 +1,7 @@
 ﻿using System.Diagnostics;
 using Silk.NET.OpenGL;
 
-namespace FlyEngine.Core.Engine.Gui.ImGui;
+namespace FlyEngine.Core.Gui.ImGui;
 
 internal static class Util
 {

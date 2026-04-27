@@ -1,6 +1,6 @@
 ﻿using Silk.NET.OpenGL;
 
-namespace FlyEngine.Core.Engine.Renderer;
+namespace FlyEngine.Core.Renderer;
 
 public class VertexArrayObject<TVertexType, TIndexType> : IDisposable
     where TVertexType : unmanaged

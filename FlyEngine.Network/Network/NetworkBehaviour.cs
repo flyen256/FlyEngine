@@ -1,4 +1,4 @@
-using FlyEngine.Core.Engine.Components.Common;
+using FlyEngine.Core.Components.Common;
 
 namespace FlyEngine.Network;
 

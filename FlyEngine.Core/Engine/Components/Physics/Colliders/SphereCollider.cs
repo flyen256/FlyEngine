@@ -1,6 +1,6 @@
 ﻿using JoltPhysicsSharp;
 
-namespace FlyEngine.Core.Engine.Components.Colliders;
+namespace FlyEngine.Core.Components.Colliders;
 
 public class SphereCollider : Collider
 {

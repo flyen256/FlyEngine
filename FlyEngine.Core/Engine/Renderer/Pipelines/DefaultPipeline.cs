@@ -1,17 +1,16 @@
-﻿using System.Diagnostics.CodeAnalysis;
-using System.Numerics;
+﻿using System.Numerics;
 using System.Runtime.InteropServices;
-using FlyEngine.Core.Engine.Components.Renderer;
-using FlyEngine.Core.Engine.Components.Renderer._3D;
-using FlyEngine.Core.Engine.Components.Renderer.Lighting;
-using FlyEngine.Core.Engine.Renderer.Common;
-using FlyEngine.Core.Engine.Renderer.Lighting;
-using FlyEngine.Core.Engine.SceneManagement;
+using FlyEngine.Core.Components.Renderer;
+using FlyEngine.Core.Components.Renderer._3D;
+using FlyEngine.Core.Components.Renderer.Lighting;
+using FlyEngine.Core.Renderer.Common;
+using FlyEngine.Core.Renderer.Lighting;
+using FlyEngine.Core.SceneManagement;
 using Microsoft.Extensions.Logging;
 using Silk.NET.Maths;
 using Silk.NET.OpenGL;
 
-namespace FlyEngine.Core.Engine.Renderer.Pipelines;
+namespace FlyEngine.Core.Renderer.Pipelines;
 
 public class DefaultPipeline(OpenGl openGl) : RenderPipeline(openGl)
 {

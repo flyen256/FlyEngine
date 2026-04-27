@@ -1,6 +1,6 @@
-using FlyEngine.Core.Engine;
-using FlyEngine.Core.Engine.Assets;
-using FlyEngine.Core.Engine.Components.Common;
+using FlyEngine.Core;
+using FlyEngine.Core.Assets;
+using FlyEngine.Core.Components.Common;
 using FlyEngine.Network.Serializable;
 using LiteNetLib;
 using LiteNetLib.Utils;

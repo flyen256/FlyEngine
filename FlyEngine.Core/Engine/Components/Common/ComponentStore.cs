@@ -2,10 +2,11 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using FlyEngine.Core.Engine.SceneManagement;
+using FlyEngine.Core.SceneManagement;
+using FlyEngine.Core.Serialization;
 using MemoryPack;
 
-namespace FlyEngine.Core.Engine.Components.Common;
+namespace FlyEngine.Core.Components.Common;
 
 [MemoryPackable]
 public partial class ComponentStore
@@ -23,7 +24,8 @@ public partial class ComponentStore
     {
         IncludeFields = true,
         PropertyNameCaseInsensitive = true,
-        NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals
+        NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals,
+        Converters = { new AssetConverterFactory() }
     };
 
     [MemoryPackInclude]
@@ -106,6 +108,7 @@ public partial class ComponentStore
         var instance = Activator.CreateInstance<T>();
         _components.Add(instance);
         instance.GameObject = GameObject;
+        SceneManager.CurrentScene?.RegisterComponent(instance, GameObject);
         if (!Application.IsRunning) return instance;
         instance.Initialize();
         if (instance is Behaviour behaviour)
@@ -117,6 +120,7 @@ public partial class ComponentStore
     {
         if (!component.IsSubclassOf(typeof(Component))) return null;
         if (Activator.CreateInstance(component) is not Component instance) return null;
+        SceneManager.CurrentScene?.RegisterComponent(instance, GameObject);
         _components.Add(instance);
         instance.GameObject = GameObject;
         if (!Application.IsRunning) return instance;
@@ -128,6 +132,7 @@ public partial class ComponentStore
 
     public T AddComponent<T>(T component) where T : Component
     {
+        SceneManager.CurrentScene?.RegisterComponent(component, GameObject);
         _components.Add(component);
         component.GameObject = GameObject;
         if (!Application.IsRunning) return component;

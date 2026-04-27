@@ -16,7 +16,7 @@ public class EditorConsoleGui : EditorGuiWindow
 
     protected override void OnRender(double deltaTime)
     {
-        if (EditorConsole.Instance == null || Core.Engine.Gui.ImGui.ImGui.Controller == null) return;
+        if (EditorConsole.Instance == null || Core.Gui.ImGui.ImGui.Controller == null) return;
         if (ImGui.Button("Clear")) { EditorConsole.Instance.Messages.Clear(); }
         ImGui.SameLine();
         ImGui.TextUnformatted($"Messages: {EditorConsole.Instance.Messages.Count}");
@@ -29,7 +29,7 @@ public class EditorConsoleGui : EditorGuiWindow
             foreach (var msg in EditorConsole.Instance.Messages)
             {
                 var color = GetColorForLevel(msg.Level);
-                ImGui.PushFont(Core.Engine.Gui.ImGui.ImGui.Controller.ArialFont);
+                ImGui.PushFont(Core.Gui.ImGui.ImGui.Controller.ArialFont);
                 ImGui.PushStyleColor(ImGuiCol.Text, color);
                 ImGui.TextUnformatted($"[{msg.Level}] {msg.Message}");
                 ImGui.PopStyleColor();

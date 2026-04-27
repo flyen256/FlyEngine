@@ -1,16 +1,16 @@
 ﻿using System.Numerics;
-using FlyEngine.Core.Engine.Components.Common;
-using FlyEngine.Core.Engine.Math;
-using FlyEngine.Core.Engine.Renderer;
+using FlyEngine.Core.Math;
+using FlyEngine.Core.Renderer;
 using Silk.NET.Maths;
 using Silk.NET.Windowing;
 
-namespace FlyEngine.Core.Engine;
+namespace FlyEngine.Core;
 
 public abstract class BaseWindow
 {
     public bool IsRunning { get; private set; }
     public bool IsLoaded { get; private set; }
+    public bool IsFocused { get; private set; } = true;
     public virtual bool IsEditor => false;
     
     public float AspectRatio { get; private set; }
@@ -22,14 +22,21 @@ public abstract class BaseWindow
     public event Action? OnLoadEvent;
     public event Action<double>? OnUpdateEvent;
     public event Action<double>? OnRenderEvent;
+    public event Action<bool>? OnFocusChanged;
     
     public OpenGl? OpenGl { get; protected set; }
     
     public Matrix4x4 EditorCameraViewMatrix { get; private set; }
-    public Matrix4x4 EditorCameraProjectionMatrix { get; private set; }
+    
+    private Matrix4x4 _editorCameraProjectionMatrix;
+    public Matrix4x4 EditorCameraProjectionMatrix
+    {
+        get => _editorCameraProjectionMatrix;
+        private set => _editorCameraProjectionMatrix = value;
+    }
 
-    public Vector3 EditorCameraPosition { get; private set; } = Vector3.Zero;
-    public Quaternion EditorCameraRotation { get; private set; } = Quaternion.Identity;
+    public Vector3 EditorCameraPosition { get; set; } = Vector3.Zero;
+    public Quaternion EditorCameraRotation { get; set; } = Quaternion.Identity;
     
     public EditorScriptLoader EditorScriptLoader { get; set; } = new();
     
@@ -44,6 +51,7 @@ public abstract class BaseWindow
             AspectRatio, 
             0.01f, 
             5000f);
+        _editorCameraProjectionMatrix.M22 *= -1;
         var cameraWorldMatrix = Matrix4x4.CreateFromQuaternion(EditorCameraRotation)
                                 * Matrix4x4.CreateTranslation(EditorCameraPosition);
 
@@ -61,6 +69,7 @@ public abstract class BaseWindow
         Handle.Resize += OnResize;
         Handle.FramebufferResize += OnFramebufferResize;
         Handle.Closing += OnClosing;
+        Handle.FocusChanged += FocusChanged;
     }
 
     public void Run()
@@ -110,4 +119,10 @@ public abstract class BaseWindow
     }
     
     protected virtual void OnFramebufferResize(Vector2D<int> newSize) { }
+
+    protected virtual void FocusChanged(bool value)
+    {
+        IsFocused = value;
+        OnFocusChanged?.Invoke(value);
+    }
 }

@@ -1,7 +1,7 @@
 ﻿using System.Numerics;
 using ImGuiNet = ImGuiNET.ImGui;
 
-namespace FlyEngine.Core.Engine.Gui.Layout;
+namespace FlyEngine.Core.Gui.Layout;
 
 public class GuiContainer : GuiElement
 {

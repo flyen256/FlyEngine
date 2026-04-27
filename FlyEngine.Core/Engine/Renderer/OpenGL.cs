@@ -1,11 +1,11 @@
 using System.Drawing;
-using FlyEngine.Core.Engine.Reactive;
-using FlyEngine.Core.Engine.Renderer.Meshes;
-using FlyEngine.Core.Engine.Renderer.Pipelines;
+using FlyEngine.Core.Assets;
+using FlyEngine.Core.Reactive;
+using FlyEngine.Core.Renderer.Pipelines;
 using Silk.NET.OpenGL;
 using Silk.NET.Windowing;
 
-namespace FlyEngine.Core.Engine.Renderer;
+namespace FlyEngine.Core.Renderer;
 
 public class OpenGl
 {
@@ -99,7 +99,11 @@ public class OpenGl
             16, 17, 18, 18, 19, 16,
             20, 21, 22, 22, 23, 20
         ];
-        return new Mesh(CubeMeshGuid, Gl, vertices, indices, (uint)indices.Length);
+        var cube = new Mesh(CubeMeshGuid, Gl, vertices, indices, (uint)indices.Length)
+        {
+            Name = "Cube"
+        };
+        return cube;
     }
 
     public string? LoadShaderCode(string shader)

@@ -1,7 +1,8 @@
 using System.Numerics;
+using FlyEngine.Core.Extensions;
 using MemoryPack;
 
-namespace FlyEngine.Core.Engine.Components.Common;
+namespace FlyEngine.Core.Components.Common;
 
 [MemoryPackable]
 public partial class Transform
@@ -49,7 +50,12 @@ public partial class Transform
     public Quaternion LocalRotation
     {
         get => _localRotation;
-        set { _localRotation = value; SetDirty(); }
+        set
+        {
+            _localRotation = value;
+            SetDirty();
+            Euler = value.ToEulerAngles();
+        }
     }
 
     [MemoryPackIgnore]

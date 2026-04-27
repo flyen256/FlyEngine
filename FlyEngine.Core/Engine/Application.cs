@@ -1,8 +1,8 @@
-using FlyEngine.Core.Engine.Renderer;
-using FlyEngine.Core.Engine.SceneManagement;
-using Scene = FlyEngine.Core.Engine.SceneManagement.Scene;
+using FlyEngine.Core.Renderer;
+using FlyEngine.Core.SceneManagement;
+using Scene = FlyEngine.Core.SceneManagement.Scene;
 
-namespace FlyEngine.Core.Engine;
+namespace FlyEngine.Core;
 
 public static class Application
 {
@@ -40,13 +40,13 @@ public static class Application
 
     private static void OnUpdate(double deltaTime)
     {
+        Input.Update(deltaTime);
         if (!IsRunning) return;
         if (_lastLoadedScene != Scene && Scene != null && !SceneManager.IsLoading)
         {
             _lastLoadedScene = Scene;
             _lastLoadedScene.OnLoad();
         }
-        Input.Update(deltaTime);
         Physics.System.Update((float)deltaTime, 1, Physics.JobSystem);
         if (Scene == null) return;
         foreach (var behaviour in Scene.Behaviours.Where(behaviour => behaviour.IsActive()))
@@ -66,6 +66,7 @@ public static class Application
     public static void Run()
     {
         if (Window == null) return;
+        Physics.Init();
         _isRunning = true;
         if (!Window.IsRunning)
             OpenWindow();
@@ -74,9 +75,11 @@ public static class Application
     public static void Stop()
     {
         _isRunning = false;
+        Physics.Shutdown();
         CleanUp();
         if (Window is { IsEditor: false })
             CloseWindow();
+        Input.CursorVisible = true;
     }
 
     public static void CloseWindow()

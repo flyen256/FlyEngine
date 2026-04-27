@@ -1,15 +1,18 @@
-﻿using System.Numerics;
-using FlyEngine.Core.Engine;
-using FlyEngine.Core.Engine.Components.Common;
-using FlyEngine.Core.Engine.SceneManagement;
+﻿using FlyEngine.Core;
+using FlyEngine.Core.Components.Common;
+using FlyEngine.Core.SceneManagement;
 using ImGuiNET;
 using MemoryPack;
+using Microsoft.Extensions.Logging;
+using Silk.NET.Input;
 using ImGuiNet = ImGuiNET.ImGui;
 
 namespace FlyEngine.Editor.Systems.Gui;
 
 public class EditorHierarchy : EditorGuiWindow
 {
+    private static readonly ILogger Logger = new Logger<EditorHierarchy>(LoggerFactory.Create(b => b.AddConsole()));
+    
     public static EditorHierarchy? Instance { get; private set; }
     
     protected override string Title => "Hierarchy" + (_isDirty ? " *" : string.Empty) + "###EditorHierarchy";
@@ -36,16 +39,26 @@ public class EditorHierarchy : EditorGuiWindow
 
     protected internal override async void OnUpdate(double deltaTime)
     {
-        var io = ImGuiNet.GetIO();
-
-        if (!io.KeyCtrl && (!ImGuiNet.IsKeyPressed(ImGuiKey.S) || Editor.IsRunningTask)) return;
-        await Editor.TaskQueue.Enqueue(TrySaveScene, "Saving scene");
-        _isDirty = false;
+        try
+        {
+            if (!Input.GetKey(Key.S) || !Input.GetKey(Key.ControlLeft) || !_isDirty) return;
+            await Editor.TaskQueue.Enqueue(TrySaveScene, "Saving scene");
+            _isDirty = false;
+        }
+        catch (Exception e)
+        {
+            Logger.LogError("{error}", e);
+        }
     }
 
     protected override void OnRender(double deltaTime)
     {
-        if (ImGuiNet.CollapsingHeader(Scene != null ? Scene.Name : "No Scene Selected") && Scene != null)
+        if (Scene == null)
+        {
+            ImGuiNet.Text("No Scene Selected");
+            return;
+        }
+        if (ImGuiNet.CollapsingHeader(Scene.Name))
         {
             if (ImGuiNet.BeginChild("GameObjects"))
             {
@@ -75,7 +88,6 @@ public class EditorHierarchy : EditorGuiWindow
                         StopCreation();
                     }
                 }
-
             }
             ImGuiNet.EndChild();
         }

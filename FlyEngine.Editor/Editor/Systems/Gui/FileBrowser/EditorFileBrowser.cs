@@ -1,4 +1,4 @@
-﻿using FlyEngine.Core.Engine.SceneManagement;
+﻿using FlyEngine.Core.SceneManagement;
 using FlyEngine.Editor.SceneManagement;
 using ImGuiNET;
 using MemoryPack;
@@ -183,7 +183,7 @@ public class EditorFileBrowser : EditorGuiWindow
             catch (Exception ex)
             {
                 _logger.LogError($"Failed to load scene: {ex}");
-                await Editor.TaskQueue.Enqueue(SceneSnapshot.RestoreSnapshotAsync, "Restoring scene");
+                SceneSnapshot.RestoreSnapshotAsync();
             }
         }
     }

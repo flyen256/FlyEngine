@@ -1,7 +1,7 @@
-using FlyEngine.Core.Engine.SceneManagement;
+using FlyEngine.Core.SceneManagement;
 using MemoryPack;
 
-namespace FlyEngine.Core.Engine.Components.Common;
+namespace FlyEngine.Core.Components.Common;
 
 [MemoryPackable]
 public partial class GameObject : Object

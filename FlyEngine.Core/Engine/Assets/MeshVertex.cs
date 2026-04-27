@@ -1,10 +1,12 @@
 ﻿using System.Numerics;
 using System.Runtime.InteropServices;
+using MemoryPack;
 
-namespace FlyEngine.Core.Engine.Renderer.Meshes;
+namespace FlyEngine.Core.Assets;
 
 [StructLayout(LayoutKind.Sequential, Pack = 1)]
-public struct MeshVertex
+[MemoryPackable]
+public partial struct MeshVertex
 {
     public Vector3 Position;
     public Vector3 Normal;

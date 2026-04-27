@@ -1,32 +1,24 @@
 ﻿using System.Numerics;
-using FlyEngine.Core.Engine.Extensions;
+using FlyEngine.Core.Extensions;
+using FlyEngine.Core.Renderer;
 using Silk.NET.Assimp;
+using File = System.IO.File;
+using Texture = FlyEngine.Core.Renderer.Texture;
 
-namespace FlyEngine.Core.Engine.Renderer.Meshes;
+namespace FlyEngine.Core.Assets;
 
 public static class ModelManager
 {
-    public static readonly Dictionary<string, List<Mesh>> Meshes = [];
-
-    private static readonly Assimp Assimp = Assimp.GetApi();
-
-    public static List<Mesh>? TryGetModel(string name)
+    public static readonly Assimp Assimp = Assimp.GetApi();
+    
+    public static unsafe List<Mesh> LoadModel(OpenGl openGl, string path)
     {
-        return !Meshes.TryGetValue(name, out var value) ? null : value;
-    }
-
-    public static unsafe List<Mesh> LoadModel(string name, OpenGl openGl)
-    {
-        if (Meshes.ContainsKey(name))
-            throw new Exception($"Mesh {name} is already loaded");
-        var assembly = typeof(OpenGl).Assembly;
-        var names = assembly.GetManifestResourceNames();
-        var findName = names.ToList().Find(n => n.Contains(name));
-        if (findName == null) return [];
-        var stream = assembly.GetManifestResourceMemory(findName);
+        if (AssetsManager.LoadedAssetsPaths.Contains(path))
+            throw new Exception($"Mesh {path} is already loaded");
+        var stream = File.ReadAllBytes(path);
         if (stream.Length == 0) return [];
         var meshes = new List<Mesh>();
-        var ext = name.Split('.').Last();
+        var ext = path.Split('.').Last();
         var hintBytes = System.Text.Encoding.ASCII.GetBytes(ext + "\0");
         fixed (byte* pData = stream)
         {
@@ -44,9 +36,39 @@ public static class ModelManager
                 ProcessNode(scene->MRootNode, scene, ref meshes, openGl);
             }
         }
+        
+        return meshes;
+    }
 
-        var meshName = name.Remove(name.Length - 1 - ext.Length, ext.Length + 1);
-        Meshes.Add(meshName, meshes);
+    public static unsafe List<Mesh> LoadModel(string embeddedResourceName, OpenGl openGl)
+    {
+        if (AssetsManager.LoadedAssetsPaths.Contains(embeddedResourceName))
+            throw new Exception($"Mesh {embeddedResourceName} is already loaded");
+        var assembly = typeof(OpenGl).Assembly;
+        var names = assembly.GetManifestResourceNames();
+        var findName = names.ToList().Find(n => n.Contains(embeddedResourceName));
+        if (findName == null) return [];
+        var stream = assembly.GetManifestResourceMemory(findName);
+        if (stream.Length == 0) return [];
+        var meshes = new List<Mesh>();
+        var ext = embeddedResourceName.Split('.').Last();
+        var hintBytes = System.Text.Encoding.ASCII.GetBytes(ext + "\0");
+        fixed (byte* pData = stream)
+        {
+            fixed (byte* pHint = hintBytes)
+            {
+                var scene = Assimp.ImportFileFromMemory(pData, (uint)stream.Length,
+                    (uint)(PostProcessSteps.Triangulate |
+                           PostProcessSteps.GenerateNormals |
+                           PostProcessSteps.JoinIdenticalVertices), pHint);
+                if (scene == null || scene->MFlags == Assimp.SceneFlagsIncomplete || scene->MRootNode == null)
+                {
+                    var error = Assimp.GetErrorStringS();
+                    throw new Exception(error);
+                }
+                ProcessNode(scene->MRootNode, scene, ref meshes, openGl);
+            }
+        }
         
         return meshes;
     }
@@ -124,6 +146,7 @@ public static class ModelManager
             textures.AddRange(heightMaps);
 
         var result = new Mesh(Guid.NewGuid(), openGl.Gl, vertices, indices, (uint)indices.Count);
+        result.Name = mesh->MName;
         return result;
     }
     

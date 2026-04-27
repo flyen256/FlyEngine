@@ -1,4 +1,4 @@
-namespace FlyEngine.Core.Engine.Reactive;
+namespace FlyEngine.Core.Reactive;
 
 public class ReactiveList<T>
 {

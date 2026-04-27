@@ -3,5 +3,6 @@
 public abstract class EditorQueueItem
 {
     public string Message { get; init; } = string.Empty;
-    public abstract Task ExecuteAsync();
+    public virtual void Execute() { }
+    public virtual Task ExecuteAsync() { return Task.CompletedTask; }
 }

@@ -1,14 +1,12 @@
 ﻿using System.Runtime.InteropServices;
-using FlyEngine.Core.Engine;
-using FlyEngine.Core.Engine.Components.Renderer;
-using FlyEngine.Core.Engine.Components.Renderer._3D;
-using FlyEngine.Core.Engine.Gui.ImGui;
-using FlyEngine.Core.Engine.Renderer;
-using FlyEngine.Core.Engine.SceneManagement;
-using FlyEngine.Editor.Systems;
+using FlyEngine.Core;
+using FlyEngine.Core.Components.Renderer;
+using FlyEngine.Core.Components.Renderer._3D;
+using FlyEngine.Core.Gui.ImGui;
+using FlyEngine.Core.Renderer;
+using FlyEngine.Core.SceneManagement;
 using Microsoft.Extensions.Logging;
 using Silk.NET.Maths;
-using Silk.NET.OpenGL;
 
 namespace FlyEngine.Editor.Window;
 

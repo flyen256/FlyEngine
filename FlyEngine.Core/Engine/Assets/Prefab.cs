@@ -1,4 +1,4 @@
-﻿namespace FlyEngine.Core.Engine.Assets;
+﻿namespace FlyEngine.Core.Assets;
 
 public class Prefab(Guid guid) : Asset(guid)
 {

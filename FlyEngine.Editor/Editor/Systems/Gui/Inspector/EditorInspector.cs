@@ -2,9 +2,11 @@
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
-using FlyEngine.Core.Engine;
-using FlyEngine.Core.Engine.Components.Common;
-using FlyEngine.Core.Engine.Extensions;
+using FlyEngine.Core;
+using FlyEngine.Core.Assets;
+using FlyEngine.Core.Components.Common;
+using FlyEngine.Core.Extensions;
+using FlyEngine.Core.SceneManagement;
 using FlyEngine.Editor.Systems.Console;
 using FlyEngine.Network;
 using ImGuiNET;
@@ -21,34 +23,52 @@ public class EditorInspector : EditorGuiWindow
     
     protected override string Title => "Inspector";
 
-    private GameObject? SelectedGameObject => EditorHierarchy.Instance?.SelectedGameObject;
+    private static GameObject? SelectedGameObject => EditorHierarchy.Instance?.SelectedGameObject;
     private GameObject? _lastSelected;
     private Vector3 _eulerRotation;
 
-    private List<Type> _componentTypes = [];
+    private readonly List<Type> _componentTypes = [];
+    private readonly List<Asset> _assets = [];
 
     private bool _addComponentModal;
+    private bool _assetSelectorModal;
 
     private string _searchComponent = string.Empty;
+    private string _searchAsset = string.Empty;
+    
+    private VariableInfo? _selectedVariableInfo;
+    private Component? _selectedComponent;
+
+    private readonly PropertyRenderer _propertyRenderer;
 
     public EditorInspector()
     {
         Instance = this;
+        _propertyRenderer = new PropertyRenderer(this);
+        RefreshComponents();
+        RefreshAssets();
     }
 
     protected internal override void OnLoad()
     {
         Editor.OnCompileScripts += OnCompileScripts;
+        AssetsManager.OnAssetsChanged += OnReloadAssets;
     }
 
     protected internal override void OnUnload()
     {
         Editor.OnCompileScripts -= OnCompileScripts;
+        AssetsManager.OnAssetsChanged -= OnReloadAssets;
     }
 
     private void OnCompileScripts()
     {
         RefreshComponents();
+    }
+
+    private void OnReloadAssets()
+    {
+        RefreshAssets();
     }
 
     protected override void BeforeBegin()
@@ -69,6 +89,7 @@ public class EditorInspector : EditorGuiWindow
         if (ImGuiNet.Button("Add Component"))
             _addComponentModal = true;
         RenderAddComponentModal();
+        RenderAssetSelectorModal();
     }
     
     private void RenderAddComponentModal()
@@ -100,6 +121,48 @@ public class EditorInspector : EditorGuiWindow
         }
     }
 
+    private void RenderAssetSelectorModal()
+    {
+        if (_assetSelectorModal)
+            ImGuiNet.OpenPopup("SelectAsset");
+
+        var center = ImGuiNet.GetMainViewport().GetCenter();
+        ImGuiNet.SetNextWindowPos(center, ImGuiCond.Appearing, new Vector2(0.5f, 0.5f));
+
+        if (ImGuiNet.BeginPopupModal("SelectAsset", ref _assetSelectorModal, ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoMove))
+        {
+            ImGuiNet.InputText("Search", ref _searchAsset, 1024);
+
+            var assets = SearchAssets();
+            if (ImGuiNet.BeginChild("SelectAssetList", new Vector2(0, 400)) && assets.Count > 0)
+            {
+                for (var i = 0; i < assets.Count; i++)
+                {
+                    var asset = assets[i];
+                    if (!ImGuiNet.Selectable(asset.Name+$"##Asset_{i}")) continue;
+                    SelectAsset(asset);
+                    _assetSelectorModal = false;
+                    ImGuiNet.CloseCurrentPopup();
+                }
+                ImGuiNet.EndChild();
+            }
+            ImGuiNet.Spacing();
+
+            ImGuiNet.EndPopup();
+        }
+    }
+
+    private void SelectAsset(Asset asset)
+    {
+        if (_selectedVariableInfo == null || _selectedComponent == null) return;
+        _selectedVariableInfo.SetValue(_selectedComponent, asset);
+        _assetSelectorModal = false;
+        _selectedVariableInfo = null;
+        _selectedComponent = null;
+        _searchComponent = string.Empty;
+        EditorAction.MarkDirty();
+    }
+
     private void AddComponent(Type type)
     {
         if (!type.IsSubclassOf(typeof(Component)))
@@ -111,7 +174,9 @@ public class EditorInspector : EditorGuiWindow
             });
             return;
         }
-        SelectedGameObject?.AddComponent(type);
+        var component = SelectedGameObject?.AddComponent(type);
+        if (component != null && SelectedGameObject != null)
+            SceneManager.CurrentScene?.RegisterComponent(component, SelectedGameObject);
         EditorAction.MarkDirty();
     }
 
@@ -130,10 +195,17 @@ public class EditorInspector : EditorGuiWindow
         _componentTypes.AddRange(gameAssembly.GetTypes().Where(t => t.IsSubclassOf(typeof(Component))));
     }
 
-    private List<Type> SearchComponents()
+    private void RefreshAssets()
     {
-        return _componentTypes.Where(c => Regex.IsMatch(c.Name, _searchComponent)).ToList();
+        _assets.Clear();
+        _assets.AddRange(AssetsManager.Assets);
     }
+
+    private List<Type> SearchComponents() =>
+        _componentTypes.Where(c => Regex.IsMatch(c.Name, _searchComponent)).ToList();
+    
+    private List<Asset> SearchAssets() =>
+        _assets.Where(c => Regex.IsMatch(c.Name, _searchAsset)).ToList();
 
     private void RenderComponents()
     {
@@ -145,7 +217,7 @@ public class EditorInspector : EditorGuiWindow
             var variables = GetComponentVariables(component);
             ImGuiNet.Checkbox($"###{component.GetType().Name + $"{i}"}", ref componentEnabled);
             ImGuiNet.SameLine();
-            if (ImGuiNet.Button($"X##{component.SceneIndex}"))
+            if (ImGuiNet.Button($"X##{component.GetType().Name}-{component.SceneIndex}"))
             {
                 component.Destroy();
                 EditorAction.MarkDirty();
@@ -154,7 +226,7 @@ public class EditorInspector : EditorGuiWindow
             if (ImGuiNet.CollapsingHeader($"{component.GetType().Name}###{component.GetType().Name + $"{i}"}header", ImGuiTreeNodeFlags.DefaultOpen))
             {
                 foreach (var variableInfo in variables)
-                    PropertyRenderer.Render(variableInfo, component);
+                    _propertyRenderer.Render(variableInfo, component);
             }
 
             if (component.Enabled != componentEnabled)
@@ -172,7 +244,7 @@ public class EditorInspector : EditorGuiWindow
         var properties = type.GetProperties()
             .Where(f => f.GetSetMethod(false) != null).Cast<MemberInfo>();
         var variables =
-            type.GetFields().Concat(properties).Where(f => f.DeclaringType == type);
+            type.GetFields().Concat(properties);
 
         return CollectionsMarshal.AsSpan(variables.Select(v => new VariableInfo(v)).ToList());
     }
@@ -189,14 +261,7 @@ public class EditorInspector : EditorGuiWindow
                 transform.Position = pos;
                 EditorAction.MarkDirty();
             }
-
-            var scale = transform.Scale;
-            if (ImGuiNet.DragFloat3("Scale", ref scale, 0.1f))
-            {
-                transform.Scale = scale;
-                EditorAction.MarkDirty();
-            }
-
+            
             var rotation = transform.Euler;
             if (ImGuiNet.DragFloat3("Rotation", ref rotation, 0.5f))
             {
@@ -205,7 +270,21 @@ public class EditorInspector : EditorGuiWindow
                 EditorAction.MarkDirty();
             }
 
+            var scale = transform.Scale;
+            if (ImGuiNet.DragFloat3("Scale", ref scale, 0.1f))
+            {
+                transform.Scale = scale;
+                EditorAction.MarkDirty();
+            }
+
             ImGui.Separator();
         }
+    }
+    
+    public void OpenAssetSelector(VariableInfo variableInfo, Component component)
+    {
+        _assetSelectorModal = true;
+        _selectedVariableInfo = variableInfo;
+        _selectedComponent = component;
     }
 }

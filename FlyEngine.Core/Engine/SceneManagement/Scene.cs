@@ -1,27 +1,20 @@
 using System.Runtime.InteropServices;
-using System.Runtime.Serialization;
-using FlyEngine.Core.Engine.Assets;
-using FlyEngine.Core.Engine.Components.Colliders;
-using FlyEngine.Core.Engine.Components.Common;
-using FlyEngine.Core.Engine.Components.Renderer;
-using FlyEngine.Core.Engine.Components.Renderer._3D;
-using FlyEngine.Core.Engine.Components.Renderer.Lighting;
-using FlyEngine.Core.Engine.Extensions;
-using FlyEngine.Core.Engine.Gui;
-using FlyEngine.Core.Engine.Gui.ImGui;
-using FlyEngine.Core.Engine.Renderer.Lighting;
+using FlyEngine.Core.Assets;
+using FlyEngine.Core.Components.Colliders;
+using FlyEngine.Core.Components.Common;
+using FlyEngine.Core.Components.Renderer;
+using FlyEngine.Core.Components.Renderer.Lighting;
+using FlyEngine.Core.Extensions;
+using FlyEngine.Core.Gui;
+using FlyEngine.Core.Gui.ImGui;
+using FlyEngine.Core.Renderer.Lighting;
 using MemoryPack;
 
-namespace FlyEngine.Core.Engine.SceneManagement;
+namespace FlyEngine.Core.SceneManagement;
 
 [MemoryPackable]
 public partial class Scene(Guid guid) : Asset(guid)
 {
-    [MemoryPackIgnore]
-    public string? Name { get; set; }
-    [MemoryPackIgnore]
-    public string? Path { get; set; }
-    
     [MemoryPackInclude]
     private List<GameObject> _gameObjects = [];
     [MemoryPackIgnore]
@@ -84,7 +77,7 @@ public partial class Scene(Guid guid) : Asset(guid)
         
     }
 
-    public void OnUnload()
+    public void Unload()
     {
         _gameObjects.Clear();
         _behaviours.Clear();
@@ -96,14 +89,6 @@ public partial class Scene(Guid guid) : Asset(guid)
 
     public void Update(double deltaTime)
     {
-        var span = CollectionsMarshal.AsSpan(_behaviours);
-
-        for (var i = 0; i < span.Length; i++)
-        {
-            var b = span[i];
-            if (b.Enabled)
-                b.OnUpdate(deltaTime);
-        }
         var gameObjects = CollectionsMarshal.AsSpan(_gameObjects);
         for (var i = gameObjects.Length - 1; i >= 0; i--)
         {
@@ -118,34 +103,31 @@ public partial class Scene(Guid guid) : Asset(guid)
         RegisterGameObjectComponents(go);
     }
 
-    internal void RegisterComponent(Component component, GameObject gameObject)
+    public void RegisterComponent(Component component, GameObject gameObject)
     {
         component.GameObject = gameObject;
-        var type = component.GetType();
-        if (type.IsSubclassOf(typeof(Behaviour)))
+        switch (component)
         {
-            component.SceneIndex = _behaviours.Count;
-            _behaviours.Add(component as Behaviour);
-        }
-        if (type.IsSubclassOf(typeof(LightSource)))
-        {
-            component.SceneIndex = _lights.Count;
-            _lights.Add(component as LightSource);
-        }
-        if (type.IsSubclassOf(typeof(Camera)))
-        {
-            component.SceneIndex = _cameras.Count;
-            _cameras.Add(component as Camera);
-        }
-        if (type.IsSubclassOf(typeof(GuiWindow)))
-        {
-            component.SceneIndex = _guiWindows.Count;
-            _guiWindows.Add(component as GuiWindow);
-        }
-        if (type.IsSubclassOf(typeof(Collider)))
-        {
-            component.SceneIndex = _colliders.Count;
-            _colliders.Add(component as Collider);
+            case Behaviour behaviour:
+                behaviour.SceneIndex = _behaviours.Count;
+                _behaviours.Add(behaviour);
+                break;
+            case LightSource lightSource:
+                lightSource.SceneIndex = _lights.Count;
+                _lights.Add(lightSource);
+                break;
+            case Camera camera:
+                camera.SceneIndex = _cameras.Count;
+                _cameras.Add(camera);
+                break;
+            case GuiWindow guiWindow:
+                guiWindow.SceneIndex = _guiWindows.Count;
+                _guiWindows.Add(guiWindow);
+                break;
+            case Collider collider:
+                collider.SceneIndex = _colliders.Count;
+                _colliders.Add(collider);
+                break;
         }
     }
 

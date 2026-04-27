@@ -1,6 +1,4 @@
-using System;
-
-namespace FlyEngine.Core.Engine.Extensions;
+namespace FlyEngine.Core.Extensions;
 
 public static class ListExtensions
 {

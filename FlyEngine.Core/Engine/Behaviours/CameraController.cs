@@ -1,10 +1,10 @@
 ﻿using System.Numerics;
-using FlyEngine.Core.Engine.Components.Common;
-using FlyEngine.Core.Engine.Extensions;
+using FlyEngine.Core.Components.Common;
+using FlyEngine.Core.Extensions;
 using Silk.NET.Input;
 using Silk.NET.Maths;
 
-namespace FlyEngine.Core.Engine.Behaviours;
+namespace FlyEngine.Core.Behaviours;
 
 public class CameraController : Behaviour
 {
@@ -21,14 +21,11 @@ public class CameraController : Behaviour
     private void TestRaycast()
     {
         if (Physics.Raycast(Transform.Position, Transform.Forward, 5f, out var hit))
-        {
-            hit.Rigidbody?.AddImpulse(Transform.Forward * 100f);
-        }
+            hit.Rigidbody?.AddImpulse(Transform.Forward * 1000f, hit.Point);
     }
 
     public override void OnLoad()
     {
-        Input.CursorLocked = true;
         Input.CursorVisible = false;
     }
 

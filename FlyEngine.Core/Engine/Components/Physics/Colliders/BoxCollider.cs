@@ -1,7 +1,7 @@
 ﻿using System.Numerics;
 using JoltPhysicsSharp;
 
-namespace FlyEngine.Core.Engine.Components.Colliders;
+namespace FlyEngine.Core.Components.Colliders;
 
 public class BoxCollider : Collider
 {

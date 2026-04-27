@@ -1,4 +1,4 @@
-namespace FlyEngine.Core.Engine.Components.Common;
+namespace FlyEngine.Core.Components.Common;
 
 public abstract class Object
 {

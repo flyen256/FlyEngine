@@ -1,8 +1,4 @@
-﻿using System.Numerics;
-using ImGuiNET;
-using Microsoft.Extensions.Logging;
-
-namespace FlyEngine.Editor.Systems.Console;
+﻿namespace FlyEngine.Editor.Systems.Console;
 
 public class EditorConsole : EditorSystem
 {

@@ -1,7 +1,7 @@
-﻿using FlyEngine.Core.Engine.Gui.Layout;
+﻿using FlyEngine.Core.Gui.Layout;
 using ImGuiNet = ImGuiNET.ImGui;
 
-namespace FlyEngine.Core.Engine.Gui.Elements;
+namespace FlyEngine.Core.Gui.Elements;
 
 public class Label(string text) : GuiElement
 {

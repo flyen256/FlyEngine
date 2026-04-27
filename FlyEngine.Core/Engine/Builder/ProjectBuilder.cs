@@ -1,6 +1,4 @@
-﻿using FlyEngine.Core.Engine.Assets;
-
-namespace FlyEngine.Core.Engine.Builder;
+﻿namespace FlyEngine.Core.Builder;
 
 public class ProjectBuilder(string outputPath)
 {

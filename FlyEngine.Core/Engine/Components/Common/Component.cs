@@ -1,16 +1,19 @@
-using System.Reflection;
-using FlyEngine.Core.Engine.SceneManagement;
+using System.Text.Json.Serialization;
+using FlyEngine.Core.CustomAttributes;
 using MemoryPack;
 
-namespace FlyEngine.Core.Engine.Components.Common;
+namespace FlyEngine.Core.Components.Common;
 
 [MemoryPackable]
 public partial class Component : Object
 {
+    [HideInInspector]
     [MemoryPackInclude]
     private bool _enabled = true;
 
+    [HideInInspector]
     [MemoryPackIgnore]
+    [JsonIgnore]
     public bool Enabled
     {
         get => _enabled;
@@ -24,17 +27,25 @@ public partial class Component : Object
                 OnDisable();
         }
     }
+    [HideInInspector]
     [MemoryPackIgnore]
+    [JsonIgnore]
     public virtual bool AllowMultipleInstances => true;
     [MemoryPackIgnore]
-    [System.Text.Json.Serialization.JsonIgnore]
+    [JsonIgnore]
+    [HideInInspector]
     public GameObject GameObject;
     [MemoryPackIgnore]
-    [System.Text.Json.Serialization.JsonIgnore]
+    [JsonIgnore]
+    [HideInInspector]
     public Transform Transform => GameObject.Transform;
     [MemoryPackIgnore]
+    [JsonIgnore]
+    [HideInInspector]
     public bool Initialized { get; private set; }
     [MemoryPackIgnore]
+    [JsonIgnore]
+    [HideInInspector]
     public int SceneIndex { get; internal set; } = -1;
 
     protected virtual void OnInitialize() { }

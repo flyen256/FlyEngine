@@ -3,7 +3,7 @@ using Silk.NET.Maths;
 using Silk.NET.OpenGL;
 using Silk.NET.Windowing;
 
-namespace FlyEngine.Core.Engine.Gui.ImGui;
+namespace FlyEngine.Core.Gui.ImGui;
 
 public static class ImGui
 {

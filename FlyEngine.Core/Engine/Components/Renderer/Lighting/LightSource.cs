@@ -1,14 +1,15 @@
 using System.Numerics;
-using FlyEngine.Core.Engine.Components.Common;
-using FlyEngine.Core.Engine.Math;
-using FlyEngine.Core.Engine.Renderer.Lighting;
+using FlyEngine.Core.Components.Common;
+using FlyEngine.Core.Math;
+using FlyEngine.Core.Renderer.Lighting;
+using FlyEngine.Core.Renderer.Types;
 
-namespace FlyEngine.Core.Engine.Components.Renderer.Lighting;
+namespace FlyEngine.Core.Components.Renderer.Lighting;
 
 public class LightSource : Component
 {
     public LightType Type { get; set; } = LightType.Point;
-    public Vector3 Color { get; set; } = Vector3.One;
+    public Color Color { get; set; } = Color.White;
     public float Intensity { get; set; } = 1f;
     public float Range { get; set; } = 10f;
     public float SpotOuterDegrees { get; set; } = 80f;
@@ -25,7 +26,7 @@ public class LightSource : Component
         var right = Vector3.Normalize(Vector3.Transform(Vector3.UnitX, rot));
         var up = Vector3.Normalize(Vector3.Transform(Vector3.UnitY, rot));
 
-        var radiance = Color * Intensity;
+        var radiance = Color.ToVector3() * Intensity;
         var type = (float)Type;
 
         return Type switch

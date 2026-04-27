@@ -1,4 +1,4 @@
-﻿namespace FlyEngine.Core.Engine.Math;
+﻿namespace FlyEngine.Core.Math;
 
 public static class MathHelper
 {
