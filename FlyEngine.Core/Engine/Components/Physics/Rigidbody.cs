@@ -9,6 +9,7 @@ namespace FlyEngine.Core.Components;
 public class Rigidbody : Behaviour
 {
     public bool IsKinematic { get; set; }
+    public MotionType MotionType { get; set; } = MotionType.Dynamic;
     
     [JsonIgnore]
     private Collider? _collider;
@@ -27,7 +28,7 @@ public class Rigidbody : Behaviour
             _collider = collider;
             return;
         }
-        if (_collider.MotionType != MotionType.Dynamic || IsKinematic)
+        if (MotionType != MotionType.Dynamic || IsKinematic)
         {
             Physics.SetPosition(_collider.BodyId, Transform.Position);
             return;
@@ -62,16 +63,23 @@ public class Rigidbody : Behaviour
 
     private bool CanApplyPhysics()
     {
-        return _collider != null && !IsKinematic && _collider.MotionType == MotionType.Dynamic;
+        return _collider != null &&
+               _collider.IsValid() &&
+               !IsKinematic &&
+               MotionType == MotionType.Dynamic;
     }
 
     private Vector3 GetPosition()
     {
-        return _collider != null ? Physics.GetPosition(_collider.BodyId) : Vector3.Zero;
+        return _collider != null && _collider.IsValid() ?
+            Physics.GetPosition(_collider.BodyId) :
+            Vector3.Zero;
     }
     
     private Quaternion GetRotation()
     {
-        return _collider != null ? Physics.GetRotation(_collider.BodyId) : Quaternion.Identity;
+        return _collider != null && _collider.IsValid() ?
+            Physics.GetRotation(_collider.BodyId) :
+            Quaternion.Identity;
     }
 }

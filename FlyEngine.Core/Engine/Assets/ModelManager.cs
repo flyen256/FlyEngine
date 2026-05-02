@@ -3,7 +3,6 @@ using FlyEngine.Core.Extensions;
 using FlyEngine.Core.Renderer;
 using Silk.NET.Assimp;
 using File = System.IO.File;
-using Texture = FlyEngine.Core.Renderer.Texture;
 
 namespace FlyEngine.Core.Assets;
 
@@ -45,14 +44,12 @@ public static class ModelManager
         if (AssetsManager.LoadedAssetsPaths.Contains(embeddedResourceName))
             throw new Exception($"Mesh {embeddedResourceName} is already loaded");
         var assembly = typeof(OpenGl).Assembly;
-        var names = assembly.GetManifestResourceNames();
-        var findName = names.ToList().Find(n => n.Contains(embeddedResourceName));
-        if (findName == null) return [];
-        var stream = assembly.GetManifestResourceMemory(findName);
+        var name = assembly.GetManifestResourceNames().ToList().Find(n => n.Contains(embeddedResourceName));
+        if (name == null) return [];
+        var stream = assembly.GetManifestResourceMemory(name);
         if (stream.Length == 0) return [];
         var meshes = new List<Mesh>();
-        var ext = embeddedResourceName.Split('.').Last();
-        var hintBytes = System.Text.Encoding.ASCII.GetBytes(ext + "\0");
+        var hintBytes = System.Text.Encoding.ASCII.GetBytes(embeddedResourceName.Split('.').Last() + "\0");
         fixed (byte* pData = stream)
         {
             fixed (byte* pHint = hintBytes)
@@ -84,16 +81,13 @@ public static class ModelManager
         }
 
         for (var i = 0; i < node->MNumChildren; i++)
-        {
             ProcessNode(node->MChildren[i], scene, ref meshes, openGl);
-        }
     }
 
     private static unsafe Mesh? ProcessMesh(Silk.NET.Assimp.Mesh* mesh, Scene* scene, OpenGl openGl)
     {
         var vertices = new List<MeshVertex>();
         var indices = new List<uint>();
-        var textures = new List<Texture>();
 
         for (uint i = 0; i < mesh->MNumVertices; i++)
         {
@@ -103,12 +97,8 @@ public static class ModelManager
                 // BoneIds = new int[Vertex.MAX_BONE_INFLUENCE];
                 // Weights = new float[Vertex.MAX_BONE_INFLUENCE];
                 Position = meshVertex,
+                Normal = mesh->MNormals != null ? mesh->MNormals[i] : new Vector3(0, 1, 0)
             };
-
-            if (mesh->MNormals != null)
-                vertex.Normal = mesh->MNormals[i];
-            else
-                vertex.Normal = new Vector3(0, 1, 0);
             if (mesh->MTangents != null)
                 vertex.Tangent = mesh->MTangents[i];
             if (mesh->MBitangents != null)
@@ -116,8 +106,8 @@ public static class ModelManager
 
             if (mesh->MTextureCoords[0] != null)
             {
-                var texcoord3 = mesh->MTextureCoords[0][i];
-                vertex.TextureCoordinates = new Vector2(texcoord3.X, texcoord3.Y);
+                var textureCoords = mesh->MTextureCoords[0][i];
+                vertex.TextureCoordinates = new Vector2(textureCoords.X, textureCoords.Y);
             }
 
             vertices.Add(vertex);
@@ -131,50 +121,40 @@ public static class ModelManager
         }
 
         var material = scene->MMaterials[mesh->MMaterialIndex];
+        var textures = new List<Texture>();
 
-        var diffuseMaps = LoadMaterialTextures(material, TextureType.Diffuse);
-        if (diffuseMaps.Count != 0)
-            textures.AddRange(diffuseMaps);
-        var specularMaps = LoadMaterialTextures(material, TextureType.Specular);
-        if (specularMaps.Count != 0)
-            textures.AddRange(specularMaps);
-        var normalMaps = LoadMaterialTextures(material, TextureType.Height);
-        if (normalMaps.Count != 0)
-            textures.AddRange(normalMaps);
-        var heightMaps = LoadMaterialTextures(material, TextureType.Ambient);
-        if (heightMaps.Count != 0)
-            textures.AddRange(heightMaps);
+        LoadMaterialTextures(material, textures, TextureType.Diffuse, openGl);
+        LoadMaterialTextures(material, textures, TextureType.Specular, openGl);
+        LoadMaterialTextures(material, textures, TextureType.Height, openGl);
+        LoadMaterialTextures(material, textures, TextureType.Ambient, openGl);
 
-        var result = new Mesh(Guid.NewGuid(), openGl.Gl, vertices, indices, (uint)indices.Count);
-        result.Name = mesh->MName;
-        return result;
+        return new Mesh(Guid.NewGuid(), textures, vertices, indices, (uint)indices.Count)
+        {
+            Name = mesh->MName
+        };
     }
     
-    private static unsafe List<Texture> LoadMaterialTextures(Material* mat, TextureType type)
+    private static unsafe void LoadMaterialTextures(Material* mat, List<Texture> textures, TextureType type, OpenGl openGl)
     {
         var textureCount = Assimp.GetMaterialTextureCount(mat, type);
-        var textures = new List<Texture>();
+        var loadedTextures = AssetsManager.GetAssets<Texture>();
         for (uint i = 0; i < textureCount; i++)
         {
             AssimpString path;
             Assimp.GetMaterialTexture(mat, type, i, &path, null, null, null, null, null, null);
             var skip = false;
-            // new Texture(path, Application.Instance.Gl);
-            // for (int j = 0; j < _texturesLoaded.Count; j++)
-            // {
-            //     if (_texturesLoaded[j].Path == path)
-            //     {
-            //         textures.Add(_texturesLoaded[j]);
-            //         skip = true;
-            //         break;
-            //     }
-            // }
-            // if (skip) continue;
-            // var texture = new Texture(_gl, Directory, type);
-            // texture.Path = path;
-            // textures.Add(texture);
-            // _texturesLoaded.Add(texture);
+            for (var j = 0; j < loadedTextures.Count; j++)
+            {
+                var currentTexture = loadedTextures[j];
+                if (currentTexture.AssimpPath != path) continue;
+                textures.Add(currentTexture);
+                skip = true;
+                break;
+            }
+            if (skip) continue;
+            var texture = new Texture(Guid.NewGuid(), type, path, openGl);
+            textures.Add(texture);
+            AssetsManager.AddAsset(texture);
         }
-        return textures;
     }
 }

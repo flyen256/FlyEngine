@@ -5,14 +5,18 @@ namespace FlyEngine.Core.Components.Colliders;
 
 public class Collider : Component
 {
-    public BodyID BodyId { get; protected set; }
-    public MotionType MotionType { get; set; } = MotionType.Dynamic;
+    public BodyID BodyId { get; protected set; } = BodyID.Invalid;
 
     protected override void OnInitialize()
     {
-        CreateBody();
+        CreateBody(TryGetComponent(out Rigidbody? rigidBody) ? rigidBody.MotionType : MotionType.Static);
         Physics.SetPosition(BodyId, Transform.Position);
     }
 
-    public virtual BodyID CreateBody() { return default; }
+    protected virtual void CreateBody(MotionType motionType) { }
+
+    public virtual bool IsValid()
+    {
+        return BodyId.IsValid && BodyId != BodyID.Invalid;
+    }
 }

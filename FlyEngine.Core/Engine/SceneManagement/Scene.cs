@@ -77,7 +77,7 @@ public partial class Scene(Guid guid) : Asset(guid)
         
     }
 
-    public void Unload()
+    public override void Unload()
     {
         _gameObjects.Clear();
         _behaviours.Clear();
@@ -85,6 +85,7 @@ public partial class Scene(Guid guid) : Asset(guid)
         _cameras.Clear();
         _guiWindows.Clear();
         _colliders.Clear();
+        base.Unload();
     }
 
     public void Update(double deltaTime)

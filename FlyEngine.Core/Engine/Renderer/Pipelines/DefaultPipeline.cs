@@ -3,6 +3,7 @@ using System.Runtime.InteropServices;
 using FlyEngine.Core.Components.Renderer;
 using FlyEngine.Core.Components.Renderer._3D;
 using FlyEngine.Core.Components.Renderer.Lighting;
+using FlyEngine.Core.Extensions;
 using FlyEngine.Core.Renderer.Common;
 using FlyEngine.Core.Renderer.Lighting;
 using FlyEngine.Core.SceneManagement;
@@ -81,7 +82,7 @@ public class DefaultPipeline(OpenGl openGl) : RenderPipeline(openGl)
             var rot = Matrix4x4.CreateFromQuaternion(sunLight.Transform.Rotation);
             var packForward = Vector3.Normalize(Vector3.Transform(-Vector3.UnitZ, rot));
             var lightDir = Vector3.Normalize(packForward);
-            lightSpace = ShadowMapping.CreateLightSpaceMatrix(
+            lightSpace = NumericsUtils.CreateLightSpaceMatrix(
                 lightDir,
                 camPosSys,
                 30f,

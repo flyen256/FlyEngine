@@ -3,7 +3,6 @@ using FlyEngine.Core.Assets;
 using FlyEngine.Core.Components.Common;
 using FlyEngine.Core.Renderer;
 using FlyEngine.Core.Renderer.Common;
-using FlyEngine.Core.Renderer.Types;
 using Silk.NET.OpenGL;
 
 namespace FlyEngine.Core.Components.Renderer._3D.Meshes;

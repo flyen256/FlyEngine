@@ -7,10 +7,9 @@ public class BoxCollider : Collider
 {
     public Vector3 HalfExtent { get; set; }
 
-    public override BodyID CreateBody()
+    protected override void CreateBody(MotionType motionType)
     {
         BodyId = Physics.CreateBody(new BoxShape(HalfExtent), Transform.Position, Transform.Rotation,
-            Physics.Layers.Moving, MotionType);
-        return BodyId;
+            Physics.Layers.Moving, motionType);
     }
 }

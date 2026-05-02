@@ -47,11 +47,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <EmbeddedResource Include="Engine\Resources\suzanne.fbx" />
     <None Remove="src\Renderer\Shaders\vertex.vert" />
     <EmbeddedResource Include="Engine\Renderer\Shaders\vertex.vert" />
     <None Remove="src\Renderer\Shaders\fragment.frag" />
-    <EmbeddedResource Include="Engine\Renderer\Shaders\fragment.frag" />
     <None Remove="src\Renderer\Shaders\deferred_geom.frag" />
     <EmbeddedResource Include="Engine\Renderer\Shaders\deferred_geom.frag" />
     <None Remove="src\Renderer\Shaders\deferred_light.vert" />
@@ -65,7 +63,7 @@
     <None Remove="silk.jpg" />
     <None Remove="src\BuiltInResources\blender_suzanne.fbx" />
     <None Remove="src\Resources\sphere.fbx" />
-    <EmbeddedResource Include="Engine\Resources\sphere.fbx" />
+    <EmbeddedResource Include="Engine\Gizmos\sphere.fbx" />
     <None Update="Resources\Fonts\DejaVuSans.ttf">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

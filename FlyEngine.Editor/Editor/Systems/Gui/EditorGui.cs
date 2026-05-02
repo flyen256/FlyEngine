@@ -40,7 +40,7 @@ public class EditorGui : EditorSystem
 
     public override void OnRender(double deltaTime)
     {
-        var io = ImGui.GetIO();
+        var io = ImGuiNet.GetIO();
         io.ConfigFlags |= ImGuiConfigFlags.DockingEnable;
         io.ConfigFlags |= ImGuiConfigFlags.ViewportsEnable;
         DockSpaceId = ImGuiNet.DockSpaceOverViewport(0, ImGuiNet.GetMainViewport(),
@@ -138,10 +138,8 @@ public class EditorGui : EditorSystem
     private void RemoveWindow<T>() where T : EditorGuiWindow
     {
         var instance = _windows.FirstOrDefault(w => w.GetType() == typeof(T));
-        if (instance != null)
-        {
-            _windows.Remove(instance);
-            instance.OnUnload();
-        }
+        if (instance == null) return;
+        _windows.Remove(instance);
+        instance.OnUnload();
     }
 }

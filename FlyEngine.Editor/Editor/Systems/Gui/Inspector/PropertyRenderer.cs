@@ -2,7 +2,7 @@
 using FlyEngine.Core.Assets;
 using FlyEngine.Core.Components.Common;
 using FlyEngine.Core.CustomAttributes;
-using FlyEngine.Core.Renderer.Types;
+using FlyEngine.Core.Renderer.Common;
 using ImGuiNet = ImGuiNET.ImGui;
 
 namespace FlyEngine.Editor.Systems.Gui;

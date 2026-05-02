@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text.Json;
@@ -25,7 +26,11 @@ public partial class ComponentStore
         IncludeFields = true,
         PropertyNameCaseInsensitive = true,
         NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals,
-        Converters = { new AssetConverterFactory() }
+        Converters =
+        {
+            new AssetConverterFactory(),
+            new AssetArrayConverterFactory()
+        }
     };
 
     [MemoryPackInclude]
@@ -142,7 +147,7 @@ public partial class ComponentStore
         return component;
     }
 
-    public bool TryGetComponent<T>(out T? component) where T : Component
+    public bool TryGetComponent<T>([NotNullWhen(true)] out T? component) where T : Component
     {
         component = GetComponent<T>();
         return component != null;

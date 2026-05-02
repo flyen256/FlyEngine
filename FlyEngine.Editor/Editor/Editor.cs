@@ -191,7 +191,8 @@ public static class Editor
     private static void OnLoad()
     {
         TaskQueue.Enqueue(CompileScriptsAsync, "Compiling scripts");
-        _ = LoadModelsAsync();
+        TaskQueue.Enqueue(LoadModelsAsync, "Loading models");
+        TaskQueue.Enqueue(LoadAssetsAsync, "Loading assets");
     }
 
     private static void OnAssetsChanged(object? sender, FileSystemEventArgs eventArgs)
@@ -311,15 +312,19 @@ public static class Editor
         }
     }
 
+    public static async Task LoadAssetsAsync()
+    {
+        if (_window?.OpenGl == null) return;
+        await Task.Run(() => Dispatch(() => AssetsManager.LoadAssets(_window.OpenGl.Gl)));
+    }
+
     public static async Task LoadModelsAsync()
     {
         if (AssetsPath == null || _window?.OpenGl == null) return;
         try
         {
             var startDate = DateTime.UtcNow;
-            var loadResult = await TaskQueue.Enqueue(LoadModelsDataAsync, "Loading models");
-            foreach (var mesh in loadResult.Item2)
-                Dispatch(() => mesh.CreateBuffer(_window.OpenGl.Gl));
+            var loadResult = await LoadModelsDataAsync();
             var loadTime = DateTime.UtcNow - startDate;
             Logger.LogInformation($"Loaded {loadResult.Item1} models," +
                                   $" {loadResult.Item2.Count} meshes in {loadTime.TotalSeconds} seconds");

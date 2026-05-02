@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using FlyEngine.Core.SceneManagement;
 using MemoryPack;
 
@@ -106,7 +107,7 @@ public partial class GameObject : Object
         return ComponentStore.AddComponent(component);
     }
 
-    public bool TryGetComponent<T>(out T? component) where T : Component
+    public bool TryGetComponent<T>([NotNullWhen(true)] out T? component) where T : Component
     {
         return ComponentStore.TryGetComponent(out component);
     }

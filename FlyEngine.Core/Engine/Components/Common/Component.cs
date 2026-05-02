@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 using FlyEngine.Core.CustomAttributes;
 using MemoryPack;
@@ -105,7 +106,7 @@ public partial class Component : Object
         return GameObject.AddComponent(component);
     }
 
-    public bool TryGetComponent<T>(out T? component) where T : Component
+    public bool TryGetComponent<T>([NotNullWhen(true)] out T? component) where T : Component
     {
         return GameObject.TryGetComponent(out component);
     }

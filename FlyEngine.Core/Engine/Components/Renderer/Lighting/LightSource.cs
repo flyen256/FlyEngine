@@ -1,8 +1,8 @@
 using System.Numerics;
 using FlyEngine.Core.Components.Common;
 using FlyEngine.Core.Math;
+using FlyEngine.Core.Renderer.Common;
 using FlyEngine.Core.Renderer.Lighting;
-using FlyEngine.Core.Renderer.Types;
 
 namespace FlyEngine.Core.Components.Renderer.Lighting;
 

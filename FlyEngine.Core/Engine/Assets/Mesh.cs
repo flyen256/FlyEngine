@@ -1,4 +1,5 @@
-﻿using FlyEngine.Core.Renderer;
+﻿using System.Net.Mime;
+using FlyEngine.Core.Renderer;
 using MemoryPack;
 using Silk.NET.OpenGL;
 
@@ -13,7 +14,12 @@ public partial class Mesh : Asset
     public readonly List<uint> Indices = [];
     [MemoryPackInclude]
     public readonly uint IndexCount;
+
+    [MemoryPackIgnore]
+    public IReadOnlyList<Texture> Textures => _textures;
     
+    [MemoryPackIgnore]
+    private readonly List<Texture> _textures;
     [MemoryPackIgnore]
     private VertexArrayObject<float, uint> _vao;
     [MemoryPackIgnore]
@@ -26,10 +32,12 @@ public partial class Mesh : Asset
     {
         if (Application.OpenGl == null)
             throw new NullReferenceException(nameof(Application.OpenGl));
+        AssetsManager.AddAsset(this);
         var gl = Application.OpenGl.Gl;
         Vertices = vertices;
         Indices = indices;
         IndexCount = indexCount;
+        _textures = [];
         _vbo = new BufferObject<float>(gl, BuildVertices(), BufferTargetARB.ArrayBuffer);
         _ebo = new BufferObject<uint>(gl, BuildIndices(), BufferTargetARB.ElementArrayBuffer);
         _vao = new VertexArrayObject<float, uint>(gl, _vbo, _ebo);
@@ -37,19 +45,23 @@ public partial class Mesh : Asset
         _vao.VertexAttributePointer(1, 2, VertexAttribPointerType.Float, 5, 3);
         _vao.VertexAttributePointer(2, 3, VertexAttribPointerType.Float, 5, 0);
         _vao.Unbind();
-        AssetsManager.LoadAsset(this);
+        Loaded = true;
     }
     
-    public Mesh(Guid guid, GL gl, List<MeshVertex> vertices, List<uint> indices, uint indexCount) : base(guid)
+    public Mesh(Guid guid, List<Texture> textures, List<MeshVertex> vertices, List<uint> indices, uint indexCount) : base(guid)
     {
+        AssetsManager.AddAsset(this);
         Vertices = vertices;
         Indices = indices;
+        _textures = textures;
         IndexCount = indexCount;
     }
     
-    public Mesh(Guid guid, GL gl, float[] vertices, uint[] indices, uint indexCount) : base(guid)
+    public Mesh(Guid guid, GL gl, List<Texture> textures, float[] vertices, uint[] indices, uint indexCount) : base(guid)
     {
+        AssetsManager.AddAsset(this);
         IndexCount = indexCount;
+        _textures = textures;
         _vbo = new BufferObject<float>(gl, vertices, BufferTargetARB.ArrayBuffer);
         _ebo = new BufferObject<uint>(gl, indices, BufferTargetARB.ElementArrayBuffer);
         _vao = new VertexArrayObject<float, uint>(gl, _vbo, _ebo);
@@ -57,11 +69,13 @@ public partial class Mesh : Asset
         _vao.VertexAttributePointer(1, 2, VertexAttribPointerType.Float, 8, 3);
         _vao.VertexAttributePointer(2, 3, VertexAttribPointerType.Float, 8, 5);
         _vao.Unbind();
-        AssetsManager.LoadAsset(this);
+        Loaded = true;
     }
 
-    public void CreateBuffer(GL gl)
+    public override void Load(GL? gl = null)
     {
+        if (gl == null)
+            throw new NullReferenceException(nameof(gl));
         _vbo = new BufferObject<float>(gl, BuildVertices(), BufferTargetARB.ArrayBuffer);
         _ebo = new BufferObject<uint>(gl, BuildIndices(), BufferTargetARB.ElementArrayBuffer);
         _vao = new VertexArrayObject<float, uint>(gl, _vbo, _ebo);
@@ -69,9 +83,17 @@ public partial class Mesh : Asset
         _vao.VertexAttributePointer(1, 2, VertexAttribPointerType.Float, 5, 3);
         _vao.VertexAttributePointer(2, 3, VertexAttribPointerType.Float, 5, 0);
         _vao.Unbind();
-        AssetsManager.LoadAsset(this);
+        base.Load(gl);
     }
-    
+
+    public override void Unload()
+    {
+        _vbo.Dispose();
+        _ebo.Dispose();
+        _vao.Dispose();
+        base.Unload();
+    }
+
     private float[] BuildVertices()
     {
         var vertices = new List<float>();
