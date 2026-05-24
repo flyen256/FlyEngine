@@ -20,6 +20,8 @@ public partial class GameObject : Object
         get => _name;
         set
         {
+            if (value.Length == 0)
+                return;
             if (Application.Scene != null && Application.Scene.ObjectExistsWithName(value))
             {
                 var count = Application.Scene.GameObjects.Count(g => g.Name == value);
@@ -48,6 +50,8 @@ public partial class GameObject : Object
 
     private GameObject(string name = "New game object")
     {
+        if (name.Length == 0)
+            name = "New game object";
         _name = name;
         Name = name;
         ComponentStore = new ComponentStore
@@ -72,8 +76,7 @@ public partial class GameObject : Object
 
     public override void Destroy()
     {
-        foreach (var component in ComponentStore.List)
-            ComponentStore.RemoveComponent(component);
+        ComponentStore.Dispose();
         IsDestroyed = true;
     }
 

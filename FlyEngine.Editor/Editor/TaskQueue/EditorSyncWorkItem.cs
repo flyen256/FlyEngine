@@ -1,4 +1,4 @@
-namespace FlyEngine.Editor.Tasks;
+namespace FlyEngine.Editor.TaskQueue;
 
 public class EditorSyncWorkItem(Action action) : EditorQueueItem
 {

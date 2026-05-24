@@ -3,6 +3,7 @@ using FlyEngine.Core.Assets;
 using FlyEngine.Core.Components.Common;
 using FlyEngine.Core.Renderer;
 using FlyEngine.Core.Renderer.Common;
+using FlyEngine.Core.Renderer.Pipelines;
 using Silk.NET.OpenGL;
 
 namespace FlyEngine.Core.Components.Renderer._3D.Meshes;
@@ -41,6 +42,31 @@ public class MeshRenderer : Behaviour
         }
 
         shader.SetUniform(ShaderConstants.Model, model);
+
+        // if (Application.Window != null &&
+        //     Application.Window.IsEditor &&
+        //     Application.Window.SelectedGameObjectName == GameObject.Name)
+        // {
+        //     switch (gl.RenderPipeline)
+        //     {
+        //         case DefaultRenderPipeline defaultRenderPipeline:
+        //             var outline = defaultRenderPipeline.OutlineShader;
+        //             outline.Use();
+        //             outline.SetUniform(ShaderConstants.PostProcess.IsSelected, 1);
+        //             break;
+        //     }
+        // }
+        // else
+        // {
+        //     switch (gl.RenderPipeline)
+        //     {
+        //         case DefaultRenderPipeline defaultRenderPipeline:
+        //             var outline = defaultRenderPipeline.OutlineShader;
+        //             outline.Use();
+        //             outline.SetUniform(ShaderConstants.PostProcess.IsSelected, 0);
+        //             break;
+        //     }
+        // }
 
         gl.Gl.DrawElements(PrimitiveType.Triangles, Mesh.IndexCount, DrawElementsType.UnsignedInt, (void*)0);
     }

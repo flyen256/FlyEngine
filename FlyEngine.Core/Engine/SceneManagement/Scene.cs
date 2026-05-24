@@ -3,6 +3,7 @@ using FlyEngine.Core.Assets;
 using FlyEngine.Core.Components.Colliders;
 using FlyEngine.Core.Components.Common;
 using FlyEngine.Core.Components.Renderer;
+using FlyEngine.Core.Components.Renderer._3D.Meshes;
 using FlyEngine.Core.Components.Renderer.Lighting;
 using FlyEngine.Core.Extensions;
 using FlyEngine.Core.Gui;
@@ -27,6 +28,8 @@ public partial class Scene(Guid guid) : Asset(guid)
     private readonly List<GuiWindow> _guiWindows = [];
     [MemoryPackIgnore]
     private readonly List<Collider> _colliders = [];
+    [MemoryPackIgnore]
+    private readonly List<MeshRenderer> _meshRenderers = [];
 
     [MemoryPackIgnore]
     public IReadOnlyList<GameObject> GameObjects => _gameObjects;
@@ -40,6 +43,8 @@ public partial class Scene(Guid guid) : Asset(guid)
     public IReadOnlyList<GuiWindow> GuiWindows => _guiWindows;
     [MemoryPackIgnore]
     public IReadOnlyList<Collider> Colliders => _colliders;
+    [MemoryPackIgnore]
+    public IReadOnlyList<MeshRenderer> MeshRenderers => _meshRenderers;
 
     [MemoryPackOnDeserialized]
     private void OnDeserialized()
@@ -85,6 +90,7 @@ public partial class Scene(Guid guid) : Asset(guid)
         _cameras.Clear();
         _guiWindows.Clear();
         _colliders.Clear();
+        _meshRenderers.Clear();
         base.Unload();
     }
 
@@ -109,6 +115,10 @@ public partial class Scene(Guid guid) : Asset(guid)
         component.GameObject = gameObject;
         switch (component)
         {
+            case MeshRenderer meshRenderer:
+                meshRenderer.SceneIndex = _meshRenderers.Count;
+                _meshRenderers.Add(meshRenderer);
+                break;
             case Behaviour behaviour:
                 behaviour.SceneIndex = _behaviours.Count;
                 _behaviours.Add(behaviour);
@@ -136,6 +146,9 @@ public partial class Scene(Guid guid) : Asset(guid)
     {
         switch (component)
         {
+            case MeshRenderer meshRenderer:
+                _meshRenderers.RemoveAtSwapBack(meshRenderer.SceneIndex);
+                break;
             case Behaviour behaviour:
                 _behaviours.RemoveAtSwapBack(behaviour.SceneIndex);
                 break;
@@ -156,75 +169,16 @@ public partial class Scene(Guid guid) : Asset(guid)
 
     private void RegisterGameObjectComponents(GameObject go)
     {
-        var behaviours = CollectionsMarshal.AsSpan(go.GetComponents<Behaviour>());
-        for (var i = 0; i < behaviours.Length; i++)
-        {
-            var b = behaviours[i];
-            b.SceneIndex = _behaviours.Count;
-            _behaviours.Add(b);
-        }
-        var lights = CollectionsMarshal.AsSpan(go.GetComponents<LightSource>());
-        for (var i = 0; i < lights.Length; i++)
-        {
-            var light = lights[i];
-            light.SceneIndex = _lights.Count;
-            _lights.Add(light);
-        }
-        var cameras = CollectionsMarshal.AsSpan(go.GetComponents<Camera>());
-        for (var i = 0; i < cameras.Length; i++)
-        {
-            var camera = cameras[i];
-            camera.SceneIndex = _cameras.Count;
-            _cameras.Add(camera);
-        }
-        var uiWindows = CollectionsMarshal.AsSpan(go.GetComponents<GuiWindow>());
-        for (var i = 0; i < uiWindows.Length; i++)
-        {
-            var uiWindow = uiWindows[i];
-            uiWindow.SceneIndex = _guiWindows.Count;
-            _guiWindows.Add(uiWindow);
-        }
-        var colliders = CollectionsMarshal.AsSpan(go.GetComponents<Collider>());
-        for (var i = 0; i <  colliders.Length; i++)
-        {
-            var collider = colliders[i];
-            collider.SceneIndex = _colliders.Count;
-            _colliders.Add(collider);
-        }
+        var components = go.ComponentStore.List;
+        foreach (var component in components)
+            RegisterComponent(component, go);
     }
 
     private void RemoveGameObjectComponents(GameObject go)
     {
-        var behaviours = CollectionsMarshal.AsSpan(go.GetComponents<Behaviour>());
-        for (var i = 0; i < behaviours.Length; i++)
-        {
-            var behaviour = behaviours[i];
-            _behaviours.RemoveAtSwapBack(behaviour.SceneIndex);
-        }
-        var lights = CollectionsMarshal.AsSpan(go.GetComponents<LightSource>());
-        for (var i = 0; i < lights.Length; i++)
-        {
-            var light = lights[i];
-            _lights.RemoveAtSwapBack(light.SceneIndex);
-        }
-        var cameras = CollectionsMarshal.AsSpan(go.GetComponents<Camera>());
-        for (var i = 0; i < cameras.Length; i++)
-        {
-            var camera = cameras[i];
-            _cameras.RemoveAtSwapBack(camera.SceneIndex);
-        }
-        var uiWindows = CollectionsMarshal.AsSpan(go.GetComponents<GuiWindow>());
-        for (var i = 0; i < uiWindows.Length; i++)
-        {
-            var uiWindow = uiWindows[i];
-            _guiWindows.RemoveAtSwapBack(uiWindow.SceneIndex);
-        }
-        var colliders = CollectionsMarshal.AsSpan(go.GetComponents<Collider>());
-        for (var i = 0; i <  colliders.Length; i++)
-        {
-            var collider = colliders[i];
-            _colliders.RemoveAtSwapBack(collider.SceneIndex);
-        }
+        var components = go.ComponentStore.List;
+        foreach (var component in components)
+            RemoveComponent(component);
     }
 
     private void RemoveGameObject(int index)

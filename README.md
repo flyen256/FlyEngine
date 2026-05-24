@@ -19,6 +19,7 @@ to discuss what you would like to change.
 
 - [FlyEngine](https://github.com/flyen256/FlyEngine) - [MIT License](https://choosealicense.com/licenses/mit/)
 - [ImGui.NET](https://github.com/ImGuiNET/ImGui.NET) - [MIT License](https://choosealicense.com/licenses/mit/)
+- [ImGuizmo.NET](https://github.com/ktisis-tools/ImGuizmo.NET) - [MIT License](https://choosealicense.com/licenses/mit/)
 - [Silk.NET](https://github.com/dotnet/Silk.NET) - [MIT License](https://choosealicense.com/licenses/mit/)
 - [MemoryPack](https://github.com/Cysharp/MemoryPack) - [MIT License](https://choosealicense.com/licenses/mit/)
 - [LiteNetLib](https://github.com/revenantx/litenetlib) - [MIT License](https://choosealicense.com/licenses/mit/)

@@ -15,21 +15,17 @@ public class EditorHierarchy : EditorGuiWindow
     
     public static EditorHierarchy? Instance { get; private set; }
     
-    protected override string Title => "Hierarchy" + (_isDirty ? " *" : string.Empty) + "###EditorHierarchy";
+    protected override string Title => "Hierarchy" + (EditorAction.IsDirty ? " *" : string.Empty) + "###EditorHierarchy";
 
-    private bool _isDirty;
     private bool _createGameObject;
     
     private string _gameObjectName = string.Empty;
 
     private Scene? Scene => SceneManager.CurrentScene;
 
-    public GameObject? SelectedGameObject { get; private set; }
-
     public EditorHierarchy()
     {
         Instance = this;
-        EditorAction.OnSceneModified += () => _isDirty = true;
     }
     
     protected override void BeforeBegin()
@@ -41,9 +37,9 @@ public class EditorHierarchy : EditorGuiWindow
     {
         try
         {
-            if (!Input.GetKey(Key.S) || !Input.GetKey(Key.ControlLeft) || !_isDirty) return;
+            if (!Input.GetKey(Key.S) || !Input.GetKey(Key.ControlLeft) || !EditorAction.IsDirty) return;
             await Editor.TaskQueue.Enqueue(TrySaveScene, "Saving scene");
-            _isDirty = false;
+            EditorAction.IsDirty = false;
         }
         catch (Exception e)
         {
@@ -65,9 +61,9 @@ public class EditorHierarchy : EditorGuiWindow
                 CreateGameObjectContextWindow();
                 foreach (var gameObject in Scene.GameObjects)
                 {
-                    var isSelected = SelectedGameObject == gameObject;
+                    var isSelected = Editor.SelectionManager.SelectedGameObject == gameObject;
                     if (ImGuiNet.Selectable(gameObject.Name, isSelected))
-                        SelectedGameObject = gameObject;
+                        Editor.SelectionManager.SelectedGameObject = gameObject;
                     GameObjectContextWindow(gameObject);
                 }
 
@@ -106,7 +102,7 @@ public class EditorHierarchy : EditorGuiWindow
     private void ExecuteGameObjectCreation(string name)
     {
         GameObject.Create(name);
-        _isDirty = true;
+        EditorAction.MarkDirty();
     }
     
     private void StopCreation()
@@ -118,8 +114,8 @@ public class EditorHierarchy : EditorGuiWindow
     private void DeleteSelectedGameObject(GameObject gameObject)
     {
         gameObject.Destroy();
-        if (gameObject == SelectedGameObject)
-            SelectedGameObject = null;
+        if (gameObject == Editor.SelectionManager.SelectedGameObject)
+            Editor.SelectionManager.SelectedGameObject = null;
         EditorAction.MarkDirty();
     }
 

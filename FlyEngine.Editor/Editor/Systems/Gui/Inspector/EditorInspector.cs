@@ -23,7 +23,7 @@ public class EditorInspector : EditorGuiWindow
     
     protected override string Title => "Inspector";
 
-    private static GameObject? SelectedGameObject => EditorHierarchy.Instance?.SelectedGameObject;
+    private static GameObject? SelectedGameObject => Editor.SelectionManager.SelectedGameObject;
     private GameObject? _lastSelected;
     private Vector3 _eulerRotation;
 
@@ -39,6 +39,8 @@ public class EditorInspector : EditorGuiWindow
     private VariableInfo? _selectedVariableInfo;
     private Component? _selectedComponent;
 
+    public Type? CurrentAssetsType { get; set; }
+
     private readonly PropertyRenderer _propertyRenderer;
 
     public EditorInspector()
@@ -51,13 +53,13 @@ public class EditorInspector : EditorGuiWindow
 
     protected internal override void OnLoad()
     {
-        Editor.OnCompileScripts += OnCompileScripts;
+        Editor.Scripts.OnCompileScripts += OnCompileScripts;
         AssetsManager.OnAssetsChanged += OnReloadAssets;
     }
 
     protected internal override void OnUnload()
     {
-        Editor.OnCompileScripts -= OnCompileScripts;
+        Editor.Scripts.OnCompileScripts -= OnCompileScripts;
         AssetsManager.OnAssetsChanged -= OnReloadAssets;
     }
 
@@ -123,9 +125,6 @@ public class EditorInspector : EditorGuiWindow
 
     private void RenderAssetSelectorModal()
     {
-        if (_assetSelectorModal)
-            ImGuiNet.OpenPopup("SelectAsset");
-
         var center = ImGuiNet.GetMainViewport().GetCenter();
         ImGuiNet.SetNextWindowPos(center, ImGuiCond.Appearing, new Vector2(0.5f, 0.5f));
 
@@ -134,12 +133,15 @@ public class EditorInspector : EditorGuiWindow
             ImGuiNet.InputText("Search", ref _searchAsset, 1024);
 
             var assets = SearchAssets();
-            if (ImGuiNet.BeginChild("SelectAssetList", new Vector2(0, 400)) && assets.Count > 0)
+            if (ImGuiNet.BeginChild("SelectAssetList", new Vector2(0, 400)))
             {
                 for (var i = 0; i < assets.Count; i++)
                 {
                     var asset = assets[i];
-                    if (!ImGuiNet.Selectable(asset.Name+$"##Asset_{i}")) continue;
+                    if (!ImGuiNet.Selectable(
+                            (!string.IsNullOrEmpty(asset.Name) ?
+                                asset.Name :
+                                asset.Guid) + $"##Asset_{i}")) continue;
                     SelectAsset(asset);
                     _assetSelectorModal = false;
                     ImGuiNet.CloseCurrentPopup();
@@ -167,7 +169,7 @@ public class EditorInspector : EditorGuiWindow
     {
         if (!type.IsSubclassOf(typeof(Component)))
         {
-            EditorConsole.Instance?.Messages.Add(new EditorConsoleMessage
+            EditorConsole.Messages.Add(new EditorConsoleMessage
             {
                 Level = LogLevel.Error,
                 Message = $"Type: {type.Name} is not Component"
@@ -187,7 +189,7 @@ public class EditorInspector : EditorGuiWindow
         var coreAssembly = Assembly.GetAssembly(typeof(Application));
         var editorAssembly = Assembly.GetAssembly(typeof(Editor));
         var networkAssembly = Assembly.GetAssembly(typeof(NetworkManager));
-        var gameAssembly = Editor.ScriptLoader?.LoadFromAssemblyName(new AssemblyName(Application.ScriptsAssemblyName));
+        var gameAssembly = Editor.Window?.EditorScriptLoader.LoadFromAssemblyName(new AssemblyName(Application.ScriptsAssemblyName));
         if (coreAssembly == null || editorAssembly == null || networkAssembly == null || gameAssembly == null) return;
         _componentTypes.AddRange(coreAssembly.GetTypes().Where(t => t.IsSubclassOf(typeof(Component))));
         _componentTypes.AddRange(editorAssembly.GetTypes().Where(t => t.IsSubclassOf(typeof(Component))));
@@ -202,10 +204,12 @@ public class EditorInspector : EditorGuiWindow
     }
 
     private List<Type> SearchComponents() =>
-        _componentTypes.Where(c => Regex.IsMatch(c.Name, _searchComponent)).ToList();
+        _componentTypes.Where(c => Regex.IsMatch(c.Name.ToLower(), _searchComponent.ToLower())).ToList();
     
     private List<Asset> SearchAssets() =>
-        _assets.Where(c => Regex.IsMatch(c.Name, _searchAsset)).ToList();
+        _assets.Where(c =>
+            (CurrentAssetsType == null || c.GetType().IsAssignableFrom(CurrentAssetsType)) &&
+            Regex.IsMatch(c.Name.ToLower(), _searchAsset.ToLower())).ToList();
 
     private void RenderComponents()
     {
@@ -284,6 +288,7 @@ public class EditorInspector : EditorGuiWindow
     public void OpenAssetSelector(VariableInfo variableInfo, Component component)
     {
         _assetSelectorModal = true;
+        ImGuiNet.OpenPopup("SelectAsset");
         _selectedVariableInfo = variableInfo;
         _selectedComponent = component;
     }

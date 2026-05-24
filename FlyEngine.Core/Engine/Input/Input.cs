@@ -109,6 +109,7 @@ public static class Input
     {
         if (PressedKeys.Contains(key)) return;
         PressedKeys.Add(key);
+        if (!Application.IsRunning) return;
         if (key == Key.Escape &&
             Application.Window is { IsEditor: true })
         {
@@ -123,7 +124,6 @@ public static class Input
                 _previousState = null;
             }
         }
-        if (!Application.IsRunning) return;
         if (Application.Scene == null) return;
         foreach (var behaviour in Application.Scene.Behaviours)
         {

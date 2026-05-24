@@ -127,7 +127,10 @@ public class PropertyRenderer
         if (variableInfo.GetValue(component) is  Asset asset)
             label = asset.Name + $"##{variableInfo.Name}{component.GetType().Name}";
         if (ImGuiNet.Button(label))
+        {
             _inspector.OpenAssetSelector(variableInfo, component);
+            _inspector.CurrentAssetsType = variableInfo.VariableType;
+        }
         ImGuiNet.SameLine();
         ImGuiNet.Text(variableInfo.Name);
     }

@@ -123,6 +123,10 @@ public partial class Transform
 
     [MemoryPackIgnore]
     public Vector3 Forward => Vector3.Transform(new Vector3(0, 0, -1), Rotation);
+    [MemoryPackIgnore]
+    public Vector3 Right => Vector3.Transform(new Vector3(1, 0, 0), Rotation);
+    [MemoryPackIgnore]
+    public Vector3 Up => Vector3.Transform(new Vector3(0, 1, 0), Rotation);
 
     private void UpdateWorldMatrix()
     {

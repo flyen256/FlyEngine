@@ -1,0 +1,361 @@
+﻿#version 430 core
+
+#define MAX_LIGHTS 24
+#define LT_POINT 0
+#define LT_SPOT 1
+#define LT_DIR 2
+#define LT_AREA 3
+#define FOG_STEPS 20
+
+layout (local_size_x = 16, local_size_y = 16) in;
+
+layout (rgba16f, binding = 0) uniform writeonly image2D uOutputImage;
+
+uniform sampler2D uGAlbedoMetallic;
+uniform sampler2D uGNormalSmoothness;
+uniform sampler2D uDepth;
+uniform sampler2D uShadowMap;
+uniform samplerCube uSkybox;
+
+uniform mat4 uView;
+uniform mat4 uInvProjection;
+uniform mat4 uInverseView;
+uniform mat4 uLightSpaceMatrix;
+uniform vec2 uViewportSize;
+uniform vec3 uCameraPos;
+uniform vec3 uAmbientColor;
+uniform vec3 uSunDirWorld;
+uniform float uDitherStrength;
+uniform int uNumLights;
+uniform int uShadowEnabled;
+uniform int uShadowDirIndex;
+uniform int uFogEnabled;
+uniform float uFogDensity;
+uniform float uFogHeight;
+uniform float uFogFalloff;
+uniform float uFogScatter;
+uniform vec3 uFogColor;
+uniform vec4 uPack0[MAX_LIGHTS];
+uniform vec4 uPack1[MAX_LIGHTS];
+uniform vec4 uPack2[MAX_LIGHTS];
+uniform vec4 uPack3[MAX_LIGHTS];
+uniform vec4 uPack4[MAX_LIGHTS];
+
+shared uint minDepthInt;
+shared uint maxDepthInt;
+shared uint tileLightCount;
+shared uint tileLightIndices[256];
+
+const float PI = 3.14159265359;
+
+float distributionGgx(vec3 N, vec3 H, float roughness)
+{
+    float a = roughness * roughness;
+    float a2 = a * a;
+    float nDotH = max(dot(N, H), 0.0);
+    float nDotH2 = nDotH * nDotH;
+    float denom = nDotH2 * (a2 - 1.0) + 1.0;
+    denom = PI * denom * denom;
+    return a2 / max(denom, 1e-6);
+}
+
+float geometrySchlickGgx(float nDotX, float roughness)
+{
+    float r = roughness + 1.0;
+    float k = (r * r) / 8.0;
+    return nDotX / max(nDotX * (1.0 - k) + k, 1e-6);
+}
+
+float geometrySmith(vec3 N, vec3 V, vec3 L, float roughness)
+{
+    float nDotV = max(dot(N, V), 0.0);
+    float nDotL = max(dot(N, L), 0.0);
+    return geometrySchlickGgx(nDotV, roughness) * geometrySchlickGgx(nDotL, roughness);
+}
+
+vec3 fresnelSchlick(float cosTheta, vec3 f0)
+{
+    return f0 + (1.0 - f0) * pow(1.0 - cosTheta, 5.0);
+}
+
+vec3 brdfLo(vec3 worldPos, vec3 N, vec3 V, vec3 L, vec3 radiance, float roughness, vec3 albedo, float metallic)
+{
+    vec3 H = normalize(V + L);
+    vec3 f0 = mix(vec3(0.04), albedo, metallic);
+    float ndf = distributionGgx(N, H, roughness);
+    float G = geometrySmith(N, V, L, roughness);
+    vec3 F = fresnelSchlick(max(dot(H, V), 0.0), f0);
+    float nDotL = max(dot(N, L), 0.0);
+    float nDotV = max(dot(N, V), 0.001);
+    vec3 specNumer = ndf * G * F;
+    float specDenom = 4.0 * nDotV * nDotL;
+    vec3 specular = specNumer / max(specDenom, 1e-4);
+    vec3 kS = F;
+    vec3 kD = (vec3(1.0) - kS) * (1.0 - metallic);
+    vec3 diffuse = kD * albedo / PI;
+    return (diffuse + specular) * radiance * nDotL;
+}
+
+float hash(vec2 p)
+{
+    return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453);
+}
+
+vec3 worldRayDir(vec2 uv)
+{
+    vec2 ndc = uv * 2.0 - 1.0;
+    vec4 clipFar = vec4(ndc, 1.0, 1.0);
+    vec4 viewFar = uInvProjection * clipFar;
+    viewFar /= viewFar.w;
+    vec3 w = (uInverseView * vec4(normalize(viewFar.xyz), 0.0)).xyz;
+    return normalize(w);
+}
+
+float phaseHG(float cosTheta, float g)
+{
+    float g2 = g * g;
+    return (1.0 - g2) / (4.0 * PI * pow(1.0 + g2 - 2.0 * g * cosTheta, 1.5));
+}
+
+vec3 applyVolumetricFog(vec3 hdrLinear, vec3 rd, float sceneDist)
+{
+    if (uFogEnabled == 0) return hdrLinear;
+    float dist = min(sceneDist, 120.0);
+    if (dist < 0.02) return hdrLinear;
+    float stepLen = dist / float(FOG_STEPS);
+    vec3 accum = vec3(0.0);
+    float trans = 1.0;
+    float cosTheta = dot(rd, normalize(uSunDirWorld));
+    float phase = phaseHG(cosTheta, 0.6);
+    vec3 sunColor = uFogColor * uFogScatter;
+    for (int s = 0; s < FOG_STEPS; s++)
+    {
+        float t = (float(s) + 0.5) * stepLen;
+        vec3 sp = uCameraPos + rd * t;
+        float heightFactor = exp(-(sp.y - uFogHeight) * uFogFalloff);
+        float density = uFogDensity * heightFactor;
+        float noise = fract(sin(dot(sp.xz, vec2(12.9898, 78.233))) * 43758.5453);
+        density *= mix(0.9, 1.1, noise);
+        float absorb = exp(-density * stepLen);
+        vec3 scatter = sunColor * phase;
+        accum += trans * scatter * density * stepLen;
+        trans *= absorb;
+        if (trans < 0.01) break;
+    }
+    return hdrLinear * trans + accum;
+}
+
+float screenDepthToViewZ(float depth)
+{
+    float z = depth * 2.0 - 1.0;
+    vec4 clip = vec4(0.0, 0.0, z, 1.0);
+    vec4 view = uInvProjection * clip;
+    view /= view.w;
+    return -view.z;
+}
+
+vec3 reconstructWorldPos(vec2 uv, float depth)
+{
+    float z = depth * 2.0 - 1.0;
+    vec2 ndc = uv * 2.0 - 1.0;
+    vec4 clip = vec4(ndc, z, 1.0);
+    vec4 view = uInvProjection * clip;
+    view /= view.w;
+    vec4 world = uInverseView * vec4(view.xyz, 1.0);
+    return world.xyz;
+}
+
+bool isLightInTile(int idx, float minZ, float maxZ)
+{
+    vec4 p0 = uPack0[idx];
+    vec4 p1 = uPack1[idx];
+    int type = int(p0.w + 0.5);
+    if (type == LT_DIR) return true;
+    float radius = p1.w;
+    vec3 lightView = (uView * vec4(p0.xyz, 1.0)).xyz;
+    if (lightView.z + radius < -maxZ) return false;
+    if (lightView.z - radius > -minZ) return false;
+    return true;
+}
+
+float shadowVisibility(vec3 worldPos, vec3 N)
+{
+    if (uShadowEnabled == 0) return 1.0;
+    vec4 ls = uLightSpaceMatrix * vec4(worldPos, 1.0);
+    vec3 proj = ls.xyz / ls.w;
+    proj = proj * 0.5 + 0.5;
+    if (proj.x < 0.0 || proj.x > 1.0 || proj.y < 0.0 || proj.y > 1.0 || proj.z < 0.0 || proj.z > 1.0)
+        return 1.0;
+    float zReceiver = proj.z;
+    vec2 texel = 1.0 / vec2(textureSize(uShadowMap, 0));
+    float angle = hash(proj.xy) * 6.2831853;
+    mat2 rot = mat2(cos(angle), -sin(angle), sin(angle), cos(angle));
+    float shadow = 0.0;
+    int radius = 3;
+    float cosTheta = clamp(dot(N, uSunDirWorld), 0.0, 1.0);
+    float bias = max(0.0008 * (1.0 - cosTheta), 0.00005);
+    for (int x = -radius; x <= radius; x++)
+    {
+        for (int y = -radius; y <= radius; y++)
+        {
+            vec2 offset = vec2(x, y);
+            offset = rot * offset;
+            vec2 uv = proj.xy + offset * texel;
+            float closest = texture(uShadowMap, uv).r;
+            shadow += (zReceiver - bias <= closest) ? 1.0 : 0.0;
+        }
+    }
+    return shadow / float((radius * 2 + 1) * (radius * 2 + 1));
+}
+
+vec3 evalLight(int i, vec3 worldPos, vec3 N, vec3 V, float roughness, vec3 albedo, float metallic, float dirShadow)
+{
+    vec4 p0 = uPack0[i];
+    vec4 p1 = uPack1[i];
+    vec4 p2 = uPack2[i];
+    vec4 p3 = uPack3[i];
+    vec4 p4 = uPack4[i];
+    int type = int(p0.w + 0.5);
+    vec3 radianceBase = p1.xyz;
+    float range = p1.w;
+    if (type == LT_POINT)
+    {
+        vec3 toL = p0.xyz - worldPos;
+        float dist = length(toL);
+        if (dist > range || dist < 1e-4) return vec3(0.0);
+        vec3 L = toL / dist;
+        float att = 1.0 / (1.0 + 0.09 * dist + 0.032 * dist * dist);
+        float edge = smoothstep(range * 0.85, range, dist);
+        att *= (1.0 - edge);
+        vec3 rad = radianceBase * att;
+        return brdfLo(worldPos, N, V, L, rad, roughness, albedo, metallic);
+    }
+    if (type == LT_DIR)
+    {
+        vec3 L = normalize(-p2.xyz);
+        vec3 rad = radianceBase;
+        if (uShadowEnabled != 0 && i == uShadowDirIndex)
+            rad *= dirShadow;
+        return brdfLo(worldPos, N, V, L, rad, roughness, albedo, metallic);
+    }
+    if (type == LT_SPOT)
+    {
+        vec3 lightPos = p0.xyz;
+        vec3 spotDir = normalize(p2.xyz);
+        float cosOuter = p2.w;
+        float cosInner = p3.x;
+        vec3 toL = lightPos - worldPos;
+        float dist = length(toL);
+        if (dist < 1e-4) return vec3(0.0);
+        vec3 L = toL / dist;
+        float spot = dot(-L, spotDir);
+        if (spot <= cosOuter) return vec3(0.0);
+        float intensity = smoothstep(cosOuter, cosInner, spot);
+        float att = 1.0 / (dist * dist / range);
+        vec3 rad = radianceBase * att * intensity;
+        return brdfLo(worldPos, N, V, L, rad, roughness, albedo, metallic);
+    }
+    if (type == LT_AREA)
+    {
+        vec3 C = p0.xyz;
+        vec3 n = normalize(p2.xyz);
+        vec3 right = normalize(p3.xyz);
+        float halfW = p3.w;
+        vec3 up = normalize(p4.xyz);
+        float halfH = p1.w;
+
+        vec3 co = worldPos - C;
+        float x = dot(co, right);
+        float y = dot(co, up);
+        x = clamp(x, -halfW, halfW);
+        y = clamp(y, -halfH, halfH);
+        vec3 closest = C + right * x + up * y;
+        vec3 toL = closest - worldPos;
+        float dist = length(toL);
+        if (dist < 1e-4) return vec3(0.0);
+        vec3 L = toL / dist;
+        float att = 1.0 / max(dist * dist, 0.05);
+        att *= (halfW * 2.0) * (halfH * 2.0) / (PI * 4.0 + 1.0);
+        vec3 rad = radianceBase * att;
+        return brdfLo(worldPos, N, V, L, rad, roughness, albedo, metallic);
+    }
+    return vec3(0.0);
+}
+
+void main()
+{
+    ivec2 pixelCoord = ivec2(gl_GlobalInvocationID.xy);
+    if (pixelCoord.x >= int(uViewportSize.x) || pixelCoord.y >= int(uViewportSize.y))
+        return;
+
+    if (gl_LocalInvocationIndex == 0)
+    {
+        minDepthInt = floatBitsToUint(1.0);
+        maxDepthInt = floatBitsToUint(0.0);
+        tileLightCount = 0u;
+    }
+    barrier();
+
+    vec2 uv = (vec2(pixelCoord) + 0.5) / uViewportSize;
+    float depth = texture(uDepth, uv).r;
+    uint depthInt = floatBitsToUint(depth);
+    atomicMin(minDepthInt, depthInt);
+    atomicMax(maxDepthInt, depthInt);
+    barrier();
+
+    if (gl_LocalInvocationIndex == 0)
+    {
+        float minZ = screenDepthToViewZ(uintBitsToFloat(minDepthInt));
+        float maxZ = screenDepthToViewZ(uintBitsToFloat(maxDepthInt));
+        for (int i = 0; i < uNumLights; i++)
+        {
+            if (isLightInTile(i, minZ, maxZ))
+            {
+                uint idx = atomicAdd(tileLightCount, 1u);
+                if (idx < 256u)
+                    tileLightIndices[idx] = uint(i);
+            }
+        }
+    }
+    barrier();
+
+    if (depth >= 0.99995)
+    {
+        vec3 rd = worldRayDir(uv);
+        vec3 sky = texture(uSkybox, rd).rgb;
+        float sunDot = dot(rd, normalize(uSunDirWorld));
+        float sunDisk = smoothstep(0.998, 1.0, sunDot);
+        vec3 sunColor = vec3(1.0, 0.9, 0.6) * 30.0;
+        sky += sunColor * sunDisk;
+        imageStore(uOutputImage, pixelCoord, vec4(sky, 1.0));
+        return;
+    }
+
+    vec4 base = texture(uGAlbedoMetallic, uv);
+    vec3 albedo = base.rgb;
+    float metallic = clamp(base.a, 0.0, 1.0);
+    vec4 normalSmooth = texture(uGNormalSmoothness, uv);
+    vec3 N = normalize(normalSmooth.xyz * 2.0 - 1.0);
+    float roughness = clamp(1.0 - normalSmooth.w, 0.05, 1.0);
+    vec3 worldPos = reconstructWorldPos(uv, depth);
+    vec3 V = normalize(uCameraPos - worldPos);
+
+    vec3 color = albedo * uAmbientColor;
+    float dirShadow = 1.0;
+    if (uShadowEnabled != 0 && uShadowDirIndex >= 0 && uShadowDirIndex < uNumLights)
+        dirShadow = shadowVisibility(worldPos, N);
+
+    for (uint li = 0u; li < tileLightCount; ++li)
+    {
+        int lightIdx = int(tileLightIndices[li]);
+        color += evalLight(lightIdx, worldPos, N, V, roughness, albedo, metallic, dirShadow);
+    }
+
+    if (uFogEnabled != 0)
+    {
+        float sceneDist = length(uCameraPos - worldPos);
+        color = applyVolumetricFog(color, worldRayDir(uv), sceneDist);
+    }
+
+    imageStore(uOutputImage, pixelCoord, vec4(color, 1.0));
+}

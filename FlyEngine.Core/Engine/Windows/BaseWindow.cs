@@ -1,4 +1,5 @@
 ﻿using System.Numerics;
+using FlyEngine.Core.Components.Common;
 using FlyEngine.Core.Math;
 using FlyEngine.Core.Renderer;
 using Silk.NET.Maths;
@@ -23,16 +24,17 @@ public abstract class BaseWindow
     public event Action<double>? OnUpdateEvent;
     public event Action<double>? OnRenderEvent;
     public event Action<bool>? OnFocusChanged;
+    public event Action? OnClosingEvent;
     
     public OpenGl? OpenGl { get; protected set; }
     
-    public Matrix4x4 EditorCameraViewMatrix { get; private set; }
+    public Matrix4x4 EditorCameraViewMatrix { get; protected set; }
     
-    private Matrix4x4 _editorCameraProjectionMatrix;
+    protected Matrix4x4 _editorCameraProjectionMatrix;
     public Matrix4x4 EditorCameraProjectionMatrix
     {
         get => _editorCameraProjectionMatrix;
-        private set => _editorCameraProjectionMatrix = value;
+        protected set => _editorCameraProjectionMatrix = value;
     }
 
     public Vector3 EditorCameraPosition { get; set; } = Vector3.Zero;
@@ -41,14 +43,17 @@ public abstract class BaseWindow
     public EditorScriptLoader EditorScriptLoader { get; set; } = new();
     
     public Vector2D<int> EditorViewport { get; set; }
+    
+    public virtual GameObject? EditorSelectedGameObject => null;
 
     protected void UpdateMatrices()
     {
         var fov = MathHelper.DegreesToRadians(70f);
         
+        var aspect = (float)EditorViewport.X / EditorViewport.Y;
         EditorCameraProjectionMatrix = Matrix4x4.CreatePerspectiveFieldOfView(
             fov, 
-            AspectRatio, 
+            IsEditor ? aspect : AspectRatio, 
             0.01f, 
             5000f);
         _editorCameraProjectionMatrix.M22 *= -1;
@@ -88,6 +93,7 @@ public abstract class BaseWindow
     protected virtual void OnClosing()
     {
         IsLoaded = false;
+        OnClosingEvent?.Invoke();
     }
 
     protected virtual void OnLoad()
@@ -116,6 +122,11 @@ public abstract class BaseWindow
             targetSize.Y = WindowOptions.MinSize.Y;
         Handle.Size = targetSize;
         AspectRatio = (float)targetSize.X / targetSize.Y;
+    }
+
+    public void Resize(Vector2D<int> newSize)
+    {
+        OnResize(newSize);
     }
     
     protected virtual void OnFramebufferResize(Vector2D<int> newSize) { }

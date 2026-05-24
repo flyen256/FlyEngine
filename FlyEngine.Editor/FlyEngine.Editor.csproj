@@ -17,5 +17,14 @@
     <ItemGroup>
       <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="5.3.0" />
     </ItemGroup>
+    
+    <ItemGroup>
+      <None Update="lib\CMakeProject1.dll">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+      <None Update="lib\imguizmo.dll">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+    </ItemGroup>
 
 </Project>

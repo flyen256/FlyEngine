@@ -1,5 +1,4 @@
 ﻿using System.Numerics;
-using FlyEngine.Core.Extensions;
 using FlyEngine.Core.Renderer;
 using Silk.NET.Assimp;
 using File = System.IO.File;
@@ -10,7 +9,7 @@ public static class ModelManager
 {
     public static readonly Assimp Assimp = Assimp.GetApi();
     
-    public static unsafe List<Mesh> LoadModel(OpenGl openGl, string path)
+    public static unsafe List<Mesh> LoadModelMeshes(OpenGl openGl, string path)
     {
         if (AssetsManager.LoadedAssetsPaths.Contains(path))
             throw new Exception($"Mesh {path} is already loaded");
@@ -19,37 +18,6 @@ public static class ModelManager
         var meshes = new List<Mesh>();
         var ext = path.Split('.').Last();
         var hintBytes = System.Text.Encoding.ASCII.GetBytes(ext + "\0");
-        fixed (byte* pData = stream)
-        {
-            fixed (byte* pHint = hintBytes)
-            {
-                var scene = Assimp.ImportFileFromMemory(pData, (uint)stream.Length,
-                    (uint)(PostProcessSteps.Triangulate |
-                           PostProcessSteps.GenerateNormals |
-                           PostProcessSteps.JoinIdenticalVertices), pHint);
-                if (scene == null || scene->MFlags == Assimp.SceneFlagsIncomplete || scene->MRootNode == null)
-                {
-                    var error = Assimp.GetErrorStringS();
-                    throw new Exception(error);
-                }
-                ProcessNode(scene->MRootNode, scene, ref meshes, openGl);
-            }
-        }
-        
-        return meshes;
-    }
-
-    public static unsafe List<Mesh> LoadModel(string embeddedResourceName, OpenGl openGl)
-    {
-        if (AssetsManager.LoadedAssetsPaths.Contains(embeddedResourceName))
-            throw new Exception($"Mesh {embeddedResourceName} is already loaded");
-        var assembly = typeof(OpenGl).Assembly;
-        var name = assembly.GetManifestResourceNames().ToList().Find(n => n.Contains(embeddedResourceName));
-        if (name == null) return [];
-        var stream = assembly.GetManifestResourceMemory(name);
-        if (stream.Length == 0) return [];
-        var meshes = new List<Mesh>();
-        var hintBytes = System.Text.Encoding.ASCII.GetBytes(embeddedResourceName.Split('.').Last() + "\0");
         fixed (byte* pData = stream)
         {
             fixed (byte* pHint = hintBytes)

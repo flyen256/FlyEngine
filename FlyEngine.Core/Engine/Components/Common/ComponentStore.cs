@@ -10,7 +10,7 @@ using MemoryPack;
 namespace FlyEngine.Core.Components.Common;
 
 [MemoryPackable]
-public partial class ComponentStore
+public partial class ComponentStore : IDisposable
 {
     [MemoryPackIgnore]
     public GameObject GameObject { get; init; }
@@ -168,5 +168,17 @@ public partial class ComponentStore
         foreach (var component in _components)
             component.Initialize();
         _initialized = true;
+    }
+
+    public void Dispose()
+    {
+        foreach (var component in _components)
+        {
+            component.OnRemoved();
+            component.OnDisable();
+            if (SceneManager.CurrentScene != null)
+                SceneManager.CurrentScene.RemoveComponent(component);
+        }
+        _components.Clear();
     }
 }

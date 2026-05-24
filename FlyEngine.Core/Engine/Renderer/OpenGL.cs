@@ -25,7 +25,7 @@ public class OpenGl
 
     public OpenGl(IWindow window, BaseWindow handle)
     {
-        RenderPipeline = new DefaultPipeline(this);
+        RenderPipeline = new DefaultRenderPipeline(this);
         Window = window;
         Handle = handle;
         Gl = window.CreateOpenGL();
@@ -37,7 +37,7 @@ public class OpenGl
         Gl.Viewport(0, 0, (uint)Window.Size.X, (uint)Window.Size.Y);
         Gl.Enable(EnableCap.DepthTest);
         Gl.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha);
-        Gl.ClearColor(Color.Black);
+        Gl.ClearColor(0, 0, 0, 0);
 
         DefaultWhiteTexture = Gl.GenTexture();
         Gl.BindTexture(TextureTarget.Texture2D, DefaultWhiteTexture);
@@ -93,13 +93,13 @@ public class OpenGl
             16, 17, 18, 18, 19, 16,
             20, 21, 22, 22, 23, 20
         ];
-        var cube = new Mesh(CubeMeshGuid, Gl, [], vertices, indices, (uint)indices.Length)
+        var mesh = new Mesh(CubeMeshGuid, Gl, [], vertices, indices, (uint)indices.Length)
         {
             Name = "Cube"
         };
     }
 
-    public string? LoadShaderCode(string shader)
+    public string? LoadEmbeddedResourceShaderCode(string shader)
     {
         var assembly = typeof(OpenGl).Assembly;
     
@@ -118,7 +118,7 @@ public class OpenGl
 
     public unsafe void ProcessShaders()
     {
-        var vertexCode = LoadShaderCode("vertex.vert");
+        var vertexCode = LoadEmbeddedResourceShaderCode("vertex.vert");
         
         if (vertexCode == null)
             throw new Exception("Shaders not found in resources!");

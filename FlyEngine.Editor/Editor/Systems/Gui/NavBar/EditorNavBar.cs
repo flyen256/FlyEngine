@@ -20,7 +20,7 @@ public class EditorNavBar : EditorGuiWindow
         {
             if (Editor.CompileError)
             {
-                await Editor.TaskQueue.Enqueue(Editor.CompileScriptsAsync, "Compiling scripts");
+                await Editor.TaskQueue.Enqueue(Editor.Scripts.CompileScriptsAsync, "Compiling scripts");
                 return;
             }
             if (Application.IsRunning)

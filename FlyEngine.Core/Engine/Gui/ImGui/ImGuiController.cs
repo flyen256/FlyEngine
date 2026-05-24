@@ -482,42 +482,6 @@ public class ImGuiController : IDisposable
       case Key.F12:
         imGuiKey = ImGuiKey.F12;
         break;
-      case Key.F13:
-        imGuiKey = ImGuiKey.F13;
-        break;
-      case Key.F14:
-        imGuiKey = ImGuiKey.F14;
-        break;
-      case Key.F15:
-        imGuiKey = ImGuiKey.F15;
-        break;
-      case Key.F16:
-        imGuiKey = ImGuiKey.F16;
-        break;
-      case Key.F17:
-        imGuiKey = ImGuiKey.F17;
-        break;
-      case Key.F18:
-        imGuiKey = ImGuiKey.F18;
-        break;
-      case Key.F19:
-        imGuiKey = ImGuiKey.F19;
-        break;
-      case Key.F20:
-        imGuiKey = ImGuiKey.F20;
-        break;
-      case Key.F21:
-        imGuiKey = ImGuiKey.F21;
-        break;
-      case Key.F22:
-        imGuiKey = ImGuiKey.F22;
-        break;
-      case Key.F23:
-        imGuiKey = ImGuiKey.F23;
-        break;
-      case Key.F24:
-        imGuiKey = ImGuiKey.F24;
-        break;
       case Key.Keypad0:
         imGuiKey = ImGuiKey.Keypad0;
         break;

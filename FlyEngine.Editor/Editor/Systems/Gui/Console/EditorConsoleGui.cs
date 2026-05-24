@@ -16,17 +16,17 @@ public class EditorConsoleGui : EditorGuiWindow
 
     protected override void OnRender(double deltaTime)
     {
-        if (EditorConsole.Instance == null || Core.Gui.ImGui.ImGui.Controller == null) return;
-        if (ImGui.Button("Clear")) { EditorConsole.Instance.Messages.Clear(); }
+        if (Core.Gui.ImGui.ImGui.Controller == null) return;
+        if (ImGui.Button("Clear")) { EditorConsole.Messages.Clear(); }
         ImGui.SameLine();
-        ImGui.TextUnformatted($"Messages: {EditorConsole.Instance.Messages.Count}");
+        ImGui.TextUnformatted($"Messages: {EditorConsole.Messages.Count}");
     
         ImGui.Separator();
 
         if (ImGui.BeginChild("ConsoleMessages", new Vector2(0, 0), ImGuiChildFlags.None, base.Flags | ImGuiWindowFlags.HorizontalScrollbar))
         {
             ImGui.PushTextWrapPos(-1.0f);
-            foreach (var msg in EditorConsole.Instance.Messages)
+            foreach (var msg in EditorConsole.Messages)
             {
                 var color = GetColorForLevel(msg.Level);
                 ImGui.PushFont(Core.Gui.ImGui.ImGui.Controller.ArialFont);

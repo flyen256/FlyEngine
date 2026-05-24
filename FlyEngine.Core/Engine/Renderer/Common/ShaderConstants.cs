@@ -34,4 +34,9 @@ public static class ShaderConstants
     public const string GizmoColor = "uGizmoColor";
 
     public static string Pack(int packIndex, int index) => $"uPack{packIndex}[{index}]";
+
+    public static class PostProcess
+    {
+        public const string IsSelected = "uIsSelected";
+    }
 }

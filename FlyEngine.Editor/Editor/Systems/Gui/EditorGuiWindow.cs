@@ -1,4 +1,5 @@
-﻿using ImGuiNET;
+﻿using System.Numerics;
+using ImGuiNET;
 using ImGuiNet = ImGuiNET.ImGui;
 
 namespace FlyEngine.Editor.Systems.Gui;
@@ -24,11 +25,22 @@ public abstract class EditorGuiWindow
         ImGuiNet.End();
     }
     
+    private Vector2 _lastWindowSize;
+    
     public virtual void Render(double deltaTime)
     {
         BeforeBegin();
         if (Begin())
+        {
+            var currentSize = ImGui.GetWindowSize();
+
+            if (currentSize != _lastWindowSize)
+            {
+                EditorAction.WindowResize(currentSize);
+                _lastWindowSize = currentSize;
+            }
             OnRender(deltaTime);
+        }
         End();
     }
 }

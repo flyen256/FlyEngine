@@ -1,8 +1,11 @@
-﻿using System.Runtime.InteropServices;
+﻿using System.Numerics;
+using System.Runtime.InteropServices;
 using FlyEngine.Core;
+using FlyEngine.Core.Components.Common;
 using FlyEngine.Core.Components.Renderer;
 using FlyEngine.Core.Components.Renderer._3D;
 using FlyEngine.Core.Gui.ImGui;
+using FlyEngine.Core.Math;
 using FlyEngine.Core.Renderer;
 using FlyEngine.Core.SceneManagement;
 using Microsoft.Extensions.Logging;
@@ -17,9 +20,12 @@ public class EditorWindow(ApplicationWindowOptions windowOptions) : BaseWindow(w
     private readonly ILogger _logger = new Logger<OpenGlWindow>(LoggerFactory.Create(builder => builder.AddConsole()));
 
     private static Scene? Scene => SceneManager.CurrentScene;
-    
+
+    public override GameObject? EditorSelectedGameObject =>
+        Editor.SelectionManager.SelectedGameObject;
+
     private bool _graphicsReady;
-    
+
     protected override void OnLoad()
     {
         OpenGl = new OpenGl(Handle, this);
@@ -71,7 +77,6 @@ public class EditorWindow(ApplicationWindowOptions windowOptions) : BaseWindow(w
             Scene?.Update(deltaTime);
             return;
         }
-        // OpenGl.Gl.Clear(ClearBufferMask.ColorBufferBit);
         ImGui.Controller.Update((float)deltaTime);
         if (Scene != null)
         {
