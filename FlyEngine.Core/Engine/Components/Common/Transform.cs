@@ -7,9 +7,9 @@ namespace FlyEngine.Core.Components.Common;
 [MemoryPackable]
 public partial class Transform
 {
-    [MemoryPackInclude]
+    [MemoryPackIgnore]
     private Transform? _parent;
-    [MemoryPackInclude]
+    [MemoryPackIgnore]
     private List<Transform> _children = [];
 
     [MemoryPackInclude]

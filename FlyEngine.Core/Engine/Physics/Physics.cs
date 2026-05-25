@@ -17,8 +17,11 @@ public static class Physics
     public static PhysicsSystem System;
     public static BodyInterface BodyInterface;
     public static JobSystem JobSystem;
+    
+    public static ObjectLayerPairFilterTable ObjectLayerPairFilter = new(2);
+    public static BroadPhaseLayerInterfaceTable BroadPhaseLayerInterface = new(2, 2);
 
-    private static PhysicsSystemSettings _settings; 
+    private static PhysicsSystemSettings _settings;
     
     public static class Layers
     {
@@ -78,18 +81,16 @@ public static class Physics
     
     private static void SetupCollisionFiltering()
     {
-        ObjectLayerPairFilterTable objectLayerPairFilter = new(2);
-        objectLayerPairFilter.EnableCollision(Layers.NonMoving, Layers.Moving);
-        objectLayerPairFilter.EnableCollision(Layers.Moving, Layers.Moving);
+        ObjectLayerPairFilter.EnableCollision(Layers.NonMoving, Layers.Moving);
+        ObjectLayerPairFilter.EnableCollision(Layers.Moving, Layers.Moving);
+        
+        BroadPhaseLayerInterface.MapObjectToBroadPhaseLayer(Layers.NonMoving, BroadPhaseLayers.NonMoving);
+        BroadPhaseLayerInterface.MapObjectToBroadPhaseLayer(Layers.Moving, BroadPhaseLayers.Moving);
 
-        BroadPhaseLayerInterfaceTable broadPhaseLayerInterface = new(2, 2);
-        broadPhaseLayerInterface.MapObjectToBroadPhaseLayer(Layers.NonMoving, BroadPhaseLayers.NonMoving);
-        broadPhaseLayerInterface.MapObjectToBroadPhaseLayer(Layers.Moving, BroadPhaseLayers.Moving);
+        ObjectVsBroadPhaseLayerFilterTable objectVsBroadPhaseLayerFilter = new(BroadPhaseLayerInterface, 2, ObjectLayerPairFilter, 2);
 
-        ObjectVsBroadPhaseLayerFilterTable objectVsBroadPhaseLayerFilter = new(broadPhaseLayerInterface, 2, objectLayerPairFilter, 2);
-
-        _settings.ObjectLayerPairFilter = objectLayerPairFilter;
-        _settings.BroadPhaseLayerInterface = broadPhaseLayerInterface;
+        _settings.ObjectLayerPairFilter = ObjectLayerPairFilter;
+        _settings.BroadPhaseLayerInterface = BroadPhaseLayerInterface;
         _settings.ObjectVsBroadPhaseLayerFilter = objectVsBroadPhaseLayerFilter;
     }
     

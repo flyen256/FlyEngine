@@ -43,31 +43,12 @@ public class MeshRenderer : Behaviour
 
         shader.SetUniform(ShaderConstants.Model, model);
 
-        // if (Application.Window != null &&
-        //     Application.Window.IsEditor &&
-        //     Application.Window.SelectedGameObjectName == GameObject.Name)
-        // {
-        //     switch (gl.RenderPipeline)
-        //     {
-        //         case DefaultRenderPipeline defaultRenderPipeline:
-        //             var outline = defaultRenderPipeline.OutlineShader;
-        //             outline.Use();
-        //             outline.SetUniform(ShaderConstants.PostProcess.IsSelected, 1);
-        //             break;
-        //     }
-        // }
-        // else
-        // {
-        //     switch (gl.RenderPipeline)
-        //     {
-        //         case DefaultRenderPipeline defaultRenderPipeline:
-        //             var outline = defaultRenderPipeline.OutlineShader;
-        //             outline.Use();
-        //             outline.SetUniform(ShaderConstants.PostProcess.IsSelected, 0);
-        //             break;
-        //     }
-        // }
-
-        gl.Gl.DrawElements(PrimitiveType.Triangles, Mesh.IndexCount, DrawElementsType.UnsignedInt, (void*)0);
+				Draw(gl);
     }
+
+		private unsafe void Draw(OpenGl gl)
+		{
+				if (Mesh == null) return;
+				gl.Gl.DrawElements(PrimitiveType.Triangles, Mesh.IndexCount, DrawElementsType.UnsignedInt, (void*)0);
+		}
 }
