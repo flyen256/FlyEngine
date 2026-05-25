@@ -1,7 +1,5 @@
 ﻿using System.Numerics;
 using FlyEngine.Core;
-using FlyEngine.Core.Components.Common;
-using FlyEngine.Core.Extensions;
 using ImGuiNET;
 using Silk.NET.Maths;
 using ImGuiNet = ImGuiNET.ImGui;
@@ -36,28 +34,6 @@ public class EditorScene : EditorGuiWindow
         
         if (ImGuiNet.IsItemHovered())
         {
-            if (ImGuiNet.IsMouseDown(ImGuiMouseButton.Left) && Application.Scene != null)
-            {
-                var localMousePos = mousePos - windowPos;
-                var (origin, direction) = ScreenPointToRay(localMousePos, regionSize);
-
-                GameObject? closestObject = null;
-                var minDistance = float.MaxValue;
-
-                foreach (var obj in Application.Scene.MeshRenderers)
-                {
-                    var size = Vector3.One * 0.5f;
-                    var min = obj.Transform.Position - size;
-                    var max = obj.Transform.Position + size;
-
-                    if (!RayIntersectsAabb(origin, direction, min, max, out var dist)) continue;
-                    if (dist < minDistance)
-                        closestObject = obj.GameObject;
-                }
-
-                if (closestObject != null)
-                    Editor.SelectionManager.SelectedGameObject = closestObject;
-            }
             if (ImGuiNet.IsMouseDown(ImGuiMouseButton.Right))
             {
                 ScenePressed = true;

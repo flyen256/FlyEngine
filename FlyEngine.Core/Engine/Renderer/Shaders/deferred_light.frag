@@ -1,6 +1,7 @@
 #version 330 core
 
-#define MAX_LIGHTS 24
+#define MAX_LIGHTS 48
+#define MAX_SHADOW_LIGHTS 48
 #define LT_POINT 0
 #define LT_SPOT 1
 #define LT_DIR 2
@@ -29,9 +30,13 @@ uniform vec4 uPack2[MAX_LIGHTS];
 uniform vec4 uPack3[MAX_LIGHTS];
 uniform vec4 uPack4[MAX_LIGHTS];
 
+uniform int uNumShadowLights;
+uniform int uShadowLightIndices[MAX_SHADOW_LIGHTS];
+uniform vec4 uShadowUVRect[MAX_SHADOW_LIGHTS];
+uniform mat4 uShadowMatrices[MAX_SHADOW_LIGHTS];
+
 uniform int uShadowEnabled;
 uniform int uShadowDirIndex;
-uniform mat4 uLightSpaceMatrix;
 
 uniform vec3 uSunDirWorld;
 uniform float uFogDensity;
@@ -107,49 +112,54 @@ float hash(vec2 p)
     return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453);
 }
 
-float shadowVisibility(vec3 worldPos, vec3 N)
+float shadowVisibility(int lightIndex, vec3 worldPos, vec3 N, vec3 lightDir)
 {
     if (uShadowEnabled == 0) return 1.0;
 
-    vec4 ls = uLightSpaceMatrix * vec4(worldPos, 1.0);
-    vec3 proj = ls.xyz / ls.w;
-    proj = proj * 0.5 + 0.5;
-
-    if (proj.x < 0.0 || proj.x > 1.0 ||
-    proj.y < 0.0 || proj.y > 1.0 ||
-    proj.z < 0.0 || proj.z > 1.0)
-    return 1.0;
-
-    float zReceiver = proj.z;
-
-    vec2 texel = 1.0 / vec2(textureSize(uShadowMap, 0));
-
-    float angle = hash(proj.xy) * 6.2831853;
-    mat2 rot = mat2(cos(angle), -sin(angle),
-    sin(angle),  cos(angle));
-
-    float shadow = 0.0;
-    int radius = 3;
-
-    float cosTheta = clamp(dot(N, uSunDirWorld), 0.0, 1.0);
-    float bias = max(0.0008 * (1.0 - cosTheta), 0.00005);
-
-    for (int x = -radius; x <= radius; x++)
+    for (int s = 0; s < uNumShadowLights; s++)
     {
-        for (int y = -radius; y <= radius; y++)
+        if (uShadowLightIndices[s] != lightIndex) continue;
+
+        vec4 rect = uShadowUVRect[s];
+        mat4 lightSpace = uShadowMatrices[s];
+
+        vec4 ls = lightSpace * vec4(worldPos, 1.0);
+        vec3 proj = ls.xyz / ls.w;
+        proj = proj * 0.5 + 0.5;
+
+				if (proj.x < 0.0 || proj.x > 1.0 || 
+						proj.y < 0.0 || proj.y > 1.0 || 
+						proj.z < 0.0 || proj.z > 1.0)
+						return 1.0;
+
+        vec2 shadowUV = proj.xy * rect.zw + rect.xy;
+
+        float zReceiver = proj.z;
+				float bias = max(0.0015 * (1.0 - clamp(dot(N, lightDir), 0.0, 1.0)), 0.0005);
+
+        vec2 texelSize = 1.0 / vec2(textureSize(uShadowMap, 0));
+        float shadow = 0.0;
+        const int radius = 2;
+
+        float angle = hash(proj.xy) * 6.2831853;
+        mat2 rot = mat2(cos(angle), -sin(angle), sin(angle), cos(angle));
+
+        for (int x = -radius; x <= radius; x++)
         {
-            vec2 offset = vec2(x, y);
-            offset = rot * offset;
+            for (int y = -radius; y <= radius; y++)
+            {
+                vec2 offset = vec2(x, y) * texelSize;
+                offset = rot * offset;
 
-            vec2 uv = proj.xy + offset * texel;
-
-            float closest = texture(uShadowMap, uv).r;
-
-            shadow += (zReceiver - bias <= closest) ? 1.0 : 0.0;
+                float depth = texture(uShadowMap, shadowUV + offset).r;
+                shadow += (zReceiver - bias <= depth) ? 1.0 : 0.0;
+            }
         }
+
+        return shadow / float((radius*2+1)*(radius*2+1));
     }
 
-    return shadow / float((radius * 2 + 1) * (radius * 2 + 1));
+    return 1.0;
 }
 
 vec3 worldRayDir(vec2 uv)
@@ -211,7 +221,7 @@ vec3 applyVolumetricFog(vec3 hdrLinear, vec3 rd, float sceneDist)
     return hdrLinear * trans + accum;
 }
 
-vec3 evalLight(int i, vec3 worldPos, vec3 N, vec3 V, float roughness, vec3 albedo, float metallic, float dirShadow)
+vec3 evalLight(int i, vec3 worldPos, vec3 N, vec3 V, float roughness, vec3 albedo, float metallic)
 {
     vec4 p0 = uPack0[i];
     vec4 p1 = uPack1[i];
@@ -241,7 +251,7 @@ vec3 evalLight(int i, vec3 worldPos, vec3 N, vec3 V, float roughness, vec3 albed
         vec3 L = normalize(-p2.xyz);
         vec3 rad = radianceBase;
         if (uShadowEnabled != 0 && i == uShadowDirIndex)
-            rad *= dirShadow;
+            rad *= shadowVisibility(i, worldPos, N, uSunDirWorld);
         return brdfLo(worldPos, N, V, L, rad, roughness, albedo, metallic);
     }
 
@@ -262,6 +272,8 @@ vec3 evalLight(int i, vec3 worldPos, vec3 N, vec3 V, float roughness, vec3 albed
         float spotMask = smoothstep(cosOuter, cosInner, theta);
         vec3 rad = radianceBase * att * spotMask;
         if (spotMask < 1e-3) return vec3(0.0);
+				if (uShadowEnabled != 0)
+					rad *= shadowVisibility(i, worldPos, N, spotDir);
         return brdfLo(worldPos, N, V, L, rad, roughness, albedo, metallic);
     }
 
@@ -337,12 +349,10 @@ void main()
     vec3 V = normalize(uCameraPos - worldPos);
     float sceneDist = length(worldPos - uCameraPos);
 
-    float dirSh = shadowVisibility(worldPos, N);
-
     vec3 Lo = vec3(0.0);
     int n = clamp(uNumLights, 0, MAX_LIGHTS);
     for (int i = 0; i < n; i++)
-        Lo += evalLight(i, worldPos, N, V, roughness, albedo, metallic, dirSh);
+        Lo += evalLight(i, worldPos, N, V, roughness, albedo, metallic);
 
     vec3 ambient = uAmbientColor * albedo * (metallic * 0.15 + (1.0 - metallic));
     vec3 color = ambient + Lo;

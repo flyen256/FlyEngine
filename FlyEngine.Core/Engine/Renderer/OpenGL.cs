@@ -15,8 +15,9 @@ public class OpenGl
     
     public uint DefaultWhiteTexture { get; private set; }
 
-    public int MaxDeferredLights { get; set; } = 24;
+    public int MaxDeferredLights { get; set; } = 48;
     public uint ShadowMapResolution { get; set; } = 4096;
+		public uint ShadowMapTileSize { get; set; } = 512;
 
     public RenderPipeline RenderPipeline { get; set; }
     

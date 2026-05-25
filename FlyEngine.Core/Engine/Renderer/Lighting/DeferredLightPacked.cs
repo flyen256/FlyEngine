@@ -1,4 +1,5 @@
 using System.Numerics;
+using FlyEngine.Core.Components.Renderer.Lighting;
 
 namespace FlyEngine.Core.Renderer.Lighting;
 
@@ -9,4 +10,6 @@ public struct DeferredLightPacked
     public Vector4 Pack2;
     public Vector4 Pack3;
     public Vector4 Pack4;
+		public Matrix4x4 LightMatrix;
+		public bool CastShadows;
 }

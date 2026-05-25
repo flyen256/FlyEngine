@@ -1,4 +1,6 @@
 ﻿using System.Numerics;
+using FlyEngine.Core.Components.Renderer.Lighting;
+using FlyEngine.Core.Math;
 
 namespace FlyEngine.Core.Extensions;
 
@@ -33,4 +35,20 @@ public static class NumericsUtils
 
         return view * proj;
     }
+
+		public static Matrix4x4 CreateLightSpaceMatrix(LightSource light) {
+				var position = light.Transform.Position;
+				var direction = Vector3.Normalize(Vector3.Transform(-Vector3.UnitZ, light.Transform.Rotation));
+
+				float near = 0.1f;
+				float far = light.Range * 1.2f;
+				float fov = light.SpotOuterDegrees * 2f;
+
+				Matrix4x4 proj = Matrix4x4.CreatePerspectiveFieldOfView(
+						MathHelper.DegreesToRadians(fov), 1.0f, near, far);
+
+				Matrix4x4 view = Matrix4x4.CreateLookAt(position, position + direction, Vector3.UnitY);
+
+				return view * proj;
+		}
 }

@@ -35,9 +35,17 @@ public class DefaultRenderPipeline(OpenGl openGl) : RenderPipeline(openGl)
     private uint _deferredLightVbo;
 
     private uint _shadowFbo;
-    private uint _shadowDepthTex;
+    private uint _shadowAtlasTex;
 
     private uint _skyCubemap;
+
+		private class ShadowAtlasEntry
+		{
+				public int LightIndex;
+				public Vector4 UVRect;
+				public Matrix4x4 LightSpaceMatrix;
+		}
+		private List<ShadowAtlasEntry> _shadowEntries = new();
 
     public override void Render(double deltaTime, bool editor = false)
     {
@@ -82,7 +90,9 @@ public class DefaultRenderPipeline(OpenGl openGl) : RenderPipeline(openGl)
                 sunLightIndex = lightCount;
                 sunLight = light;
             }
-            lightBuf[lightCount++] = light.BuildPacked();
+						var packed = light.BuildPacked();
+						packed.LightMatrix = NumericsUtils.CreateLightSpaceMatrix(light);
+            lightBuf[lightCount++] = packed;
         }
 
         var lightSpace = Matrix4x4.Identity;
@@ -100,9 +110,10 @@ public class DefaultRenderPipeline(OpenGl openGl) : RenderPipeline(openGl)
                 300f
             );
             sunDirection = -packForward;
+						lightBuf[sunLightIndex].LightMatrix = lightSpace;
         }
 
-        RenderShadowPass(lightSpace, dt =>
+        RenderShadowPass(lightSpace, lightBuf[..lightCount], dt =>
         {
             var behaviours = CollectionsMarshal.AsSpan(Application.Scene.Behaviours.ToList());
             for (var i = 0; i < behaviours.Length; i++)
@@ -118,7 +129,7 @@ public class DefaultRenderPipeline(OpenGl openGl) : RenderPipeline(openGl)
                 if (!meshRenderer.IsActive()) continue;
                 meshRenderer.OnRender(deltaTime);
             }
-        }, deltaTime);
+        }, deltaTime, sunLightIndex);
 
         FinishDeferredLightingPass(
             projection,
@@ -129,8 +140,7 @@ public class DefaultRenderPipeline(OpenGl openGl) : RenderPipeline(openGl)
             1f,
             SceneManager.CurrentScene != null ? SceneManager.CurrentScene.Environment : DeferredEnvironment.Default,
             sunLightIndex,
-            sunDirection,
-            lightSpace);
+            sunDirection);
         Gl.Clear((uint)ClearBufferMask.DepthBufferBit);
     }
 
@@ -138,11 +148,38 @@ public class DefaultRenderPipeline(OpenGl openGl) : RenderPipeline(openGl)
     {
         BuildDeferredPrograms(vertexCode);
         BuildShadowProgram();
-        CreateShadowFramebuffer();
+        // CreateShadowFramebuffer();
+				CreateShadowAtlas();
         CreateDeferredLightQuad();
         CreateFinalFramebuffer(OpenGl.Window.Size);
         ResizeGBuffer(OpenGl.Window.Size);
     }
+
+		private unsafe void CreateShadowAtlas()
+		{
+				_shadowAtlasTex = Gl.GenTexture();
+				Gl.BindTexture(TextureTarget.Texture2D, _shadowAtlasTex);
+				Gl.TexImage2D(TextureTarget.Texture2D, 0, InternalFormat.DepthComponent24, 
+											(uint)OpenGl.ShadowMapResolution, (uint)OpenGl.ShadowMapResolution, 0,
+											PixelFormat.DepthComponent, PixelType.UnsignedInt, null);
+
+				Gl.TexParameterI(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Nearest);
+				Gl.TexParameterI(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMinFilter.Nearest);
+				Gl.TexParameterI(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.ClampToBorder);
+				Gl.TexParameterI(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.ClampToBorder);
+
+				var border = stackalloc float[] { 1f, 1f, 1f, 1f };
+				Gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureBorderColor, border);
+
+				_shadowFbo = Gl.GenFramebuffer();
+				Gl.BindFramebuffer(FramebufferTarget.Framebuffer, _shadowFbo);
+				Gl.FramebufferTexture2D(FramebufferTarget.Framebuffer, FramebufferAttachment.DepthAttachment, 
+															 TextureTarget.Texture2D, _shadowAtlasTex, 0);
+				Gl.DrawBuffer(DrawBufferMode.None);
+				Gl.ReadBuffer(ReadBufferMode.None);
+
+				Gl.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
+		}
 
     public override unsafe void CreateFinalFramebuffer(Vector2D<int> viewport)
     {
@@ -229,37 +266,6 @@ public class DefaultRenderPipeline(OpenGl openGl) : RenderPipeline(openGl)
         if (vs == null || fs == null)
             throw new Exception("shadow_depth shaders not found in resources!");
         ShadowDepthShader = new Shader(Gl, vs, fs);
-    }
-
-    private unsafe void CreateShadowFramebuffer()
-    {
-        _shadowDepthTex = Gl.GenTexture();
-        Gl.BindTexture(TextureTarget.Texture2D, _shadowDepthTex);
-        Gl.TexImage2D(TextureTarget.Texture2D, 0, InternalFormat.DepthComponent24, OpenGl.ShadowMapResolution, OpenGl.ShadowMapResolution, 0,
-            PixelFormat.DepthComponent, PixelType.UnsignedInt, null);
-        var linear = (int)TextureMinFilter.Linear;
-        Gl.TexParameterI(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, in linear);
-        Gl.TexParameterI(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, in linear);
-        var nearest = (int)TextureMinFilter.Nearest;
-        Gl.TexParameterI(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, in nearest);
-        Gl.TexParameterI(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, in nearest);
-        var wrapEdge = (int)TextureWrapMode.ClampToBorder;
-        Gl.TexParameterI(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, in wrapEdge);
-        Gl.TexParameterI(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, in wrapEdge);
-        var border = stackalloc float[] { 1f, 1f, 1f, 1f };
-        Gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureBorderColor, border);
-        Gl.BindTexture(TextureTarget.Texture2D, 0);
-
-        _shadowFbo = Gl.GenFramebuffer();
-        Gl.BindFramebuffer(FramebufferTarget.Framebuffer, _shadowFbo);
-        Gl.FramebufferTexture2D(FramebufferTarget.Framebuffer, FramebufferAttachment.DepthAttachment, TextureTarget.Texture2D,
-            _shadowDepthTex, 0);
-        Gl.DrawBuffer(DrawBufferMode.None);
-        Gl.ReadBuffer(ReadBufferMode.None);
-        var status = Gl.CheckFramebufferStatus(FramebufferTarget.Framebuffer);
-        if (status != GLEnum.FramebufferComplete)
-            throw new Exception($"Shadow framebuffer incomplete: {status}");
-        Gl.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
     }
 
     public unsafe void CreateProceduralSkyCubemap()
@@ -354,32 +360,83 @@ public class DefaultRenderPipeline(OpenGl openGl) : RenderPipeline(openGl)
         return sky;
     }
 
-    public void RenderShadowPass(in Matrix4x4 lightSpaceMatrix, Action<double> drawMeshes, double deltaTime)
-    {
-        if (_shadowFbo == 0 || ShadowDepthShader.Handle == 0)
-            return;
+    public void RenderShadowPass(
+        in Matrix4x4 lightSpaceMatrix,
+        ReadOnlySpan<DeferredLightPacked> lights,
+        Action<double> drawMeshes,
+        double deltaTime,
+        int sunLightIndex)
+		{
+				if (_shadowFbo == 0) return;
 
-        Gl.Viewport(0, 0, OpenGl.ShadowMapResolution, OpenGl.ShadowMapResolution);
-        Gl.BindFramebuffer(FramebufferTarget.Framebuffer, _shadowFbo);
-        Gl.Clear(ClearBufferMask.DepthBufferBit);
-        Gl.Enable(EnableCap.DepthTest);
+				Gl.BindFramebuffer(FramebufferTarget.Framebuffer, _shadowFbo);
+				Gl.Clear(ClearBufferMask.DepthBufferBit);
+				IsShadowPass = true;
+				ShadowDepthShader.Use();
 
-        Gl.Disable(EnableCap.CullFace);
+				_shadowEntries.Clear();
+				int shadowLightCount = 0;
 
-        Gl.Enable(EnableCap.PolygonOffsetFill);
-        Gl.PolygonOffset(1.1f, 2f);
-        Gl.DepthFunc(DepthFunction.Less);
+				Gl.Enable(EnableCap.ScissorTest);
 
-        IsShadowPass = true;
-        ShadowDepthShader.Use();
-        ShadowDepthShader.SetUniform(ShaderConstants.LightMatrix, lightSpaceMatrix);
+				if (sunLightIndex >= 0)
+				{
+						Gl.Viewport(0, 0, OpenGl.ShadowMapResolution, OpenGl.ShadowMapResolution);
+						Gl.Scissor(0, 0, OpenGl.ShadowMapResolution, OpenGl.ShadowMapResolution);
+						Gl.Clear(ClearBufferMask.DepthBufferBit);
 
-        drawMeshes(deltaTime);
+						ShadowDepthShader.SetUniform(ShaderConstants.LightMatrix, lightSpaceMatrix);
+						drawMeshes(deltaTime);
 
-        IsShadowPass = false;
-        Gl.Disable(EnableCap.PolygonOffsetFill);
-        Gl.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
-    }
+						_shadowEntries.Add(new ShadowAtlasEntry
+						{
+								LightIndex = sunLightIndex,
+								UVRect = new Vector4(0, 0, 1.0f, 1.0f),
+								LightSpaceMatrix = lightSpaceMatrix
+						});
+						shadowLightCount = 1;
+				}
+
+				uint tileSize = OpenGl.ShadowMapTileSize;
+				var n = MathF.Min(lights.Length, OpenGl.MaxDeferredLights);
+
+				for (int i = 0; i < n; i++)
+				{
+						var pk = lights[i];
+						if (!pk.CastShadows || i == sunLightIndex) continue;
+
+						int tileX = shadowLightCount % 4;
+						int tileY = shadowLightCount / 4;
+
+						int x = (int)(tileX * tileSize);
+						int y = (int)(tileY * tileSize);
+
+						Gl.Viewport(x, y, tileSize, tileSize);
+						Gl.Scissor(x, y, tileSize, tileSize);
+						Gl.Clear(ClearBufferMask.DepthBufferBit);
+
+						ShadowDepthShader.SetUniform(ShaderConstants.LightMatrix, pk.LightMatrix);
+						drawMeshes(deltaTime);
+
+						_shadowEntries.Add(new ShadowAtlasEntry
+						{
+								LightIndex = i,
+								UVRect = new Vector4(
+										(float)x / OpenGl.ShadowMapResolution,
+										(float)y / OpenGl.ShadowMapResolution,
+										(float)tileSize / OpenGl.ShadowMapResolution,
+										(float)tileSize / OpenGl.ShadowMapResolution),
+								LightSpaceMatrix = pk.LightMatrix
+						});
+
+						shadowLightCount++;
+						if (shadowLightCount >= 16) break;
+				}
+
+				Gl.Disable(EnableCap.ScissorTest);
+				IsShadowPass = false;
+				Gl.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
+		}
 
     private unsafe void CreateDeferredLightQuad()
     {
@@ -503,8 +560,7 @@ public class DefaultRenderPipeline(OpenGl openGl) : RenderPipeline(openGl)
         float ditherStrength,
         in DeferredEnvironment environment,
         int sunLightIndex,
-        in Vector3 sunDirection,
-        in Matrix4x4 lightSpaceMatrix)
+        in Vector3 sunDirection)
     {
         Matrix4x4.Invert(projection, out var invProj);
         Matrix4x4.Invert(view, out var invView);
@@ -517,155 +573,80 @@ public class DefaultRenderPipeline(OpenGl openGl) : RenderPipeline(openGl)
         Gl.Disable(EnableCap.DepthTest);
         Gl.Disable(EnableCap.Blend);
 
-        if (_hasDeferredCompute && DeferredComputeShader != null)
-        {
-            DeferredComputeShader.Use();
+				DeferredLightShader.Use();
 
-            Gl.ActiveTexture(TextureUnit.Texture0);
-            Gl.BindTexture(TextureTarget.Texture2D, _gAlbedoMetallic);
-            DeferredComputeShader.SetUniform(ShaderConstants.AlbedoMetallic, 0);
+				Gl.ActiveTexture(TextureUnit.Texture0);
+				Gl.BindTexture(TextureTarget.Texture2D, _gAlbedoMetallic);
+				DeferredLightShader.SetUniform(ShaderConstants.AlbedoMetallic, 0);
 
-            Gl.ActiveTexture(TextureUnit.Texture1);
-            Gl.BindTexture(TextureTarget.Texture2D, _gNormalSmoothness);
-            DeferredComputeShader.SetUniform(ShaderConstants.NormalSmoothness, 1);
+				Gl.ActiveTexture(TextureUnit.Texture1);
+				Gl.BindTexture(TextureTarget.Texture2D, _gNormalSmoothness);
+				DeferredLightShader.SetUniform(ShaderConstants.NormalSmoothness, 1);
 
-            Gl.ActiveTexture(TextureUnit.Texture2);
-            Gl.BindTexture(TextureTarget.Texture2D, _gDepth);
-            DeferredComputeShader.SetUniform(ShaderConstants.Depth, 2);
+				Gl.ActiveTexture(TextureUnit.Texture2);
+				Gl.BindTexture(TextureTarget.Texture2D, _gDepth);
+				DeferredLightShader.SetUniform(ShaderConstants.Depth, 2);
 
-            Gl.ActiveTexture(TextureUnit.Texture3);
-            Gl.BindTexture(TextureTarget.Texture2D, _shadowDepthTex);
-            DeferredComputeShader.SetUniform(ShaderConstants.ShadowMap, 3);
+				Gl.ActiveTexture(TextureUnit.Texture3);
+				Gl.BindTexture(TextureTarget.Texture2D, _shadowAtlasTex);
+				DeferredLightShader.SetUniform(ShaderConstants.ShadowMap, 3);
 
-            Gl.ActiveTexture(TextureUnit.Texture4);
-            Gl.BindTexture(TextureTarget.TextureCubeMap, _skyCubemap);
-            DeferredComputeShader.SetUniform(ShaderConstants.Skybox, 4);
+				Gl.ActiveTexture(TextureUnit.Texture4);
+				Gl.BindTexture(TextureTarget.TextureCubeMap, _skyCubemap);
+				DeferredLightShader.SetUniform(ShaderConstants.Skybox, 4);
 
-            DeferredComputeShader.SetUniform(ShaderConstants.View, view);
-            DeferredComputeShader.SetUniform(ShaderConstants.ShadowEnabled, environment.ShadowEnabled ? 1 : 0);
-            DeferredComputeShader.SetUniform(ShaderConstants.ShadowDirIndex, sunLightIndex);
-            DeferredComputeShader.SetUniform(ShaderConstants.LightSpaceMatrix, lightSpaceMatrix);
-            DeferredComputeShader.SetUniform(ShaderConstants.SunDirWorld, sunDirection);
+				DeferredLightShader.SetUniform(ShaderConstants.ShadowEnabled, environment.ShadowEnabled ? 1 : 0);
+				DeferredLightShader.SetUniform(ShaderConstants.ShadowDirIndex, sunLightIndex);
 
-            DeferredComputeShader.SetUniform(ShaderConstants.FogEnabled, environment.FogEnabled ? 1 : 0);
-            DeferredComputeShader.SetUniform(ShaderConstants.FogDensity, environment.FogDensity);
-            DeferredComputeShader.SetUniform(ShaderConstants.FogHeight, environment.FogHeight);
-            DeferredComputeShader.SetUniform(ShaderConstants.FogFalloff, environment.FogHeightFalloff);
-            DeferredComputeShader.SetUniform(ShaderConstants.FogScatter, environment.FogScattering);
-            DeferredComputeShader.SetUniform(ShaderConstants.FogColor, environment.FogColor);
+				DeferredLightShader.SetUniform(ShaderConstants.SunDirWorld, sunDirection);
 
-            DeferredComputeShader.SetUniform(ShaderConstants.ViewportSize, new Vector2(viewport.X, viewport.Y));
-            DeferredComputeShader.SetUniform(ShaderConstants.InverseProjection, invProj);
-            DeferredComputeShader.SetUniform(ShaderConstants.InverseView, invView);
-            DeferredComputeShader.SetUniform(ShaderConstants.CameraPosition, cameraPos);
-            DeferredComputeShader.SetUniform(ShaderConstants.AmbientColor, environment.AmbientColor);
+				DeferredLightShader.SetUniform(ShaderConstants.FogEnabled, environment.FogEnabled ? 1 : 0);
+				DeferredLightShader.SetUniform(ShaderConstants.FogDensity, environment.FogDensity);
+				DeferredLightShader.SetUniform(ShaderConstants.FogHeight, environment.FogHeight);
+				DeferredLightShader.SetUniform(ShaderConstants.FogFalloff, environment.FogHeightFalloff);
+				DeferredLightShader.SetUniform(ShaderConstants.FogScatter, environment.FogScattering);
+				DeferredLightShader.SetUniform(ShaderConstants.FogColor, environment.FogColor);
 
-            var n = System.Math.Min(lights.Length, OpenGl.MaxDeferredLights);
-            DeferredComputeShader.SetUniform(ShaderConstants.NumLights, n);
-            var zero = Vector4.Zero;
-            for (var i = 0; i < OpenGl.MaxDeferredLights; i++)
-            {
-                var pk = i < n ? lights[i] : default;
-                var p0 = i < n ? pk.Pack0 : zero;
-                var p1 = i < n ? pk.Pack1 : zero;
-                var p2 = i < n ? pk.Pack2 : zero;
-                var p3 = i < n ? pk.Pack3 : zero;
-                var p4 = i < n ? pk.Pack4 : zero;
-                DeferredComputeShader.SetUniform(ShaderConstants.Pack(0, i), p0);
-                DeferredComputeShader.SetUniform(ShaderConstants.Pack(1, i), p1);
-                DeferredComputeShader.SetUniform(ShaderConstants.Pack(2, i), p2);
-                DeferredComputeShader.SetUniform(ShaderConstants.Pack(3, i), p3);
-                DeferredComputeShader.SetUniform(ShaderConstants.Pack(4, i), p4);
-            }
+				DeferredLightShader.SetUniform(ShaderConstants.ViewportSize, new Vector2(viewport.X, viewport.Y));
 
-            Gl.BindImageTexture(0, FinalTexture, 0, false, 0, GLEnum.WriteOnly, InternalFormat.Rgba16f);
+				DeferredLightShader.SetUniform(ShaderConstants.InverseProjection, invProj);
+				DeferredLightShader.SetUniform(ShaderConstants.InverseView, invView);
 
-            var groupsX = (uint)((viewport.X + 15) / 16);
-            var groupsY = (uint)((viewport.Y + 15) / 16);
-            DeferredComputeShader.Dispatch(groupsX, groupsY, 1);
-            Gl.MemoryBarrier((uint)GLEnum.ShaderImageAccessBarrierBit | (uint)GLEnum.TextureFetchBarrierBit | (uint)GLEnum.FramebufferBarrierBit);
+				DeferredLightShader.SetUniform(ShaderConstants.CameraPosition, cameraPos);
+				DeferredLightShader.SetUniform(ShaderConstants.AmbientColor, environment.AmbientColor);
+				DeferredLightShader.SetUniform(ShaderConstants.DitherStrength, ditherStrength);
 
-            if (targetFbo == 0)
-            {
-                Gl.BindFramebuffer(FramebufferTarget.ReadFramebuffer, FinalFbo);
-                Gl.BindFramebuffer(FramebufferTarget.DrawFramebuffer, 0);
-                Gl.BlitFramebuffer(0, 0, viewport.X, viewport.Y, 0, 0, viewport.X, viewport.Y, ClearBufferMask.ColorBufferBit, BlitFramebufferFilter.Nearest);
-                Gl.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
-            }
-            else
-            {
-                Gl.BindFramebuffer(FramebufferTarget.Framebuffer, targetFbo);
-            }
-        }
-        else
-        {
-            DeferredLightShader.Use();
+				var n = System.Math.Min(lights.Length, OpenGl.MaxDeferredLights);
+				DeferredLightShader.SetUniform(ShaderConstants.NumLights, n);
+				var zero = Vector4.Zero;
+				for (var i = 0; i < OpenGl.MaxDeferredLights; i++)
+				{
+						var pk = i < n ? lights[i] : default;
+						var p0 = i < n ? pk.Pack0 : zero;
+						var p1 = i < n ? pk.Pack1 : zero;
+						var p2 = i < n ? pk.Pack2 : zero;
+						var p3 = i < n ? pk.Pack3 : zero;
+						var p4 = i < n ? pk.Pack4 : zero;
+						DeferredLightShader.SetUniform(ShaderConstants.Pack(0, i), p0);
+						DeferredLightShader.SetUniform(ShaderConstants.Pack(1, i), p1);
+						DeferredLightShader.SetUniform(ShaderConstants.Pack(2, i), p2);
+						DeferredLightShader.SetUniform(ShaderConstants.Pack(3, i), p3);
+						DeferredLightShader.SetUniform(ShaderConstants.Pack(4, i), p4);
+				}
+				DeferredLightShader.SetUniform(ShaderConstants.NumShadowLights, _shadowEntries.Count);
 
-            Gl.ActiveTexture(TextureUnit.Texture0);
-            Gl.BindTexture(TextureTarget.Texture2D, _gAlbedoMetallic);
-            DeferredLightShader.SetUniform(ShaderConstants.AlbedoMetallic, 0);
-
-            Gl.ActiveTexture(TextureUnit.Texture1);
-            Gl.BindTexture(TextureTarget.Texture2D, _gNormalSmoothness);
-            DeferredLightShader.SetUniform(ShaderConstants.NormalSmoothness, 1);
-
-            Gl.ActiveTexture(TextureUnit.Texture2);
-            Gl.BindTexture(TextureTarget.Texture2D, _gDepth);
-            DeferredLightShader.SetUniform(ShaderConstants.Depth, 2);
-
-            Gl.ActiveTexture(TextureUnit.Texture3);
-            Gl.BindTexture(TextureTarget.Texture2D, _shadowDepthTex);
-            DeferredLightShader.SetUniform(ShaderConstants.ShadowMap, 3);
-
-            Gl.ActiveTexture(TextureUnit.Texture4);
-            Gl.BindTexture(TextureTarget.TextureCubeMap, _skyCubemap);
-            DeferredLightShader.SetUniform(ShaderConstants.Skybox, 4);
-
-            DeferredLightShader.SetUniform(ShaderConstants.ShadowEnabled, environment.ShadowEnabled ? 1 : 0);
-            DeferredLightShader.SetUniform(ShaderConstants.ShadowDirIndex, sunLightIndex);
-            DeferredLightShader.SetUniform(ShaderConstants.LightSpaceMatrix, lightSpaceMatrix);
-
-            DeferredLightShader.SetUniform(ShaderConstants.SunDirWorld, sunDirection);
-
-            DeferredLightShader.SetUniform(ShaderConstants.FogEnabled, environment.FogEnabled ? 1 : 0);
-            DeferredLightShader.SetUniform(ShaderConstants.FogDensity, environment.FogDensity);
-            DeferredLightShader.SetUniform(ShaderConstants.FogHeight, environment.FogHeight);
-            DeferredLightShader.SetUniform(ShaderConstants.FogFalloff, environment.FogHeightFalloff);
-            DeferredLightShader.SetUniform(ShaderConstants.FogScatter, environment.FogScattering);
-            DeferredLightShader.SetUniform(ShaderConstants.FogColor, environment.FogColor);
-
-            DeferredLightShader.SetUniform(ShaderConstants.ViewportSize, new Vector2(viewport.X, viewport.Y));
-
-            DeferredLightShader.SetUniform(ShaderConstants.InverseProjection, invProj);
-            DeferredLightShader.SetUniform(ShaderConstants.InverseView, invView);
-
-            DeferredLightShader.SetUniform(ShaderConstants.CameraPosition, cameraPos);
-            DeferredLightShader.SetUniform(ShaderConstants.AmbientColor, environment.AmbientColor);
-            DeferredLightShader.SetUniform(ShaderConstants.DitherStrength, ditherStrength);
-
-            var n = System.Math.Min(lights.Length, OpenGl.MaxDeferredLights);
-            DeferredLightShader.SetUniform(ShaderConstants.NumLights, n);
-            var zero = Vector4.Zero;
-            for (var i = 0; i < OpenGl.MaxDeferredLights; i++)
-            {
-                var pk = i < n ? lights[i] : default;
-                var p0 = i < n ? pk.Pack0 : zero;
-                var p1 = i < n ? pk.Pack1 : zero;
-                var p2 = i < n ? pk.Pack2 : zero;
-                var p3 = i < n ? pk.Pack3 : zero;
-                var p4 = i < n ? pk.Pack4 : zero;
-                DeferredLightShader.SetUniform(ShaderConstants.Pack(0, i), p0);
-                DeferredLightShader.SetUniform(ShaderConstants.Pack(1, i), p1);
-                DeferredLightShader.SetUniform(ShaderConstants.Pack(2, i), p2);
-                DeferredLightShader.SetUniform(ShaderConstants.Pack(3, i), p3);
-                DeferredLightShader.SetUniform(ShaderConstants.Pack(4, i), p4);
-            }
-            Gl.BindVertexArray(_deferredLightVao);
-            Gl.DrawArrays(PrimitiveType.Triangles, 0, 3);
-            Gl.BindVertexArray(0);
-            Gl.Enable(EnableCap.Blend);
-            Gl.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha);
-        }
+				for (var i = 0; i < _shadowEntries.Count; i++)
+				{
+						var entry = _shadowEntries[i];
+						DeferredLightShader.SetUniform(ShaderConstants.ShadowLightIndex(i), entry.LightIndex);
+						DeferredLightShader.SetUniform(ShaderConstants.ShadowMatrix(i), entry.LightSpaceMatrix);
+						DeferredLightShader.SetUniform(ShaderConstants.ShadowUVRect(i), entry.UVRect);
+				}
+				Gl.BindVertexArray(_deferredLightVao);
+				Gl.DrawArrays(PrimitiveType.Triangles, 0, 3);
+				Gl.BindVertexArray(0);
+				Gl.Enable(EnableCap.Blend);
+				Gl.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha);
 
         OutlineShader.Use();
 

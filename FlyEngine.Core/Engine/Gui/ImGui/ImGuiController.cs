@@ -76,7 +76,7 @@ public class ImGuiController : IDisposable
       IntPtr glyph_ranges = getGlyphRange != null ? getGlyphRange(io) : IntPtr.Zero;
       io.Fonts.AddFontFromFileTTF(imGuiFontConfig.Value.FontPath, (float) imGuiFontConfig.Value.FontSize, (ImFontConfigPtr) (ImFontConfig*) null, glyph_ranges);
     }
-    var currentDir = Directory.GetCurrentDirectory();
+    var currentDir = AppContext.BaseDirectory;
     var resourcesDir = new DirectoryInfo(Path.Combine(currentDir, "Resources"));
     var fontInfo = new FileInfo(Path.Combine(resourcesDir.FullName, "Fonts", "DejaVuSans.ttf"));
     ArialFont = io.Fonts.AddFontFromFileTTF(fontInfo.FullName, 16.0f, null,

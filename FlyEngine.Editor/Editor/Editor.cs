@@ -179,7 +179,7 @@ public static class Editor
     {
         if (_currentProjectPath != null && DirectoryExists(_currentProjectPath)) return _currentProjectPath;
         var currentDirectory =
-            new DirectoryInfo(Directory.GetCurrentDirectory()).Parent?.Parent?.Parent?.Parent;
+            new DirectoryInfo(AppContext.BaseDirectory).Parent?.Parent?.Parent?.Parent;
         if (currentDirectory == null) return null;
         var targetDirectory = new DirectoryInfo(Path.Combine(currentDirectory.FullName, "FlyEngine.Game"));
         _currentProjectPath = targetDirectory.FullName;

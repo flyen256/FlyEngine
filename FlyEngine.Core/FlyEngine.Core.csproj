@@ -70,8 +70,6 @@
     <EmbeddedResource Include="Engine\Renderer\Shaders\PostProcess\outline.frag" />
     <None Remove="Engine\Renderer\Shaders\PostProcess\outline.vert" />
     <EmbeddedResource Include="Engine\Renderer\Shaders\PostProcess\outline.vert" />
-    <None Remove="Engine\Renderer\Shaders\deferred_compute.comp" />
-    <EmbeddedResource Include="Engine\Renderer\Shaders\deferred_compute.comp" />
   </ItemGroup>
 
 </Project>

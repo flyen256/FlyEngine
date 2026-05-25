@@ -29,7 +29,7 @@ public class LightSource : Component
         var radiance = Color.ToVector3() * Intensity;
         var type = (float)Type;
 
-        return Type switch
+        var packed = Type switch
         {
             LightType.Point => new DeferredLightPacked
             {
@@ -58,6 +58,8 @@ public class LightSource : Component
             },
             _ => default
         };
+				packed.CastShadows = CastShadows;
+				return packed;
     }
 
     private DeferredLightPacked BuildSpotPack(Vector3 pos, float type, Vector3 radiance, Vector3 forward)

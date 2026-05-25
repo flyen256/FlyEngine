@@ -32,8 +32,12 @@ public static class ShaderConstants
     public const string Metallic = "uMetallic";
     public const string Smoothness = "uSmoothness";
     public const string GizmoColor = "uGizmoColor";
+		public const string NumShadowLights = "uNumShadowLights";
 
     public static string Pack(int packIndex, int index) => $"uPack{packIndex}[{index}]";
+		public static string ShadowUVRect(int index) => $"uShadowUVRect[{index}]";
+		public static string ShadowLightIndex(int index) => $"uShadowLightIndices[{index}]";
+		public static string ShadowMatrix(int index) => $"uShadowMatrices[{index}]";
 
     public static class PostProcess
     {
