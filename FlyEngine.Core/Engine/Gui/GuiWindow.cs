@@ -39,8 +39,8 @@ public abstract class GuiWindow : Component
         var screenPos = viewport.Pos;
         var screenSize = viewport.Size;
 
-        Vector2 anchorPos = Vector2.Zero;
-        Vector2 pivot = Vector2.Zero;
+        var anchorPos = Vector2.Zero;
+        var pivot = Vector2.Zero;
 
         switch (Anchor)
         {

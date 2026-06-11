@@ -14,7 +14,7 @@ public abstract class RenderPipeline(OpenGl openGl)
     protected uint FinalFbo;
     public uint FinalTexture { get; protected set; }
     
-    public abstract void Render(double deltaTime, bool editor = false);
+    public abstract void Render(float deltaTime, bool editor = false);
     public abstract Shader GetRenderShader();
     public abstract void ProcessShaders(string vertexCode);
     public abstract void CreateFinalFramebuffer(Vector2D<int> viewport);

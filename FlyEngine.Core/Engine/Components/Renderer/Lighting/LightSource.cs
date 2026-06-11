@@ -1,5 +1,6 @@
 using System.Numerics;
 using FlyEngine.Core.Components.Common;
+using FlyEngine.Core.CustomAttributes;
 using FlyEngine.Core.Math;
 using FlyEngine.Core.Renderer.Common;
 using FlyEngine.Core.Renderer.Lighting;
@@ -10,9 +11,13 @@ public class LightSource : Component
 {
     public LightType Type { get; set; } = LightType.Point;
     public Color Color { get; set; } = Color.White;
+    [PropertyRange<float>(0f, float.MaxValue)]
     public float Intensity { get; set; } = 1f;
+    [PropertyRange<float>(1f, 1000f)]
     public float Range { get; set; } = 10f;
+    [PropertyRange<float>(1f, 90f)]
     public float SpotOuterDegrees { get; set; } = 80f;
+    [PropertyRange<float>(1f, 90f)]
     public float SpotInnerDegrees { get; set; } = 35f;
     public Vector2 AreaHalfSize { get; set; } = new(1f, 0.5f);
     public bool CastShadows { get; set; } = true;

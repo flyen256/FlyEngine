@@ -3,6 +3,7 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Text.Json.Serialization.Metadata;
 using FlyEngine.Core.SceneManagement;
 using FlyEngine.Core.Serialization;
 using MemoryPack;
@@ -18,8 +19,8 @@ public partial class ComponentStore : IDisposable
     [MemoryPackIgnore]
     public IReadOnlyList<Component> List => _components;
     
-    [MemoryPackIgnore]
-    private readonly List<Component> _components = [];
+    [MemoryPackInclude]
+    private List<Component> _components = [];
     
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -29,8 +30,10 @@ public partial class ComponentStore : IDisposable
         Converters =
         {
             new AssetConverterFactory(),
-            new AssetArrayConverterFactory()
-        }
+            new AssetArrayConverterFactory(),
+            new ComponentRefConverterFactory(),
+            new TransformReferenceConverterFactory()
+        },
     };
 
     [MemoryPackInclude]
@@ -79,7 +82,7 @@ public partial class ComponentStore : IDisposable
     public T? GetComponent<T>() where T : class
     {
         var span = CollectionsMarshal.AsSpan(_components);
-        for (int i = 0; i < span.Length; i++)
+        for (var i = 0; i < span.Length; i++)
         {
             if (span[i] is T t) return t;
         }
@@ -90,7 +93,7 @@ public partial class ComponentStore : IDisposable
     {
         var result = new List<T>();
         var span = CollectionsMarshal.AsSpan(_components);
-        for (int i = 0; i < span.Length; i++)
+        for (var i = 0; i < span.Length; i++)
         {
             if (span[i] is T t) result.Add(t);
         }
@@ -100,7 +103,7 @@ public partial class ComponentStore : IDisposable
     public Component? GetComponent(Type type)
     {
         var span = CollectionsMarshal.AsSpan(_components);
-        for (int i = 0; i < span.Length; i++)
+        for (var i = 0; i < span.Length; i++)
         {
             var comp = span[i];
             if (type.IsInstanceOfType(comp)) return comp;

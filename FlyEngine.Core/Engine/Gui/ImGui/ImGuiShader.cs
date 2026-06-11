@@ -38,12 +38,12 @@ internal class ImGuiShader
   {
     int @params;
     _gl.GetProgram(Program, GLEnum.ActiveUniforms, out @params);
-    ImGuiUniformFieldInfo[] uniforms = new ImGuiUniformFieldInfo[@params];
-    for (int uniformIndex = 0; uniformIndex < @params; ++uniformIndex)
+    var uniforms = new ImGuiUniformFieldInfo[@params];
+    for (var uniformIndex = 0; uniformIndex < @params; ++uniformIndex)
     {
       int size;
       UniformType type;
-      string activeUniform = _gl.GetActiveUniform(Program, (uint) uniformIndex, out size, out type);
+      var activeUniform = _gl.GetActiveUniform(Program, (uint) uniformIndex, out size, out type);
       ImGuiUniformFieldInfo uniformFieldInfo;
       uniformFieldInfo.Location = GetUniformLocation(activeUniform);
       uniformFieldInfo.Name = activeUniform;
@@ -81,14 +81,14 @@ internal class ImGuiShader
   private uint CreateProgram(
     params (ShaderType Type, string source)[] shaderPaths)
   {
-    uint program = _gl.CreateProgram();
+    var program = _gl.CreateProgram();
     Span<uint> span1 = stackalloc uint[shaderPaths.Length];
-    for (int index = 0; index < shaderPaths.Length; ++index)
+    for (var index = 0; index < shaderPaths.Length; ++index)
       span1[index] = CompileShader(shaderPaths[index].Type, shaderPaths[index].source);
-    Span<uint> span2 = span1;
-    for (int index = 0; index < span2.Length; ++index)
+    var span2 = span1;
+    for (var index = 0; index < span2.Length; ++index)
     {
-      uint shader = span2[index];
+      var shader = span2[index];
       _gl.AttachShader(program, shader);
     }
     _gl.LinkProgram(program);
@@ -96,10 +96,10 @@ internal class ImGuiShader
     _gl.GetProgram(program, GLEnum.LinkStatus, out @params);
     if (@params == 0)
       _gl.GetProgramInfoLog(program);
-    Span<uint> span3 = span1;
-    for (int index = 0; index < span3.Length; ++index)
+    var span3 = span1;
+    for (var index = 0; index < span3.Length; ++index)
     {
-      uint shader = span3[index];
+      var shader = span3[index];
       _gl.DetachShader(program, shader);
       _gl.DeleteShader(shader);
     }
@@ -109,7 +109,7 @@ internal class ImGuiShader
 
   private uint CompileShader(ShaderType type, string source)
   {
-    uint shader = _gl.CreateShader(type);
+    var shader = _gl.CreateShader(type);
     _gl.ShaderSource(shader, source);
     _gl.CompileShader(shader);
     int @params;

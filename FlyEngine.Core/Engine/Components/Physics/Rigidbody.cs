@@ -20,7 +20,7 @@ public class Rigidbody : Behaviour
         _collider = collider;
     }
 
-    public override void OnUpdate(double deltaTime)
+    public override void OnUpdate(float deltaTime)
     {
         if (_collider == null)
         {

@@ -1,3 +1,4 @@
+using System.Reflection;
 using System.Runtime.InteropServices;
 using FlyEngine.Core.Assets;
 using FlyEngine.Core.Components.Colliders;
@@ -49,6 +50,7 @@ public partial class Scene(Guid guid) : Asset(guid)
     [MemoryPackOnDeserialized]
     private void OnDeserialized()
     {
+        Console.WriteLine($"Scene guid: {Guid}");
         var gameObjects = CollectionsMarshal.AsSpan(_gameObjects);
         for (var i = 0; i < gameObjects.Length; i++)
         {
@@ -57,12 +59,67 @@ public partial class Scene(Guid guid) : Asset(guid)
             for (var o = 0; o < components.Length; o++)
             {
                 var component = components[o];
+                Console.WriteLine($"Component: {component.GetType().Name} guid: {component.Guid}");
                 RegisterComponent(component, gameObject);
+                var componentFields = GetComponentFields(component.GetType(), typeof(Component));
+                foreach (var field in componentFields)
+                {
+                    var value = (Component?)field.GetValue(component);
+                    if (value == null || value.LazyGuid == Guid.Empty) continue;
+                    field.SetValue(GetComponentByGuid(value.LazyGuid), value);
+                }
+                var transformFields = GetComponentFields(component.GetType(), typeof(Transform));
+                foreach (var field in transformFields)
+                {
+                    var value = (Transform?)field.GetValue(component);
+                    if (value == null || value.LazyGuid == Guid.Empty) continue;
+                    field.SetValue(GetTransformByGuid(value.LazyGuid), value);
+                }
             }
         }
+        
+        for (var i = 0; i < gameObjects.Length; i++)
+            gameObjects[i].Transform.ResolveReferences(gameObjects);
+    }
+    
+    public static FieldInfo[] GetComponentFields(Type targetType, Type fieldType)
+    {
+        var fields = targetType.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+
+        var result = fields.Where(field => fieldType.IsAssignableFrom(field.FieldType)).ToArray();
+        return result;
     }
     
     public DeferredEnvironment Environment { get; private set; } = DeferredEnvironment.Default;
+
+    public Component? GetComponentByGuid(Guid guid)
+    {
+        var gameObjects = CollectionsMarshal.AsSpan(_gameObjects);
+        for (var i = 0; i < gameObjects.Length; i++)
+        {
+            var gameObject = gameObjects[i];
+            var components = CollectionsMarshal.AsSpan(gameObjects[i].ComponentStore.List.ToList());
+            for (var o = 0; o < components.Length; o++)
+            {
+                var component = components[o];
+                if (component.Guid == guid)
+                    return component;
+            }
+        }
+        return null;
+    }
+    
+    public Transform? GetTransformByGuid(Guid guid)
+    {
+        var gameObjects = CollectionsMarshal.AsSpan(_gameObjects);
+        for (var i = 0; i < gameObjects.Length; i++)
+        {
+            var gameObject = gameObjects[i];
+            if (gameObject.Transform.Guid == guid)
+                return gameObject.Transform;
+        }
+        return null;
+    }
 
     protected internal void OnLoad()
     {
@@ -189,8 +246,6 @@ public partial class Scene(Guid guid) : Asset(guid)
         RemoveGameObjectComponents(go);
     }
 
-    public bool ObjectExistsWithName(string name)
-    {
-        return _gameObjects.Exists(g => g.Name == name);
-    }
+    public bool ObjectExistsWithName(string name) =>
+        _gameObjects.Exists(g => g.Name == name);
 }

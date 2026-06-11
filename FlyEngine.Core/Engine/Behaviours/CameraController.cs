@@ -29,7 +29,7 @@ public class CameraController : Behaviour
         Input.CursorVisible = false;
     }
 
-    public override void OnUpdate(double deltaTime)
+    public override void OnUpdate(float deltaTime)
     {
         _rotation.X += Input.MouseInput.Y * Sensitivity;
         _rotation.Y -= Input.MouseInput.X * Sensitivity;

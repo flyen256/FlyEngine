@@ -2,7 +2,7 @@
 using FlyEngine.Core.Components.Renderer.Lighting;
 using FlyEngine.Core.Math;
 
-namespace FlyEngine.Core.Extensions;
+namespace FlyEngine.Core.Utils;
 
 public static class NumericsUtils
 {
@@ -29,26 +29,29 @@ public static class NumericsUtils
         var proj = Matrix4x4.CreateOrthographicOffCenter(
             -size, size,
             -size, size,
-            nearPlane,
-            farPlane
+            System.Math.Clamp(nearPlane, 0.01f, float.MaxValue),
+            System.Math.Clamp(farPlane, 0.01f, float.MaxValue)
         );
 
         return view * proj;
     }
 
-		public static Matrix4x4 CreateLightSpaceMatrix(LightSource light) {
-				var position = light.Transform.Position;
-				var direction = Vector3.Normalize(Vector3.Transform(-Vector3.UnitZ, light.Transform.Rotation));
+    public static Matrix4x4 CreateLightSpaceMatrix(LightSource light)
+    {
+	    var position = light.Transform.Position;
+	    var direction = Vector3.Normalize(Vector3.Transform(-Vector3.UnitZ, light.Transform.Rotation));
 
-				float near = 0.1f;
-				float far = light.Range * 1.2f;
-				float fov = light.SpotOuterDegrees * 2f;
+	    const float near = 0.1f;
+	    var far = System.Math.Clamp(light.Range * 1.2f, 0.1f, float.MaxValue);
+    
+	    var fov = System.Math.Clamp(light.SpotOuterDegrees * 2f, 1f, 170f);
 
-				Matrix4x4 proj = Matrix4x4.CreatePerspectiveFieldOfView(
-						MathHelper.DegreesToRadians(fov), 1.0f, near, far);
+	    var proj = Matrix4x4.CreatePerspectiveFieldOfView(
+		    MathHelper.DegreesToRadians(fov), 1.0f, near, far);
 
-				Matrix4x4 view = Matrix4x4.CreateLookAt(position, position + direction, Vector3.UnitY);
+	    var up = System.Math.Abs(direction.Y) > 0.99f ? Vector3.UnitZ : Vector3.UnitY;
+	    var view = Matrix4x4.CreateLookAt(position, position + direction, up);
 
-				return view * proj;
-		}
+	    return view * proj;
+    }
 }

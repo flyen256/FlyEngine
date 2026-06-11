@@ -37,14 +37,14 @@ public class EditorScene : EditorGuiWindow
             if (ImGuiNet.IsMouseDown(ImGuiMouseButton.Right))
             {
                 ScenePressed = true;
-                Input.CursorVisible = false;
+                Input.LockAndHideCursor();
             }
         }
         
         if (ScenePressed && ImGuiNet.IsMouseReleased(ImGuiMouseButton.Right))
         {
             ScenePressed = false;
-            Input.CursorVisible = true;
+            Input.UnlockAndShowCursor();
         }
         
         if (ImGuiNet.Begin("Operation", ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoCollapse))

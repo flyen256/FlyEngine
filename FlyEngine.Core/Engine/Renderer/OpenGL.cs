@@ -17,7 +17,7 @@ public class OpenGl
 
     public int MaxDeferredLights { get; set; } = 48;
     public uint ShadowMapResolution { get; set; } = 4096;
-		public uint ShadowMapTileSize { get; set; } = 512;
+	public uint ShadowMapTileSize { get; set; } = 1024;
 
     public RenderPipeline RenderPipeline { get; set; }
     

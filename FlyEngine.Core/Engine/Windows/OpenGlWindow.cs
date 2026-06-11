@@ -61,7 +61,7 @@ public class OpenGlWindow(ApplicationWindowOptions windowOptions) : BaseWindow(w
         
         if (OpenGl == null) return;
 
-        OpenGl.RenderPipeline.Render(deltaTime);
+        OpenGl.RenderPipeline.Render((float)deltaTime);
 
         if (!ImGui.Initialized || ImGui.Controller == null) return;
         ImGui.Controller.Update((float)deltaTime);

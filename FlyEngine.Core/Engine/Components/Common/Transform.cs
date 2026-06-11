@@ -1,5 +1,6 @@
 using System.Numerics;
 using FlyEngine.Core.Extensions;
+using FlyEngine.Core.Serialization;
 using MemoryPack;
 
 namespace FlyEngine.Core.Components.Common;
@@ -7,10 +8,22 @@ namespace FlyEngine.Core.Components.Common;
 [MemoryPackable]
 public partial class Transform
 {
+    [MemoryPackInclude]
+    public Guid Guid { get; set; }
+    
+    [MemoryPackIgnore]
+    public Guid LazyGuid { get; set; } = Guid.Empty;
+    
     [MemoryPackIgnore]
     private Transform? _parent;
     [MemoryPackIgnore]
-    private List<Transform> _children = [];
+    private readonly List<Transform> _children = [];
+    
+    public IReadOnlyList<Transform> Children => _children;
+
+    [MemoryPackInclude]
+    [GameObjectFormatter]
+    public GameObject GameObject { get; set; } = null!;
 
     [MemoryPackInclude]
     private Vector3 _localPosition = Vector3.Zero;
@@ -27,6 +40,10 @@ public partial class Transform
     private bool _isDirty = true;
 
     [MemoryPackIgnore]
+    public string LazyGameObjectName = string.Empty;
+
+    [MemoryPackInclude]
+    [TransformFormatter]
     public Transform? Parent
     {
         get => _parent;
@@ -127,6 +144,14 @@ public partial class Transform
     public Vector3 Right => Vector3.Transform(new Vector3(1, 0, 0), Rotation);
     [MemoryPackIgnore]
     public Vector3 Up => Vector3.Transform(new Vector3(0, 1, 0), Rotation);
+    
+    [MemoryPackConstructor]
+    private Transform() {}
+
+    public Transform(Guid guid)
+    {
+        Guid = guid;
+    }
 
     private void UpdateWorldMatrix()
     {
@@ -160,4 +185,21 @@ public partial class Transform
         foreach (var child in _children)
             child.SetDirty();
     }
+
+    public void ResolveReferences(Span<GameObject> gameObjects)
+    {
+        for (var i = 0; i < gameObjects.Length; i++)
+        {
+            var gameObject = gameObjects[i];
+            if (gameObject.Name == GameObject.LazyGameObjectName)
+                GameObject = gameObject;
+            if (gameObject.Name == Parent?.LazyGameObjectName)
+                Parent = gameObject.Transform;
+        }
+    }
+
+    public static Transform CreateWithLazyReference(string parentName) =>
+        new() { LazyGameObjectName = parentName };
+    public static Transform CreateWithLazyGuid(Guid guid) =>
+        new() { LazyGuid = guid };
 }

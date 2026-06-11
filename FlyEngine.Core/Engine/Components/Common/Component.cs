@@ -8,13 +8,21 @@ namespace FlyEngine.Core.Components.Common;
 [MemoryPackable]
 public partial class Component : Object
 {
+    [MemoryPackIgnore]
+    [JsonInclude]
+    public Guid Guid { get; set; } = Guid.NewGuid();
+    
+    [MemoryPackIgnore]
+    [JsonIgnore]
+    public Guid LazyGuid { get; set; } = Guid.Empty;
+    
     [HideInInspector]
-    [MemoryPackInclude]
+    [MemoryPackIgnore]
     private bool _enabled = true;
 
     [HideInInspector]
     [MemoryPackIgnore]
-    [JsonIgnore]
+    [JsonInclude]
     public bool Enabled
     {
         get => _enabled;
@@ -109,5 +117,12 @@ public partial class Component : Object
     public bool TryGetComponent<T>([NotNullWhen(true)] out T? component) where T : Component
     {
         return GameObject.TryGetComponent(out component);
+    }
+
+    public static Component CreateWithLazyGuid(Guid guid, Type componentType)
+    {
+        var instance = (Component)Activator.CreateInstance(componentType)!;
+        instance.LazyGuid = guid;
+        return instance;
     }
 }

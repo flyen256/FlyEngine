@@ -67,10 +67,6 @@ public class Menu : GuiWindow
 
     public override void OnLoadUi()
     {
-        var style = ImGui.GetStyle();
-        style.WindowRounding = 10f;
-        style.FrameRounding = 5f;
-        style.FramePadding = new Vector2(5f, 5f);
         DebugTask().Start();
     }
 

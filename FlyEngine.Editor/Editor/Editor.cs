@@ -70,12 +70,12 @@ public static class Editor
     public static void Start(EditorWindow window)
     {
         Window = window;
+        Window.OnLoadEvent += OnLoad;
+        Window.OnUpdateEvent += OnUpdate;
+        Window.OnRenderEvent += OnRender;
+        Window.OnFocusChanged += OnFocusChanged;
+        Window.OnClosingEvent += OnClosing;
         Application.Window = Window;
-        Application.Window.OnLoadEvent += OnLoad;
-        Application.Window.OnUpdateEvent += OnUpdate;
-        Application.Window.OnRenderEvent += OnRender;
-        Application.Window.OnFocusChanged += OnFocusChanged;
-        Application.Window.OnClosingEvent += OnClosing;
         Application.OpenWindow();
         EditorAction.OnWindowResize += OnWindowResize;
     }

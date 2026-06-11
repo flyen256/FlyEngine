@@ -165,8 +165,9 @@ public class EditorInspector : EditorGuiWindow
         EditorAction.MarkDirty();
     }
 
-    private void AddComponent(Type type)
+    private static void AddComponent(Type type)
     {
+        if (type.IsAbstract) return;
         if (!type.IsSubclassOf(typeof(Component)))
         {
             EditorConsole.Messages.Add(new EditorConsoleMessage
@@ -204,7 +205,9 @@ public class EditorInspector : EditorGuiWindow
     }
 
     private List<Type> SearchComponents() =>
-        _componentTypes.Where(c => Regex.IsMatch(c.Name.ToLower(), _searchComponent.ToLower())).ToList();
+        _componentTypes.Where(c =>
+                !c.IsAbstract &&
+                Regex.IsMatch(c.Name.ToLower(), _searchComponent.ToLower())).ToList();
     
     private List<Asset> SearchAssets() =>
         _assets.Where(c =>

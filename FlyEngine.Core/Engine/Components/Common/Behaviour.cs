@@ -5,6 +5,6 @@ public class Behaviour : Component
     public override bool AllowMultipleInstances => false;
 
     public virtual void OnLoad() { }
-    public virtual void OnUpdate(double deltaTime) { }
-    public virtual void OnRender(double deltaTime) { }
+    public virtual void OnUpdate(float deltaTime) { }
+    public virtual void OnRender(float deltaTime) { }
 }

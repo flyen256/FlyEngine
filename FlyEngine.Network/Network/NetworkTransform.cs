@@ -22,7 +22,7 @@ public class NetworkTransform : NetworkBehaviour
         _targetRotation = Transform.Rotation;
     }
 
-    public override void OnUpdate(double deltaTime)
+    public override void OnUpdate(float deltaTime)
     {
         if (NetworkObject is not { IsSpawned: true }) return;
 

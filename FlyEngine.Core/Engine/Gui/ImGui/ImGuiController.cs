@@ -69,11 +69,11 @@ public class ImGuiController : IDisposable
   {
     _minSize = minSize;
     Init(gl, view, input);
-    ImGuiIOPtr io = ImGuiNET.ImGui.GetIO();
+    var io = ImGuiNET.ImGui.GetIO();
     if (imGuiFontConfig.HasValue)
     {
-      Func<ImGuiIOPtr, IntPtr> getGlyphRange = imGuiFontConfig.Value.GetGlyphRange;
-      IntPtr glyph_ranges = getGlyphRange != null ? getGlyphRange(io) : IntPtr.Zero;
+      var getGlyphRange = imGuiFontConfig.Value.GetGlyphRange;
+      var glyph_ranges = getGlyphRange != null ? getGlyphRange(io) : IntPtr.Zero;
       io.Fonts.AddFontFromFileTTF(imGuiFontConfig.Value.FontPath, (float) imGuiFontConfig.Value.FontSize, (ImFontConfigPtr) (ImFontConfig*) null, glyph_ranges);
     }
     var currentDir = AppContext.BaseDirectory;
@@ -145,8 +145,8 @@ public class ImGuiController : IDisposable
   /// <param name="down">True if the event is a key down event, otherwise False</param>
   private static void OnKeyEvent(IKeyboard keyboard, Key keycode, int scancode, bool down)
   {
-    ImGuiIOPtr io = ImGuiNET.ImGui.GetIO();
-    ImGuiKey imGuiKey = TranslateInputKeyToImGuiKey(keycode);
+    var io = ImGuiNET.ImGui.GetIO();
+    var imGuiKey = TranslateInputKeyToImGuiKey(keycode);
     io.AddKeyEvent(imGuiKey, down);
     io.SetKeyEventNativeData(imGuiKey, (int) keycode, scancode);
   }
@@ -169,7 +169,7 @@ public class ImGuiController : IDisposable
   {
     if (!_frameBegun)
       return;
-    IntPtr currentContext = ImGuiNET.ImGui.GetCurrentContext();
+    var currentContext = ImGuiNET.ImGui.GetCurrentContext();
     if (currentContext != Context)
       ImGuiNET.ImGui.SetCurrentContext(Context);
     _frameBegun = false;
@@ -183,7 +183,7 @@ public class ImGuiController : IDisposable
   /// <summary>Updates ImGui input and IO configuration state.</summary>
   public void Update(float deltaSeconds)
   {
-    IntPtr currentContext = ImGuiNET.ImGui.GetCurrentContext();
+    var currentContext = ImGuiNET.ImGui.GetCurrentContext();
     if (currentContext != Context)
       ImGuiNET.ImGui.SetCurrentContext(Context);
     if (_frameBegun)
@@ -203,7 +203,7 @@ public class ImGuiController : IDisposable
   /// </summary>
   private void SetPerFrameImGuiData(float deltaSeconds)
   {
-    ImGuiIOPtr io = ImGuiNET.ImGui.GetIO();
+    var io = ImGuiNET.ImGui.GetIO();
     io.DisplaySize = new Vector2((float) System.Math.Max(_windowWidth, _minSize.X), (float) System.Math.Max(_windowHeight, _minSize.Y));
     if (_windowWidth > 0 && _windowHeight > 0)
       io.DisplayFramebufferScale = new Vector2(
@@ -214,18 +214,18 @@ public class ImGuiController : IDisposable
 
   private void UpdateImGuiInput()
   {
-    ImGuiIOPtr io = ImGuiNET.ImGui.GetIO();
-    using (MouseState mouseState = _input.Mice[0].CaptureState())
+    var io = ImGuiNET.ImGui.GetIO();
+    using (var mouseState = _input.Mice[0].CaptureState())
     {
       io.MouseDown[0] = mouseState.IsButtonPressed(MouseButton.Left);
       io.MouseDown[1] = mouseState.IsButtonPressed(MouseButton.Right);
       io.MouseDown[2] = mouseState.IsButtonPressed(MouseButton.Middle);
-      Point point = new Point((int) mouseState.Position.X, (int) mouseState.Position.Y);
+      var point = new Point((int) mouseState.Position.X, (int) mouseState.Position.Y);
       io.MousePos = new Vector2((float) point.X, (float) point.Y);
-      ScrollWheel scrollWheel = mouseState.GetScrollWheels()[0];
+      var scrollWheel = mouseState.GetScrollWheels()[0];
       io.MouseWheel = scrollWheel.Y;
       io.MouseWheelH = scrollWheel.X;
-      foreach (char pressedChar in _pressedChars)
+      foreach (var pressedChar in _pressedChars)
         io.AddInputCharacter((uint) pressedChar);
       _pressedChars.Clear();
       io.KeyCtrl = _keyboard.IsKeyPressed(Key.ControlLeft) || _keyboard.IsKeyPressed(Key.ControlRight);
@@ -581,10 +581,10 @@ public class ImGuiController : IDisposable
     _gl.Enable(GLEnum.ScissorTest);
     _gl.Disable(GLEnum.PrimitiveRestart);
     _gl.PolygonMode(GLEnum.FrontAndBack, GLEnum.Fill);
-    float x = drawDataPtr.DisplayPos.X;
-    float num1 = drawDataPtr.DisplayPos.X + drawDataPtr.DisplaySize.X;
-    float y = drawDataPtr.DisplayPos.Y;
-    float num2 = drawDataPtr.DisplayPos.Y + drawDataPtr.DisplaySize.Y;
+    var x = drawDataPtr.DisplayPos.X;
+    var num1 = drawDataPtr.DisplayPos.X + drawDataPtr.DisplaySize.X;
+    var y = drawDataPtr.DisplayPos.Y;
+    var num2 = drawDataPtr.DisplayPos.Y + drawDataPtr.DisplaySize.Y;
     Span<float> span = stackalloc float[16 /*0x10*/]
     {
       (float) (2.0 / ((double) num1 - (double) x)),
@@ -622,8 +622,8 @@ public class ImGuiController : IDisposable
 
   private unsafe void RenderImDrawData(ImDrawDataPtr drawDataPtr)
   {
-    int framebufferWidth = (int) ((double) drawDataPtr.DisplaySize.X * (double) drawDataPtr.FramebufferScale.X);
-    int framebufferHeight = (int) ((double) drawDataPtr.DisplaySize.Y * (double) drawDataPtr.FramebufferScale.Y);
+    var framebufferWidth = (int) ((double) drawDataPtr.DisplaySize.X * (double) drawDataPtr.FramebufferScale.X);
+    var framebufferHeight = (int) ((double) drawDataPtr.DisplaySize.Y * (double) drawDataPtr.FramebufferScale.Y);
     if (framebufferWidth <= 0 || framebufferHeight <= 0)
       return;
     int data1;
@@ -655,23 +655,23 @@ public class ImGuiController : IDisposable
     _gl.GetInteger(GLEnum.BlendEquation, out data13);
     int data14;
     _gl.GetInteger(GLEnum.BlendEquationAlpha, out data14);
-    bool flag1 = _gl.IsEnabled(GLEnum.Blend);
-    bool flag2 = _gl.IsEnabled(GLEnum.CullFace);
-    bool flag3 = _gl.IsEnabled(GLEnum.DepthTest);
-    bool flag4 = _gl.IsEnabled(GLEnum.StencilTest);
-    bool flag5 = _gl.IsEnabled(GLEnum.ScissorTest);
-    bool flag6 = _gl.IsEnabled(GLEnum.PrimitiveRestart);
+    var flag1 = _gl.IsEnabled(GLEnum.Blend);
+    var flag2 = _gl.IsEnabled(GLEnum.CullFace);
+    var flag3 = _gl.IsEnabled(GLEnum.DepthTest);
+    var flag4 = _gl.IsEnabled(GLEnum.StencilTest);
+    var flag5 = _gl.IsEnabled(GLEnum.ScissorTest);
+    var flag6 = _gl.IsEnabled(GLEnum.PrimitiveRestart);
     SetupRenderState(drawDataPtr, framebufferWidth, framebufferHeight);
-    Vector2 vector2_1 = drawDataPtr.DisplayPos;
-    Vector2 vector2_2 = drawDataPtr.FramebufferScale;
-    for (int index1 = 0; index1 < drawDataPtr.CmdListsCount; ++index1)
+    var vector2_1 = drawDataPtr.DisplayPos;
+    var vector2_2 = drawDataPtr.FramebufferScale;
+    for (var index1 = 0; index1 < drawDataPtr.CmdListsCount; ++index1)
     {
-      ImDrawListPtr imDrawListPtr = drawDataPtr.CmdLists[index1];
+      var imDrawListPtr = drawDataPtr.CmdLists[index1];
       _gl.BufferData(GLEnum.ArrayBuffer, (UIntPtr) (imDrawListPtr.VtxBuffer.Size * sizeof (ImDrawVert)), (void*) imDrawListPtr.VtxBuffer.Data, GLEnum.StreamDraw);
       _gl.BufferData(GLEnum.ElementArrayBuffer, (UIntPtr) (imDrawListPtr.IdxBuffer.Size * 2), (void*) imDrawListPtr.IdxBuffer.Data, GLEnum.StreamDraw);
-      for (int index2 = 0; index2 < imDrawListPtr.CmdBuffer.Size; ++index2)
+      for (var index2 = 0; index2 < imDrawListPtr.CmdBuffer.Size; ++index2)
       {
-        ImDrawCmdPtr imDrawCmdPtr = imDrawListPtr.CmdBuffer[index2];
+        var imDrawCmdPtr = imDrawListPtr.CmdBuffer[index2];
         if (imDrawCmdPtr.UserCallback != IntPtr.Zero)
           throw new NotImplementedException();
         Vector4 vector4;
@@ -750,11 +750,11 @@ public class ImGuiController : IDisposable
   /// <summary>Creates the texture used to render text.</summary>
   public void RecreateFontDeviceTexture()
   {
-    ImGuiIOPtr io = ImGuiNET.ImGui.GetIO();
+    var io = ImGuiNET.ImGui.GetIO();
     IntPtr out_pixels;
     int out_width;
     int out_height;
-    io.Fonts.GetTexDataAsRGBA32(out out_pixels, out out_width, out out_height, out int _);
+    io.Fonts.GetTexDataAsRGBA32(out out_pixels, out out_width, out out_height, out var _);
     int data;
     _gl.GetInteger(GLEnum.TextureBinding2D, out data);
     _fontTexture = new ImGuiTexture(_gl, out_width, out_height, out_pixels);

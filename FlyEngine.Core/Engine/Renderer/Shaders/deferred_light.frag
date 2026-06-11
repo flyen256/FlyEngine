@@ -112,7 +112,7 @@ float hash(vec2 p)
     return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453);
 }
 
-float shadowVisibility(int lightIndex, vec3 worldPos, vec3 N, vec3 lightDir)
+float shadowVisibility(int lightIndex, vec3 worldPos, vec3 N, vec3 lightDir, int type)
 {
     if (uShadowEnabled == 0) return 1.0;
 
@@ -123,19 +123,22 @@ float shadowVisibility(int lightIndex, vec3 worldPos, vec3 N, vec3 lightDir)
         vec4 rect = uShadowUVRect[s];
         mat4 lightSpace = uShadowMatrices[s];
 
-        vec4 ls = lightSpace * vec4(worldPos, 1.0);
+        float normalBias = 0.0005;
+        vec3 biasedWorldPos = worldPos + N * normalBias;
+
+        vec4 ls = lightSpace * vec4(biasedWorldPos, 1.0);
         vec3 proj = ls.xyz / ls.w;
         proj = proj * 0.5 + 0.5;
 
-				if (proj.x < 0.0 || proj.x > 1.0 || 
-						proj.y < 0.0 || proj.y > 1.0 || 
-						proj.z < 0.0 || proj.z > 1.0)
-						return 1.0;
+        if (proj.x < 0.0 || proj.x > 1.0 ||
+            proj.y < 0.0 || proj.y > 1.0 ||
+            proj.z < 0.0 || proj.z > 1.0)
+        return 1.0;
 
-        vec2 shadowUV = proj.xy * rect.zw + rect.xy;
-
+        vec2 baseShadowUV = proj.xy * rect.zw + rect.xy;
         float zReceiver = proj.z;
-				float bias = max(0.0015 * (1.0 - clamp(dot(N, lightDir), 0.0, 1.0)), 0.0005);
+
+        float depthBias = (type == LT_SPOT) ? 0.0003 : 0.0001;
 
         vec2 texelSize = 1.0 / vec2(textureSize(uShadowMap, 0));
         float shadow = 0.0;
@@ -151,8 +154,10 @@ float shadowVisibility(int lightIndex, vec3 worldPos, vec3 N, vec3 lightDir)
                 vec2 offset = vec2(x, y) * texelSize;
                 offset = rot * offset;
 
-                float depth = texture(uShadowMap, shadowUV + offset).r;
-                shadow += (zReceiver - bias <= depth) ? 1.0 : 0.0;
+                vec2 sampleUV = baseShadowUV + offset;
+
+                float depth = texture(uShadowMap, sampleUV).r;
+                shadow += (zReceiver <= depth + depthBias) ? 1.0 : 0.0;
             }
         }
 
@@ -251,7 +256,7 @@ vec3 evalLight(int i, vec3 worldPos, vec3 N, vec3 V, float roughness, vec3 albed
         vec3 L = normalize(-p2.xyz);
         vec3 rad = radianceBase;
         if (uShadowEnabled != 0 && i == uShadowDirIndex)
-            rad *= shadowVisibility(i, worldPos, N, uSunDirWorld);
+            rad *= shadowVisibility(i, worldPos, N, uSunDirWorld, type);
         return brdfLo(worldPos, N, V, L, rad, roughness, albedo, metallic);
     }
 
@@ -266,14 +271,16 @@ vec3 evalLight(int i, vec3 worldPos, vec3 N, vec3 V, float roughness, vec3 albed
         float dist = length(toL);
         if (dist < 1e-4) return vec3(0.0);
         vec3 L = toL / dist;
-        float att = 1.0 / (dist * dist / range);
+        float att = 1.0 / (1.0 + 0.09 * dist + 0.032 * dist * dist);
+        float edge = smoothstep(range * 0.85, range, dist);
+        att *= (1.0 - edge);
 
         float theta = dot(-L, spotDir);
         float spotMask = smoothstep(cosOuter, cosInner, theta);
         vec3 rad = radianceBase * att * spotMask;
         if (spotMask < 1e-3) return vec3(0.0);
-				if (uShadowEnabled != 0)
-					rad *= shadowVisibility(i, worldPos, N, spotDir);
+        if (uShadowEnabled != 0)
+            rad *= shadowVisibility(i, worldPos, N, spotDir, type);
         return brdfLo(worldPos, N, V, L, rad, roughness, albedo, metallic);
     }
 

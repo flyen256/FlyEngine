@@ -15,7 +15,7 @@ public class MeshRenderer : Behaviour
     public float Smoothness { get; set; }
     public Mesh? Mesh { get; set; }
 
-    public override void OnRender(double deltaTime)
+    public override void OnRender(float deltaTime)
     {
         if (Mesh == null || Application.Window == null || Application.Window.OpenGl == null) return;
         var gl = Application.Window.OpenGl;

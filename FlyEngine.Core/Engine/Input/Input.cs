@@ -17,11 +17,9 @@ public static class Input
     public static Vector2 MousePosition { get; private set; } = Vector2.Zero;
 
     private static bool _cursorVisible = true;
-    private static bool? _previousState;
+    private static bool? _previousStateVisible;
+    private static bool? _previousStateLocked;
 
-    /// <summary>
-    /// When true, cursor is visible and unlocked. When false, cursor is invisible and locked at the center.
-    /// </summary>
     public static bool CursorVisible
     {
         get => _cursorVisible;
@@ -30,15 +28,29 @@ public static class Input
             if (_cursorVisible.Equals(value)) return;
             _cursorVisible = value;
             if (InputContext == null) return;
-            if (!_cursorVisible)
-            {
+            foreach (var mouse in InputContext.Mice)
+                mouse.Cursor.CursorMode = _cursorVisible ? CursorMode.Normal : CursorMode.Hidden;
+        }
+    }
+
+    private static bool _cursorLocked;
+    public static bool CursorLocked
+    {
+        get => _cursorLocked;
+        set
+        {
+            if (_cursorLocked.Equals(value)) return;
+            if (InputContext == null) return;
+            if (_lockPositions.Length < InputContext.Mice.Count)
                 _lockPositions = new Vector2[InputContext.Mice.Count];
+            if (value)
+            {
                 for (var i = 0; i < InputContext.Mice.Count; i++)
                 {
                     var mouse = InputContext.Mice[i];
                     _lockPositions[i] = mouse.Position;
                 }
-                CenterMouse();
+                MoveMouseToLockPosition();
             }
             else
             {
@@ -49,9 +61,20 @@ public static class Input
                 }
                 _lockPositions = [];
             }
-            foreach (var mouse in InputContext.Mice)
-                mouse.Cursor.CursorMode = _cursorVisible ? CursorMode.Normal : CursorMode.Disabled;
+            _cursorLocked = value;
         }
+    }
+
+    public static void LockAndHideCursor()
+    {
+        CursorLocked = true;
+        CursorVisible = false;
+    }
+
+    public static void UnlockAndShowCursor()
+    {
+        CursorLocked = false;
+        CursorVisible = true;
     }
     
     private static Vector2[] _lockPositions = [];
@@ -70,16 +93,20 @@ public static class Input
             mouse.MouseMove += OnMouseMove;
     }
     
-    private static void CenterMouse()
+    private static void MoveMouseToLockPosition()
     {
         if (InputContext == null || Application.Window == null) return;
 
         var centerX = Application.Window.Handle.Size.X / 2;
         var centerY = Application.Window.Handle.Size.Y / 2;
 
-        foreach (var mouse in InputContext.Mice)
+        for (var i = 0; i < InputContext.Mice.Count; i++)
         {
-            mouse.Position = new Vector2(centerX, centerY);
+            var mouse = InputContext.Mice[i];
+            mouse.Position =
+                // i < _lockPositions.Length ?
+                //     new Vector2(_lockPositions[i].X, _lockPositions[i].Y) :
+                    new Vector2(centerX, centerY);
             MousePosition = mouse.Position;
         }
     }
@@ -91,8 +118,8 @@ public static class Input
 
         MouseInput = raw;
 
-        if (!CursorVisible)
-            CenterMouse();
+        if (CursorLocked)
+            MoveMouseToLockPosition();
     }
 
     private static void OnMouseMove(IMouse mouse, Vector2 mousePosition)
@@ -113,15 +140,25 @@ public static class Input
         if (key == Key.Escape &&
             Application.Window is { IsEditor: true })
         {
+            if (CursorLocked)
+            {
+                _previousStateLocked = CursorLocked;
+                CursorLocked = false;
+            }
+            else if (_previousStateLocked != null)
+            {
+                CursorLocked = (bool)_previousStateLocked;
+                _previousStateLocked = null;
+            }
             if (!CursorVisible)
             {
-                _previousState = CursorVisible;
+                _previousStateVisible = CursorVisible;
                 CursorVisible = true;
             }
-            else if (_previousState != null)
+            else if (_previousStateVisible != null)
             {
-                CursorVisible = (bool)_previousState;
-                _previousState = null;
+                CursorVisible = (bool)_previousStateVisible;
+                _previousStateVisible = null;
             }
         }
         if (Application.Scene == null) return;

@@ -15,6 +15,6 @@ internal static class Util
     [Conditional("DEBUG")]
     public static void CheckGlError(this GL gl, string title)
     {
-        int error = (int) gl.GetError();
+        var error = (int) gl.GetError();
     }
 }

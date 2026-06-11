@@ -70,7 +70,7 @@ public class EditorWindow(ApplicationWindowOptions windowOptions) : BaseWindow(w
             return;
         }
 
-        OpenGl.RenderPipeline.Render(deltaTime, Editor.IsSceneOpened);
+        OpenGl.RenderPipeline.Render((float)deltaTime, Editor.IsSceneOpened);
 
         if (!ImGui.Initialized || ImGui.Controller == null)
         {
@@ -78,7 +78,7 @@ public class EditorWindow(ApplicationWindowOptions windowOptions) : BaseWindow(w
             return;
         }
         ImGui.Controller.Update((float)deltaTime);
-        if (Scene != null)
+        if (Scene != null && Application.IsRunning)
         {
             var renderers = CollectionsMarshal.AsSpan(Scene.GuiWindows.ToList());
             for (var i = 0; i < renderers.Length; i++)

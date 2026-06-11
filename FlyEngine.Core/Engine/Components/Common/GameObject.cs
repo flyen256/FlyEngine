@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using FlyEngine.Core.SceneManagement;
+using FlyEngine.Core.Serialization;
 using MemoryPack;
 
 namespace FlyEngine.Core.Components.Common;
@@ -12,9 +13,9 @@ public partial class GameObject : Object
     [MemoryPackIgnore]
     public bool IsDestroyed { get; private set; }
 
-    [MemoryPackInclude]
-    private string _name;
     [MemoryPackIgnore]
+    private string _name;
+    [MemoryPackInclude]
     public string Name
     {
         get => _name;
@@ -31,11 +32,23 @@ public partial class GameObject : Object
                 _name = value;
         }
     }
-    [MemoryPackInclude]
-    public required Transform Transform;
 
     [MemoryPackIgnore]
-    private ComponentStore _componentStore;
+    private Transform? _transform;
+
+    [MemoryPackInclude]
+    public Transform Transform
+    {
+        get => _transform!;
+        set
+        {
+            _transform = value;
+            _transform.GameObject = this;
+        }
+    }
+
+    [MemoryPackIgnore]
+    private ComponentStore _componentStore = null!;
 
     [MemoryPackInclude]
     public ComponentStore ComponentStore
@@ -48,8 +61,24 @@ public partial class GameObject : Object
         }
     }
 
-    private GameObject(string name = "New game object")
+    [MemoryPackIgnore]
+    public string LazyGameObjectName;
+
+    public static GameObject CreateWithLazyReference(string name) =>
+        new GameObject() { LazyGameObjectName = name };
+
+    [MemoryPackConstructor]
+    private GameObject()
     {
+        ComponentStore = new ComponentStore
+        {
+            GameObject = this
+        };
+    }
+    
+    private GameObject(Transform transform, string name = "New game object")
+    {
+        Transform = transform;
         if (name.Length == 0)
             name = "New game object";
         _name = name;
@@ -64,10 +93,7 @@ public partial class GameObject : Object
     {
         if (SceneManager.CurrentScene == null)
             throw new InvalidOperationException("No scene loaded");
-        var gameObject = new GameObject(name)
-        {
-            Transform = new Transform()
-        };
+        var gameObject = new GameObject(new Transform(Guid.NewGuid()), name);
         foreach (var component in components ?? [])
             gameObject.AddComponent(component);
         SceneManager.CurrentScene.AddGameObject(gameObject);

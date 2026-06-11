@@ -7,7 +7,7 @@ public class RotationTimer : Behaviour
 {
     public Vector3 Axis { get; set; } = Vector3.UnitX;
     
-    public override void OnUpdate(double deltaTime)
+    public override void OnUpdate(float deltaTime)
     {
         if (Application.Window == null) return;
         var time = Application.Window.Handle.Time;

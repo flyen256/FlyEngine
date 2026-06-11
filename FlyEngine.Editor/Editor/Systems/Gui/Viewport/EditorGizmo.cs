@@ -83,17 +83,17 @@ public static class EditorGizmo
         {
             if (isOverX && !_pressedY && !_pressedZ)
             {
-                Input.CursorVisible = false;
+                Input.LockAndHideCursor();
                 _pressedX = true;
             }
             else if (isOverY && !_pressedX && !_pressedZ)
             {
-                Input.CursorVisible = false;
+                Input.LockAndHideCursor();
                 _pressedY = true;
             }
             else if (isOverZ && !_pressedY && !_pressedX)
             {
-                Input.CursorVisible = false;
+                Input.LockAndHideCursor();
                 _pressedZ = true;
             }
         }
@@ -101,17 +101,17 @@ public static class EditorGizmo
         {
             if (_pressedX)
             {
-                Input.CursorVisible = true;
+                Input.UnlockAndShowCursor();
                 _pressedX = false;
             }
             if (_pressedY)
             {
-                Input.CursorVisible = true;
+                Input.UnlockAndShowCursor();
                 _pressedY = false;
             }
             if (_pressedZ)
             {
-                Input.CursorVisible = true;
+                Input.UnlockAndShowCursor();
                 _pressedZ = false;
             }
         }
@@ -212,28 +212,26 @@ public static class EditorGizmo
         if (isHovered && ImGui.IsMouseDown(ImGuiMouseButton.Left) && !AnyOtherPressed(axisName))
         {
             pressed = true;
-            Input.CursorVisible = false;
+            Input.LockAndHideCursor();
         }
 
-        if (pressed)
+        if (!pressed) return isHovered;
+        if (ImGui.IsMouseReleased(ImGuiMouseButton.Left))
         {
-            if (ImGui.IsMouseReleased(ImGuiMouseButton.Left))
-            {
-                pressed = false;
-                Input.CursorVisible = true;
-            }
-            else
-            {
-                const float rotSpeed = 0.02f; 
-                var delta = (Input.MouseInput.X + -Input.MouseInput.Y) * rotSpeed;
+            pressed = false;
+            Input.UnlockAndShowCursor();
+        }
+        else
+        {
+            const float rotSpeed = 0.02f; 
+            var delta = (Input.MouseInput.X + -Input.MouseInput.Y) * rotSpeed;
 
-                var deltaRotation = Quaternion.CreateFromAxisAngle(axis, delta);
+            var deltaRotation = Quaternion.CreateFromAxisAngle(axis, delta);
                 
-                var targetRotation = Quaternion.Normalize(deltaRotation * transform.Rotation);
-                if (transform.Rotation != targetRotation)
-                    EditorAction.MarkDirty();
-                transform.Rotation = targetRotation;
-            }
+            var targetRotation = Quaternion.Normalize(deltaRotation * transform.Rotation);
+            if (transform.Rotation != targetRotation)
+                EditorAction.MarkDirty();
+            transform.Rotation = targetRotation;
         }
         return isHovered;
     }

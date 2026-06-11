@@ -1,8 +1,9 @@
 using System.Numerics;
+using System.Text.Json.Serialization;
 using FlyEngine.Core.Components.Common;
 using JoltPhysicsSharp;
 
-namespace FlyEngine.Core.Engine.Components.Physics;
+namespace FlyEngine.Core.Components;
 
 public class Character : Behaviour
 {
@@ -10,7 +11,14 @@ public class Character : Behaviour
 	public float Radius { get; set; } = 0.4f;
 	public float MaxSlopeAngle { get; set; } = 45f;
 
-	private CharacterVirtual _character = null!;
+	private CharacterVirtual? _character;
+
+	[JsonIgnore]
+	public GroundState GroundState =>
+		_character?.GroundState ?? GroundState.NotSupported;
+	
+	[JsonIgnore]
+	public Vector3 Velocity = Vector3.Zero;
 
 	public override void OnLoad()
 	{
@@ -24,22 +32,17 @@ public class Character : Behaviour
 		_character = new CharacterVirtual(settings, Transform.Position, Transform.Rotation, 0, Core.Physics.System);
 	}
 
-	public override void OnUpdate(double deltaTime)
+	public override void OnUpdate(float deltaTime)
 	{
-		var currentVelocity = _character.LinearVelocity;
-
-		const float gravity = -9.81f;
-		var verticalVelocity = currentVelocity.Y + (gravity * (float)deltaTime);
-
-		var finalVelocity = new Vector3(0.0f, verticalVelocity, 0.0f);
-		
-		_character.LinearVelocity = finalVelocity;
-		
+		if (_character == null) return;
+		_character.LinearVelocity = Velocity;
 		_character.ExtendedUpdate(
 			(float)deltaTime,
 			new ExtendedUpdateSettings(),
 			Core.Physics.Layers.Moving,
 			Core.Physics.System
 		);
+		
+		Transform.Position = _character.Position;
 	}
 }
