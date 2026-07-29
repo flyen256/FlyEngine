@@ -3,12 +3,14 @@
 FlyEngine is an open-source modular game engine/framework for creating 3d games, includes netcode, powered by Silk.NET, LiteNetLib, MemoryPack, JoltPhysics and SteamAudio. FlyEngine using Unity-like GameObject system, ECS in todo list.
 
 ## TODO
-- [ ] ECS system
+#### High priority
+- [X] Basic editor (hierarchy, scenes, inspector)
 - [ ] Finish netcode
-- [ ] Basic editor (hierarchy, scenes, inspector)
 - [ ] Debug gizmos
 - [ ] Custom package system
-- [ ] Make my first game on my game engine :tada:
+- [ ] Object selection by mouse clicking in editor viewport
+#### Low Priority
+- [ ] ECS system
 
 ## Contributing
 
