@@ -29,7 +29,12 @@ public static class Input
             _cursorVisible = value;
             if (InputContext == null) return;
             foreach (var mouse in InputContext.Mice)
-                mouse.Cursor.CursorMode = _cursorVisible ? CursorMode.Normal : CursorMode.Hidden;
+            {
+                if (CursorLocked)
+                    mouse.Cursor.CursorMode = CursorMode.Raw;
+                else
+                    mouse.Cursor.CursorMode = _cursorVisible ? CursorMode.Normal : CursorMode.Hidden;
+            }
         }
     }
 
@@ -41,25 +46,21 @@ public static class Input
         {
             if (_cursorLocked.Equals(value)) return;
             if (InputContext == null) return;
-            if (_lockPositions.Length < InputContext.Mice.Count)
-                _lockPositions = new Vector2[InputContext.Mice.Count];
             if (value)
             {
                 for (var i = 0; i < InputContext.Mice.Count; i++)
                 {
                     var mouse = InputContext.Mice[i];
-                    _lockPositions[i] = mouse.Position;
+                    mouse.Cursor.CursorMode = CursorMode.Raw;
                 }
-                MoveMouseToLockPosition();
             }
             else
             {
                 for (var i = 0; i < InputContext.Mice.Count; i++)
                 {
                     var mouse = InputContext.Mice[i];
-                    mouse.Position = _lockPositions[i];
+                    mouse.Cursor.CursorMode = CursorVisible ? CursorMode.Normal : CursorMode.Hidden;
                 }
-                _lockPositions = [];
             }
             _cursorLocked = value;
         }
@@ -76,8 +77,6 @@ public static class Input
         CursorLocked = false;
         CursorVisible = true;
     }
-    
-    private static Vector2[] _lockPositions = [];
 
     public static void Initialize(IWindow window)
     {

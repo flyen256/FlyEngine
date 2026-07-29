@@ -2,7 +2,7 @@
 
 namespace FlyEngine.Editor.Selection;
 
-public class EditorSelectionManager
+public class EditorSelection
 {
     public GameObject? SelectedGameObject { get; set; }
 }

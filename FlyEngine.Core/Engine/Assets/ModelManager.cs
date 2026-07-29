@@ -43,16 +43,14 @@ public static class ModelManager
         for (var i = 0; i < node->MNumMeshes; i++)
         {
             var mesh = scene->MMeshes[node->MMeshes[i]];
-            var processedMesh = ProcessMesh(mesh, scene, openGl);
-            if (processedMesh != null)
-                meshes.Add(processedMesh);
+            meshes.Add(ProcessMesh(mesh, scene, openGl));
         }
 
         for (var i = 0; i < node->MNumChildren; i++)
             ProcessNode(node->MChildren[i], scene, ref meshes, openGl);
     }
 
-    private static unsafe Mesh? ProcessMesh(Silk.NET.Assimp.Mesh* mesh, Scene* scene, OpenGl openGl)
+    private static unsafe Mesh ProcessMesh(Silk.NET.Assimp.Mesh* mesh, Scene* scene, OpenGl openGl)
     {
         var vertices = new List<MeshVertex>();
         var indices = new List<uint>();

@@ -10,7 +10,7 @@ public static class SceneSnapshot
 {
     private static readonly ILogger Logger = new Logger<SceneSnapshotClass>(LoggerFactory.Create(b => b.AddConsole()));
     
-    private static string? SnapshotPath => Editor.TempPath != null ? Editor.TempPath + "\\SceneSnapshot.tmp" : null;
+    private static string? SnapshotPath => Editor.TempPath != null ? Path.Combine(Editor.TempPath, "SceneSnapshot.tmp") : null;
 
     static SceneSnapshot()
     {
@@ -37,7 +37,7 @@ public static class SceneSnapshot
     
     public static async Task RestoreSnapshotAsync()
     {
-        if (SnapshotPath == null) return;
+        if (SnapshotPath == null || !Editor.FileExists(SnapshotPath)) return;
         try
         {
             SceneManager.UnloadScene();

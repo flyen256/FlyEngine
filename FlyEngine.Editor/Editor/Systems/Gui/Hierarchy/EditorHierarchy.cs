@@ -65,13 +65,13 @@ public class EditorHierarchy : EditorGuiWindow
             if (ImGuiNet.BeginChild("GameObjects"))
             {
                 if (ImGuiNet.IsWindowHovered() && ImGuiNet.IsMouseReleased(ImGuiMouseButton.Left) && !ImGuiNet.IsMouseDragging(ImGuiMouseButton.Left))
-                    Editor.SelectionManager.SelectedGameObject = null;
+                    Editor.Selection.SelectedGameObject = null;
                 CreateGameObjectContextWindow();
 
                 if (ImGuiNet.IsWindowFocused() && ImGuiNet.IsKeyPressed(ImGuiKey.F2) &&
-                    Editor.SelectionManager.SelectedGameObject != null)
+                    Editor.Selection.SelectedGameObject != null)
                 {
-                    StartRename(Editor.SelectionManager.SelectedGameObject);
+                    StartRename(Editor.Selection.SelectedGameObject);
                 }
 
                 var gameObjectsSpan = CollectionsMarshal.AsSpan((List<GameObject>)Scene.GameObjects);
@@ -117,7 +117,7 @@ public class EditorHierarchy : EditorGuiWindow
         var flags = ImGuiTreeNodeFlags.OpenOnArrow | ImGuiTreeNodeFlags.OpenOnDoubleClick |
                     ImGuiTreeNodeFlags.SpanAvailWidth;
 
-        if (Editor.SelectionManager.SelectedGameObject == gameObject)
+        if (Editor.Selection.SelectedGameObject == gameObject)
             flags |= ImGuiTreeNodeFlags.Selected;
 
         if (!hasChildren)
@@ -140,7 +140,7 @@ public class EditorHierarchy : EditorGuiWindow
             if (!ImGuiNet.IsMouseDragging(ImGuiMouseButton.Left))
             {
                 if (!ImGuiNet.IsItemToggledOpen())
-                    Editor.SelectionManager.SelectedGameObject = gameObject;
+                    Editor.Selection.SelectedGameObject = gameObject;
             }
         }
 
@@ -275,7 +275,7 @@ public class EditorHierarchy : EditorGuiWindow
 
         gameObject.Transform.Parent = null;
         gameObject.Destroy();
-        if (gameObject == Editor.SelectionManager.SelectedGameObject) Editor.SelectionManager.SelectedGameObject = null;
+        if (gameObject == Editor.Selection.SelectedGameObject) Editor.Selection.SelectedGameObject = null;
         EditorAction.MarkDirty();
     }
 

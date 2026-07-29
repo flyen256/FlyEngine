@@ -42,6 +42,7 @@ public static class Application
 
     private static void OnUpdate(double deltaTime)
     {
+        deltaTime *= TimeManager.TimeScale;
         TimeManager.DeltaTime = (float)deltaTime;
         Input.Update(deltaTime);
         if (!IsRunning) return;

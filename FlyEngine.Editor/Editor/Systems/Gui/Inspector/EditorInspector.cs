@@ -23,7 +23,7 @@ public class EditorInspector : EditorGuiWindow
     
     protected override string Title => "Inspector";
 
-    private static GameObject? SelectedGameObject => Editor.SelectionManager.SelectedGameObject;
+    private static GameObject? SelectedGameObject => Editor.Selection.SelectedGameObject;
     private GameObject? _lastSelected;
     private Vector3 _eulerRotation;
 

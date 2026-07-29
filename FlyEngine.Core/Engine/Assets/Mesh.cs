@@ -5,16 +5,16 @@ namespace FlyEngine.Core.Assets;
 
 public class Mesh : Asset
 {
-    public readonly List<MeshVertex> Vertices = [];
-    public readonly List<uint> Indices = [];
+    public readonly IReadOnlyList<MeshVertex> Vertices = [];
+    public readonly IReadOnlyList<uint> Indices = [];
     public readonly uint IndexCount;
 
     public IReadOnlyList<Texture> Textures => _textures;
     
     private readonly List<Texture> _textures;
-    private VertexArrayObject<float, uint> _vao;
-    private BufferObject<uint> _ebo;
-    private BufferObject<float> _vbo;
+    private VertexArrayObject<float, uint> _vao = null!;
+    private BufferObject<uint> _ebo = null!;
+    private BufferObject<float> _vbo = null!;
     
     public Mesh(Guid guid, List<Texture> textures, List<MeshVertex> vertices, List<uint> indices, uint indexCount) : base(guid)
     {

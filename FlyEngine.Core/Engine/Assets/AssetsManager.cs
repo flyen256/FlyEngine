@@ -14,12 +14,9 @@ public static class AssetsManager
 
     public static event Action? OnAssetsChanged;
 
-    internal static List<T> GetAssets<T>() where T : Asset =>
-        _assets.OfType<T>().ToList();
-    internal static T? GetAsset<T>(Guid guid) where T : Asset =>
-        GetAssets<T>().Find(a => a.Guid == guid);
-    internal static Asset? GetAsset(Guid guid) =>
-        _assets.Find(a => a.Guid == guid);
+    internal static List<T> GetAssets<T>() where T : Asset => _assets.OfType<T>().ToList();
+    internal static T? GetAsset<T>(Guid guid) where T : Asset => GetAssets<T>().Find(a => a.Guid == guid);
+    internal static Asset? GetAsset(Guid guid) => _assets.Find(a => a.Guid == guid);
 
     public static async Task LoadAssetsAsync(GL? gl = null)
     {

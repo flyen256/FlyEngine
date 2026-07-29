@@ -22,7 +22,7 @@ public class EditorWindow(ApplicationWindowOptions windowOptions) : BaseWindow(w
     private static Scene? Scene => SceneManager.CurrentScene;
 
     public override GameObject? EditorSelectedGameObject =>
-        Editor.SelectionManager.SelectedGameObject;
+        Editor.Selection.SelectedGameObject;
 
     private bool _graphicsReady;
 
@@ -52,6 +52,7 @@ public class EditorWindow(ApplicationWindowOptions windowOptions) : BaseWindow(w
 
     protected override void OnRender(double deltaTime)
     {
+        deltaTime *= TimeManager.TimeScale;
         var activeCameras = Scene?.Cameras.Where(camera => camera.IsActive()).ToList();
         Camera3D? camera3D = null;
         if (activeCameras != null)

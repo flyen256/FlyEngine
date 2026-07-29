@@ -48,6 +48,7 @@ public class OpenGlWindow(ApplicationWindowOptions windowOptions) : BaseWindow(w
 
     protected override void OnRender(double deltaTime)
     {
+        deltaTime *= TimeManager.TimeScale;
         var activeCameras = Scene?.Cameras.Where(camera => camera.IsActive()).ToList();
         Camera3D? camera3D = null;
         if (activeCameras != null)

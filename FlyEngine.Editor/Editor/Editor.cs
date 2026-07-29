@@ -46,7 +46,7 @@ public static class Editor
     public static EditorWindow? Window { get; private set; }
     public static EditorAssets Assets { get; } = new();
     public static EditorScripts Scripts { get; } = new();
-    public static EditorSelectionManager SelectionManager { get; } = new();
+    public static EditorSelection Selection { get; } = new();
     public static readonly EditorTaskQueue TaskQueue = new();
     
     public static bool IsRunningTask => TaskQueue.IsProcessing;
