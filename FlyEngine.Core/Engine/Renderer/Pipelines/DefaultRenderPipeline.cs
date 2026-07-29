@@ -3,7 +3,6 @@ using System.Runtime.InteropServices;
 using FlyEngine.Core.Components.Renderer;
 using FlyEngine.Core.Components.Renderer._3D;
 using FlyEngine.Core.Components.Renderer.Lighting;
-using FlyEngine.Core.Extensions;
 using FlyEngine.Core.Renderer.Common;
 using FlyEngine.Core.Renderer.Lighting;
 using FlyEngine.Core.SceneManagement;
@@ -20,11 +19,9 @@ public class DefaultRenderPipeline(OpenGl openGl) : RenderPipeline(openGl)
 
     public Shader DeferredGeometryShader { get; private set; } = null!;
     public Shader DeferredLightShader { get; private set; } = null!;
-    public ComputeShader? DeferredComputeShader { get; private set; }
     public Shader ShadowDepthShader { get; private set; } = null!;
     public Shader OutlineShader { get; private set; } = null!;
 
-    private bool _hasDeferredCompute;
     private uint _gBufferFbo;
     private uint _gAlbedoMetallic;
     private uint _gNormalSmoothness;
@@ -235,26 +232,6 @@ public class DefaultRenderPipeline(OpenGl openGl) : RenderPipeline(openGl)
         if (lightVsCode == null || lightFsCode == null)
             throw new Exception("deferred_light.frag or deferred_light.vert not found in resources!");
         DeferredLightShader = new Shader(Gl, lightVsCode, lightFsCode);
-
-        var deferredComputeCode = OpenGl.LoadEmbeddedResourceShaderCode("deferred_compute.comp");
-        if (deferredComputeCode != null)
-        {
-            try
-            {
-                DeferredComputeShader = new ComputeShader(Gl, deferredComputeCode);
-                _hasDeferredCompute = false;
-            }
-            catch (Exception ex)
-            {
-                _hasDeferredCompute = false;
-                Logger.LogWarning($"Deferred compute shader failed, falling back to fragment deferred lighting: {ex.Message}");
-            }
-        }
-        else
-        {
-            _hasDeferredCompute = false;
-            Logger.LogWarning("deferred_compute.comp not found in resources, falling back to fragment deferred lighting.");
-        }
 
         var outlineFsCode = OpenGl.LoadEmbeddedResourceShaderCode("outline.frag");
         var outlineVsCode = OpenGl.LoadEmbeddedResourceShaderCode("outline.vert");
