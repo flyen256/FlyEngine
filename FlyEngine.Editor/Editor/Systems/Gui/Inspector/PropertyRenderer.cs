@@ -1,15 +1,13 @@
 ﻿using System.Numerics;
-using FlyEngine.Core;
 using FlyEngine.Core.Assets;
-using FlyEngine.Core.Components.Common;
+using FlyEngine.Core.Components;
 using FlyEngine.Core.CustomAttributes;
-using FlyEngine.Core.Renderer.Common;
+using FlyEngine.Core.Renderer;
 using FlyEngine.Core.Serialization;
-using ImGuiNET;
 using Microsoft.Extensions.Logging;
 using ImGuiNet = ImGuiNET.ImGui;
 
-namespace FlyEngine.Editor.Systems.Gui;
+namespace FlyEngine.Editor.Systems;
 
 public class PropertyRenderer
 {
@@ -57,13 +55,9 @@ public class PropertyRenderer
 
         while (currentType != null)
         {
-            if (currentType.IsEnum && _types.TryGetValue(typeof(Enum), out var enumRenderer))
-            {
-                enumRenderer(variableInfo, component, out var changed);
-                return;
-            }
-
-            if (_types.TryGetValue(currentType, out var renderer))
+            if (currentType.IsEnum &&
+                _types.TryGetValue(typeof(Enum), out var renderer) ||
+                _types.TryGetValue(currentType, out renderer))
             {
                 renderer(variableInfo, component, out var changed);
                 return;

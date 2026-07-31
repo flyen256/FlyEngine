@@ -1,6 +1,6 @@
 ﻿using System.Numerics;
-using FlyEngine.Core.Components.Common;
-using FlyEngine.Core.Extensions;
+using FlyEngine.Core.Components;
+using FlyEngine.Core.Utils;
 using Silk.NET.Input;
 using Silk.NET.Maths;
 
@@ -20,22 +20,22 @@ public class CameraController : Behaviour
 
     private void TestRaycast()
     {
-        if (Physics.Raycast(Transform.Position, Transform.Forward, 5f, out var hit))
+        if (Physics.Physics.Raycast(Transform.Position, Transform.Forward, 5f, out var hit))
             hit.Rigidbody?.AddImpulse(Transform.Forward * 1000f, hit.Point);
     }
 
     public override void OnLoad()
     {
-        Input.CursorVisible = false;
+        Input.Input.CursorVisible = false;
     }
 
     public override void OnUpdate(float deltaTime)
     {
-        _rotation.X += Input.MouseInput.Y * Sensitivity;
-        _rotation.Y -= Input.MouseInput.X * Sensitivity;
+        _rotation.X += Input.Input.MouseInput.Y * Sensitivity;
+        _rotation.Y -= Input.Input.MouseInput.X * Sensitivity;
         _rotation.X = System.Math.Clamp(_rotation.X, -90f, 90f);
         Transform.Rotation = QuaternionUtils.FromVector3(_rotation);
-        var moveInput = Input.GetMoveInput();
+        var moveInput = Input.Input.GetMoveInput();
         if (moveInput == Vector2D<float>.Zero) return;
         var moveSpeed = 5.0f * (float)deltaTime;
 

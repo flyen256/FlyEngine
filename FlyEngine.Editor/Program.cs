@@ -1,6 +1,6 @@
 ﻿using FlyEngine.Core;
-using FlyEngine.Core.Serialization;
-using FlyEngine.Editor.Window;
+using FlyEngine.Core.Windowing;
+using FlyEngine.Editor.Scripting;
 using Silk.NET.Maths;
 
 namespace FlyEngine.Editor;
@@ -13,6 +13,7 @@ internal static class Program
         {
             MinSize = new Vector2D<int>(800, 600)
         };
-        Editor.Start(new EditorWindow(windowOptions));
+        Application.Initialize(true);
+        Editor.Start(new Window(windowOptions));
     }
 }

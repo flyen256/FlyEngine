@@ -85,7 +85,7 @@ float interleavedGradientNoise(vec2 pixelCoord)
     return fract(52.9829189 * fract(dot(pixelCoord, vec2(0.06711056, 0.00583715))));
 }
 
-vec3 brdfLo(vec3 worldPos, vec3 N, vec3 V, vec3 L, vec3 radiance, float roughness, vec3 albedo, float metallic)
+vec3 brdfLo(vec3 worldPos, vec3 N, vec3 V, vec3 L, vec3 radiance, float roughness, vec3 albedo, float metallic, float shadow)
 {
     vec3 H = normalize(V + L);
     vec3 f0 = mix(vec3(0.04), albedo, metallic);
@@ -104,7 +104,7 @@ vec3 brdfLo(vec3 worldPos, vec3 N, vec3 V, vec3 L, vec3 radiance, float roughnes
     vec3 kD = (vec3(1.0) - kS) * (1.0 - metallic);
     vec3 diffuse = kD * albedo / PI;
 
-    return (diffuse + specular) * radiance * nDotL;
+    return shadow * (diffuse + specular) * radiance * nDotL;
 }
 
 float hash(vec2 p)
@@ -123,22 +123,17 @@ float shadowVisibility(int lightIndex, vec3 worldPos, vec3 N, vec3 lightDir, int
         vec4 rect = uShadowUVRect[s];
         mat4 lightSpace = uShadowMatrices[s];
 
-        float normalBias = 0.0005;
+        float normalBias = 0.002;
         vec3 biasedWorldPos = worldPos + N * normalBias;
 
         vec4 ls = lightSpace * vec4(biasedWorldPos, 1.0);
         vec3 proj = ls.xyz / ls.w;
         proj = proj * 0.5 + 0.5;
 
-        if (proj.x < 0.0 || proj.x > 1.0 ||
-            proj.y < 0.0 || proj.y > 1.0 ||
-            proj.z < 0.0 || proj.z > 1.0)
-        return 1.0;
-
         vec2 baseShadowUV = proj.xy * rect.zw + rect.xy;
         float zReceiver = proj.z;
 
-        float depthBias = (type == LT_SPOT) ? 0.0003 : 0.0001;
+        float depthBias = (type == LT_SPOT) ? 0.0002 : 0.0001;
 
         vec2 texelSize = 1.0 / vec2(textureSize(uShadowMap, 0));
         float shadow = 0.0;
@@ -161,7 +156,7 @@ float shadowVisibility(int lightIndex, vec3 worldPos, vec3 N, vec3 lightDir, int
             }
         }
 
-        return shadow / float((radius*2+1)*(radius*2+1));
+        return shadow;
     }
 
     return 1.0;
@@ -247,17 +242,18 @@ vec3 evalLight(int i, vec3 worldPos, vec3 N, vec3 V, float roughness, vec3 albed
         float att = 1.0 / (1.0 + 0.09 * dist + 0.032 * dist * dist);
         float edge = smoothstep(range * 0.85, range, dist);
         att *= (1.0 - edge);
-        vec3 rad = radianceBase * att;
-        return brdfLo(worldPos, N, V, L, rad, roughness, albedo, metallic);
+        vec3 rad = radianceBase;
+        return brdfLo(worldPos, N, V, L, rad, roughness, albedo, metallic, att);
     }
 
     if (type == LT_DIR)
     {
         vec3 L = normalize(-p2.xyz);
         vec3 rad = radianceBase;
+        float shadow = 1.0;
         if (uShadowEnabled != 0 && i == uShadowDirIndex)
-            rad *= shadowVisibility(i, worldPos, N, uSunDirWorld, type);
-        return brdfLo(worldPos, N, V, L, rad, roughness, albedo, metallic);
+            shadow = shadowVisibility(i, worldPos, N, uSunDirWorld, type);
+        return brdfLo(worldPos, N, V, L, rad, roughness, albedo, metallic, shadow);
     }
 
     if (type == LT_SPOT)
@@ -271,6 +267,7 @@ vec3 evalLight(int i, vec3 worldPos, vec3 N, vec3 V, float roughness, vec3 albed
         float dist = length(toL);
         if (dist < 1e-4) return vec3(0.0);
         vec3 L = toL / dist;
+
         float att = 1.0 / (1.0 + 0.09 * dist + 0.032 * dist * dist);
         float edge = smoothstep(range * 0.85, range, dist);
         att *= (1.0 - edge);
@@ -278,10 +275,12 @@ vec3 evalLight(int i, vec3 worldPos, vec3 N, vec3 V, float roughness, vec3 albed
         float theta = dot(-L, spotDir);
         float spotMask = smoothstep(cosOuter, cosInner, theta);
         vec3 rad = radianceBase * att * spotMask;
+
         if (spotMask < 1e-3) return vec3(0.0);
+        float shadow = 1.0;
         if (uShadowEnabled != 0)
-            rad *= shadowVisibility(i, worldPos, N, spotDir, type);
-        return brdfLo(worldPos, N, V, L, rad, roughness, albedo, metallic);
+            shadow = shadowVisibility(i, worldPos, N, L, type);
+        return brdfLo(worldPos, N, V, L, rad, roughness, albedo, metallic, shadow);
     }
 
     if (type == LT_AREA)
@@ -305,8 +304,8 @@ vec3 evalLight(int i, vec3 worldPos, vec3 N, vec3 V, float roughness, vec3 albed
         vec3 L = toL / dist;
         float att = 1.0 / max(dist * dist, 0.05);
         att *= (halfW * 2.0) * (halfH * 2.0) / (PI * 4.0 + 1.0);
-        vec3 rad = radianceBase * att;
-        return brdfLo(worldPos, N, V, L, rad, roughness, albedo, metallic);
+        vec3 rad = radianceBase;
+        return brdfLo(worldPos, N, V, L, rad, roughness, albedo, metallic, att);
     }
 
     return vec3(0.0);

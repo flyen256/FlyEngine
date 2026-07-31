@@ -1,8 +1,8 @@
 ﻿using System.Text.Json;
 using System.Text.Json.Serialization;
-using FlyEngine.Core.Components.Common;
+using Transform = FlyEngine.Core.Components.Transform;
 
-namespace FlyEngine.Core.Serialization;
+namespace FlyEngine.Core.Serialization.Json;
 
 public class TransformReferenceConverterFactory : JsonConverterFactory
 {

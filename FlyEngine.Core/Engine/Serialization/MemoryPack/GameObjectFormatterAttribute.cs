@@ -1,7 +1,7 @@
-﻿using FlyEngine.Core.Components.Common;
-using MemoryPack;
+﻿using MemoryPack;
+using GameObject = FlyEngine.Core.Components.GameObject;
 
-namespace FlyEngine.Core.Serialization;
+namespace FlyEngine.Core.Serialization.MemoryPack;
 
 public class GameObjectFormatterAttribute : MemoryPackCustomFormatterAttribute<GameObject>
 {

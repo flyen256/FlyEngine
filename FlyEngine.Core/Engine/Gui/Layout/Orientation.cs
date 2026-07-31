@@ -1,4 +1,4 @@
-﻿namespace FlyEngine.Core.Gui.Layout;
+﻿namespace FlyEngine.Core.Gui;
 
 public enum Orientation
 {

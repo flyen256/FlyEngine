@@ -1,7 +1,7 @@
 ﻿using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace FlyEngine.Core.Serialization;
+namespace FlyEngine.Core.Serialization.Json;
 
 public class ComponentRefConverterFactory : JsonConverterFactory
 {

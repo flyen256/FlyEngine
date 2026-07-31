@@ -1,9 +1,9 @@
-﻿using FlyEngine.Core.Components.Common;
-using FlyEngine.Core.Extensions;
+﻿using FlyEngine.Core.Extensions;
 using FlyEngine.Core.SceneManagement;
 using MemoryPack;
+using GameObject = FlyEngine.Core.Components.GameObject;
 
-namespace FlyEngine.Core.Serialization;
+namespace FlyEngine.Core.Serialization.MemoryPack;
 
 public class GameObjectFormatter : MemoryPackFormatter<GameObject>
 {

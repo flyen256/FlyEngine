@@ -1,7 +1,6 @@
 ﻿using System.Text.Json.Serialization;
-using FlyEngine.Core.Components.Common;
 
-namespace FlyEngine.Core.Components.Renderer;
+namespace FlyEngine.Core.Components;
 
 public class Camera : Component
 {

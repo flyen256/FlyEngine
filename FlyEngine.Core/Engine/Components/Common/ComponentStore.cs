@@ -3,12 +3,11 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using System.Text.Json.Serialization.Metadata;
 using FlyEngine.Core.SceneManagement;
-using FlyEngine.Core.Serialization;
+using FlyEngine.Core.Serialization.Json;
 using MemoryPack;
 
-namespace FlyEngine.Core.Components.Common;
+namespace FlyEngine.Core.Components;
 
 [MemoryPackable]
 public partial class ComponentStore : IDisposable
@@ -60,10 +59,8 @@ public partial class ComponentStore : IDisposable
 
             foreach (var holder in value)
             {
-                var type = Type.GetType(holder.TypeName);
-                if (Application.Window is { IsEditor: true } && type == null)
-                    type = Application.Window.EditorScriptLoader.LoadFromAssemblyName(
-                        new AssemblyName(Application.ScriptsAssemblyName)).GetType(holder.TypeName.Split(",")[0]);
+                var type = Type.GetType(holder.TypeName) ?? Application.ScriptsLoader.LoadFromAssemblyName(
+                    new AssemblyName(Application.ScriptsAssemblyName)).GetType(holder.TypeName.Split(",")[0]);
                 if (type == null) continue;
 
                 var comp = (Component)JsonSerializer.Deserialize(holder.JsonPayload, type, JsonOptions);

@@ -1,7 +1,7 @@
 ﻿using System.Numerics;
 using JoltPhysicsSharp;
 
-namespace FlyEngine.Core.Components.Colliders;
+namespace FlyEngine.Core.Components;
 
 public class BoxCollider : Collider
 {
@@ -9,7 +9,7 @@ public class BoxCollider : Collider
 
     protected override void CreateBody(MotionType motionType)
     {
-        BodyId = Physics.CreateBody(new BoxShape(HalfExtent), Transform.Position, Transform.Rotation,
-            Physics.Layers.Moving, motionType);
+        BodyId = Core.Physics.Physics.CreateBody(new BoxShape(HalfExtent), Transform.Position, Transform.Rotation,
+            Core.Physics.Physics.Layers.Moving, motionType);
     }
 }

@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 using FlyEngine.Core.CustomAttributes;
 using FlyEngine.Core.Math;
 
-namespace FlyEngine.Core.Components.Renderer._3D;
+namespace FlyEngine.Core.Components;
 
 public class Camera3D : Camera
 {

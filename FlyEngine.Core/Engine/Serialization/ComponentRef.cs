@@ -1,6 +1,8 @@
 ﻿using System.Text.Json.Serialization;
-using FlyEngine.Core.Components.Common;
+using FlyEngine.Core.Components;
 using FlyEngine.Core.SceneManagement;
+using FlyEngine.Core.Serialization.Json;
+using Component = FlyEngine.Core.Components.Component;
 
 namespace FlyEngine.Core.Serialization;
 

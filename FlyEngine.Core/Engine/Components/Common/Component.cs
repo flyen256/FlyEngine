@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 using FlyEngine.Core.CustomAttributes;
 using MemoryPack;
 
-namespace FlyEngine.Core.Components.Common;
+namespace FlyEngine.Core.Components;
 
 [MemoryPackable]
 public partial class Component : Object

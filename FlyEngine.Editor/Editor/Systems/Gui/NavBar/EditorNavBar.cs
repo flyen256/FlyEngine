@@ -3,7 +3,7 @@ using FlyEngine.Core.SceneManagement;
 using FlyEngine.Editor.SceneManagement;
 using ImGuiNET;
 
-namespace FlyEngine.Editor.Systems.Gui;
+namespace FlyEngine.Editor.Systems;
 
 public class EditorNavBar : EditorGuiWindow
 {

@@ -5,7 +5,7 @@ using MemoryPack;
 using Microsoft.Extensions.Logging;
 using ImGuiNet = ImGuiNET.ImGui;
 
-namespace FlyEngine.Editor.Systems.Gui;
+namespace FlyEngine.Editor.Systems;
 
 public class EditorFileBrowser : EditorGuiWindow
 {

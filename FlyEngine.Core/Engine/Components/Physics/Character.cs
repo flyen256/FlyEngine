@@ -1,6 +1,5 @@
 using System.Numerics;
 using System.Text.Json.Serialization;
-using FlyEngine.Core.Components.Common;
 using JoltPhysicsSharp;
 
 namespace FlyEngine.Core.Components;
@@ -29,7 +28,7 @@ public class Character : Behaviour
 			Up = Vector3.UnitY,
 			PredictiveContactDistance = 0.1f
 		};
-		_character = new CharacterVirtual(settings, Transform.Position, Transform.Rotation, 0, Core.Physics.System);
+		_character = new CharacterVirtual(settings, Transform.Position, Transform.Rotation, 0, Core.Physics.Physics.System);
 	}
 
 	public override void OnUpdate(float deltaTime)
@@ -39,8 +38,8 @@ public class Character : Behaviour
 		_character.ExtendedUpdate(
 			(float)deltaTime,
 			new ExtendedUpdateSettings(),
-			Core.Physics.Layers.Moving,
-			Core.Physics.System
+			Core.Physics.Physics.Layers.Moving,
+			Core.Physics.Physics.System
 		);
 		
 		Transform.Position = _character.Position;

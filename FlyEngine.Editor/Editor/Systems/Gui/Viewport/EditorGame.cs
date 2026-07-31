@@ -1,10 +1,9 @@
 ﻿using System.Numerics;
 using FlyEngine.Core;
-using FlyEngine.Core.Components.Renderer;
 using Silk.NET.Maths;
 using ImGuiNet = ImGuiNET.ImGui;
 
-namespace FlyEngine.Editor.Systems.Gui;
+namespace FlyEngine.Editor.Systems;
 
 public class EditorGame : EditorGuiWindow
 {
@@ -21,11 +20,7 @@ public class EditorGame : EditorGuiWindow
         if (Application.Window == null || Editor.Window == null || Application.Window.OpenGl == null) return;
         var windowPos = ImGuiNet.GetCursorScreenPos();
         var regionSize = ImGuiNet.GetContentRegionAvail();
-        Editor.Window.EditorViewport = new Vector2D<int>((int)regionSize.X, (int)regionSize.Y);
-        var pipeline = Application.Window.OpenGl.RenderPipeline;
-        if (pipeline.FinalTexture == 0) return;
-        
-        var targetAspect = 16f / 9f;
+        const float targetAspect = 16f / 9f;
         var windowAspect = regionSize.X / regionSize.Y;
         
         var displaySize = regionSize;
@@ -41,7 +36,10 @@ public class EditorGame : EditorGuiWindow
             displaySize.Y = regionSize.X / targetAspect;
             offset.Y = (regionSize.Y - displaySize.Y) * 0.5f;
         }
-
+        Editor.Window.EditorViewport = new Vector2D<int>((int)displaySize.X, (int)displaySize.Y);
+        var pipeline = Application.Window.OpenGl.RenderPipeline;
+        if (pipeline.FinalTexture == 0) return;
+        
         ImGuiNet.SetCursorScreenPos(windowPos + offset);
 
         ImGuiNet.Image((IntPtr)pipeline.FinalTexture, displaySize);

@@ -2,7 +2,6 @@ obj/
 bin/
 .idea/
 .user
-.DotSettings
 .editorconfig
 Temp/
 .vscode/

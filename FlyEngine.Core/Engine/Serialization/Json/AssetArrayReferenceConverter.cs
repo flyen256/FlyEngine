@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 using FlyEngine.Core.Assets;
 using Microsoft.Extensions.Logging;
 
-namespace FlyEngine.Core.Serialization;
+namespace FlyEngine.Core.Serialization.Json;
 
 public class AssetArrayReferenceConverter<T> : JsonConverter<T> where T : IEnumerable<Asset>
 {

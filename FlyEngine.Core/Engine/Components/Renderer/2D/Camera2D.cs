@@ -1,6 +1,6 @@
 using System.Numerics;
 
-namespace FlyEngine.Core.Components.Renderer._2D;
+namespace FlyEngine.Core.Components;
 
 public class Camera2D : Camera
 {

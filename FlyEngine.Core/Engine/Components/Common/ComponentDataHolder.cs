@@ -1,6 +1,6 @@
 ﻿using MemoryPack;
 
-namespace FlyEngine.Core.Components.Common;
+namespace FlyEngine.Core.Components;
 
 [MemoryPackable]
 public partial struct ComponentDataHolder

@@ -3,7 +3,7 @@ using Silk.NET.Input;
 using Silk.NET.Maths;
 using Silk.NET.Windowing;
 
-namespace FlyEngine.Core;
+namespace FlyEngine.Core.Input;
 
 public static class Input
 {
@@ -31,7 +31,10 @@ public static class Input
             foreach (var mouse in InputContext.Mice)
             {
                 if (CursorLocked)
+                {
                     mouse.Cursor.CursorMode = CursorMode.Raw;
+                    MousePosition = mouse.Position;
+                }
                 else
                     mouse.Cursor.CursorMode = _cursorVisible ? CursorMode.Normal : CursorMode.Hidden;
             }
@@ -52,6 +55,7 @@ public static class Input
                 {
                     var mouse = InputContext.Mice[i];
                     mouse.Cursor.CursorMode = CursorMode.Raw;
+                    MousePosition = mouse.Position;
                 }
             }
             else
@@ -60,6 +64,7 @@ public static class Input
                 {
                     var mouse = InputContext.Mice[i];
                     mouse.Cursor.CursorMode = CursorVisible ? CursorMode.Normal : CursorMode.Hidden;
+                    MousePosition = mouse.Position;
                 }
             }
             _cursorLocked = value;
@@ -91,24 +96,6 @@ public static class Input
         foreach (var mouse in InputContext.Mice)
             mouse.MouseMove += OnMouseMove;
     }
-    
-    private static void MoveMouseToLockPosition()
-    {
-        if (InputContext == null || Application.Window == null) return;
-
-        var centerX = Application.Window.Handle.Size.X / 2;
-        var centerY = Application.Window.Handle.Size.Y / 2;
-
-        for (var i = 0; i < InputContext.Mice.Count; i++)
-        {
-            var mouse = InputContext.Mice[i];
-            mouse.Position =
-                // i < _lockPositions.Length ?
-                //     new Vector2(_lockPositions[i].X, _lockPositions[i].Y) :
-                    new Vector2(centerX, centerY);
-            MousePosition = mouse.Position;
-        }
-    }
 
     public static void Update(double deltaTime)
     {
@@ -116,9 +103,6 @@ public static class Input
         _mouseDeltaAccumulated = Vector2.Zero;
 
         MouseInput = raw;
-
-        if (CursorLocked)
-            MoveMouseToLockPosition();
     }
 
     private static void OnMouseMove(IMouse mouse, Vector2 mousePosition)
@@ -137,7 +121,7 @@ public static class Input
         PressedKeys.Add(key);
         if (!Application.IsRunning) return;
         if (key == Key.Escape &&
-            Application.Window is { IsEditor: true })
+            Application.IsEditor)
         {
             if (CursorLocked)
             {

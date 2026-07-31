@@ -1,4 +1,4 @@
-namespace FlyEngine.Core.Components.Common;
+namespace FlyEngine.Core.Components;
 
 public class Behaviour : Component
 {

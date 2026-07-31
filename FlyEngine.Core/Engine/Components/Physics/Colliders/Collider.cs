@@ -1,7 +1,6 @@
-﻿using FlyEngine.Core.Components.Common;
-using JoltPhysicsSharp;
+﻿using JoltPhysicsSharp;
 
-namespace FlyEngine.Core.Components.Colliders;
+namespace FlyEngine.Core.Components;
 
 public class Collider : Component
 {
@@ -10,7 +9,7 @@ public class Collider : Component
     protected override void OnInitialize()
     {
         CreateBody(TryGetComponent(out Rigidbody? rigidBody) ? rigidBody.MotionType : MotionType.Static);
-        Physics.SetPosition(BodyId, Transform.Position);
+        Core.Physics.Physics.SetPosition(BodyId, Transform.Position);
     }
 
     protected virtual void CreateBody(MotionType motionType) { }

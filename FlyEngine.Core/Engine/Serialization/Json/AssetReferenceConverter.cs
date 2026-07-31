@@ -2,7 +2,7 @@
 using System.Text.Json.Serialization;
 using FlyEngine.Core.Assets;
 
-namespace FlyEngine.Core.Serialization;
+namespace FlyEngine.Core.Serialization.Json;
 
 public class AssetReferenceConverter<T> : JsonConverter<T> where T : Asset
 {

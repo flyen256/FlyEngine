@@ -1,11 +1,9 @@
 ﻿using System.Numerics;
-using FlyEngine.Core;
-using FlyEngine.Core.Components.Common;
-using FlyEngine.Core.Extensions;
+using FlyEngine.Core.Components;
+using FlyEngine.Core.Input;
 using ImGuiNET;
-using Silk.NET.Maths;
 
-namespace FlyEngine.Editor.Systems.Gui;
+namespace FlyEngine.Editor.Systems;
 
 public static class EditorGizmo
 {

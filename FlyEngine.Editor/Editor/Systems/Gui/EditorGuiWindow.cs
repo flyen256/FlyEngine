@@ -2,7 +2,7 @@
 using ImGuiNET;
 using ImGuiNet = ImGuiNET.ImGui;
 
-namespace FlyEngine.Editor.Systems.Gui;
+namespace FlyEngine.Editor.Systems;
 
 public abstract class EditorGuiWindow
 {

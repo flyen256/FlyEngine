@@ -2,13 +2,12 @@
 using System.Numerics;
 using FlyEngine.Core;
 using FlyEngine.Core.Assets;
+using FlyEngine.Core.Windowing;
 using FlyEngine.Editor.Assets;
-using FlyEngine.Editor.Selection;
+using FlyEngine.Editor.Scripting;
 using FlyEngine.Editor.Systems;
 using FlyEngine.Editor.Systems.Console;
-using FlyEngine.Editor.Systems.Gui;
 using FlyEngine.Editor.TaskQueue;
-using FlyEngine.Editor.Window;
 using Microsoft.Extensions.Logging;
 using Silk.NET.Assimp;
 using Silk.NET.Maths;
@@ -43,16 +42,23 @@ public static class Editor
     public static string? AssetsPath => GetAssetsPath();
     public static string? TempPath => GetTempPath();
     
-    public static EditorWindow? Window { get; private set; }
+    public static Window? Window { get; private set; }
     public static EditorAssets Assets { get; } = new();
     public static EditorScripts Scripts { get; } = new();
-    public static EditorSelection Selection { get; } = new();
     public static readonly EditorTaskQueue TaskQueue = new();
     
     public static bool IsRunningTask => TaskQueue.IsProcessing;
     public static bool CompileError { get; private set; }
-    public static bool IsSceneOpened { get; set; }
-    
+
+    public static bool IsSceneOpened
+    {
+        set
+        {
+            if (Window != null)
+                Window.IsEditorSceneOpened = value;
+        }
+    }
+
     public static event Action<string?>? OnCurrentProjectPathChanged;
     
     private static string? _currentProjectPath;
@@ -67,7 +73,7 @@ public static class Editor
     
     private static readonly ConcurrentQueue<Action> MainThreadQueue = new();
     
-    public static void Start(EditorWindow window)
+    public static void Start(Window window)
     {
         Window = window;
         Window.OnLoadEvent += OnLoad;

@@ -1,16 +1,14 @@
 using System.Reflection;
 using System.Runtime.InteropServices;
 using FlyEngine.Core.Assets;
-using FlyEngine.Core.Components.Colliders;
-using FlyEngine.Core.Components.Common;
-using FlyEngine.Core.Components.Renderer;
-using FlyEngine.Core.Components.Renderer._3D.Meshes;
-using FlyEngine.Core.Components.Renderer.Lighting;
+using FlyEngine.Core.Components;
 using FlyEngine.Core.Extensions;
 using FlyEngine.Core.Gui;
-using FlyEngine.Core.Gui.ImGui;
-using FlyEngine.Core.Renderer.Lighting;
 using MemoryPack;
+using Component = FlyEngine.Core.Components.Component;
+using DeferredEnvironment = FlyEngine.Core.Renderer.DeferredEnvironment;
+using GameObject = FlyEngine.Core.Components.GameObject;
+using Transform = FlyEngine.Core.Components.Transform;
 
 namespace FlyEngine.Core.SceneManagement;
 

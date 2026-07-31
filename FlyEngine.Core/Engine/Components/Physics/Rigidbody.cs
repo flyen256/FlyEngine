@@ -1,7 +1,5 @@
 ﻿using System.Numerics;
 using System.Text.Json.Serialization;
-using FlyEngine.Core.Components.Colliders;
-using FlyEngine.Core.Components.Common;
 using JoltPhysicsSharp;
 
 namespace FlyEngine.Core.Components;
@@ -30,7 +28,7 @@ public class Rigidbody : Behaviour
         }
         if (MotionType != MotionType.Dynamic || IsKinematic)
         {
-            Physics.SetPosition(_collider.BodyId, Transform.Position);
+            Core.Physics.Physics.SetPosition(_collider.BodyId, Transform.Position);
             return;
         }
         Transform.Position = GetPosition();
@@ -40,25 +38,25 @@ public class Rigidbody : Behaviour
     public void AddForce(Vector3 force)
     {
         if (CanApplyPhysics())
-            Physics.BodyInterface.AddForce(_collider!.BodyId, force);
+            Core.Physics.Physics.BodyInterface.AddForce(_collider!.BodyId, force);
     }
     
     public void AddImpulse(Vector3 impulse)
     {
         if (CanApplyPhysics())
-            Physics.BodyInterface.AddImpulse(_collider!.BodyId, impulse);
+            Core.Physics.Physics.BodyInterface.AddImpulse(_collider!.BodyId, impulse);
     }
     
     public void AddForce(Vector3 force, Vector3 worldPosition)
     {
         if (CanApplyPhysics())
-            Physics.BodyInterface.AddForce(_collider!.BodyId, force, worldPosition);
+            Core.Physics.Physics.BodyInterface.AddForce(_collider!.BodyId, force, worldPosition);
     }
 
     public void AddImpulse(Vector3 impulse, Vector3 worldPosition)
     {
         if (CanApplyPhysics())
-            Physics.BodyInterface.AddImpulse(_collider!.BodyId, impulse, worldPosition);
+            Core.Physics.Physics.BodyInterface.AddImpulse(_collider!.BodyId, impulse, worldPosition);
     }
 
     private bool CanApplyPhysics()
@@ -72,14 +70,14 @@ public class Rigidbody : Behaviour
     private Vector3 GetPosition()
     {
         return _collider != null && _collider.IsValid() ?
-            Physics.GetPosition(_collider.BodyId) :
+            Core.Physics.Physics.GetPosition(_collider.BodyId) :
             Vector3.Zero;
     }
     
     private Quaternion GetRotation()
     {
         return _collider != null && _collider.IsValid() ?
-            Physics.GetRotation(_collider.BodyId) :
+            Core.Physics.Physics.GetRotation(_collider.BodyId) :
             Quaternion.Identity;
     }
 }

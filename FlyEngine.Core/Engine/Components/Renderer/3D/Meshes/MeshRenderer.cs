@@ -1,12 +1,9 @@
 using System.Numerics;
 using FlyEngine.Core.Assets;
-using FlyEngine.Core.Components.Common;
 using FlyEngine.Core.Renderer;
-using FlyEngine.Core.Renderer.Common;
-using FlyEngine.Core.Renderer.Pipelines;
 using Silk.NET.OpenGL;
 
-namespace FlyEngine.Core.Components.Renderer._3D.Meshes;
+namespace FlyEngine.Core.Components;
 
 public class MeshRenderer : Behaviour
 {

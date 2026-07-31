@@ -1,7 +1,7 @@
 ﻿using Silk.NET.Maths;
 using Silk.NET.OpenGL;
 
-namespace FlyEngine.Core.Renderer.Pipelines;
+namespace FlyEngine.Core.Renderer;
 
 public abstract class RenderPipeline(OpenGl openGl)
 {

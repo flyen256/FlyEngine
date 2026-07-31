@@ -1,4 +1,4 @@
-namespace FlyEngine.Core.Components.Renderer.Lighting;
+namespace FlyEngine.Core.Components;
 
 public enum LightType
 {

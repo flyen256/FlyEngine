@@ -1,7 +1,6 @@
 ﻿using System.Numerics;
-using FlyEngine.Core.Components.Common;
-using FlyEngine.Core.Gui.Layout;
 using ImGuiNET;
+using Component = FlyEngine.Core.Components.Component;
 using ImGuiNet = ImGuiNET.ImGui;
 
 namespace FlyEngine.Core.Gui;

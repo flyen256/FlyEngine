@@ -1,7 +1,8 @@
 ﻿using System.Numerics;
 using FlyEngine.Core;
 using FlyEngine.Core.Extensions;
-using FlyEngine.Editor.Systems.Gui;
+using FlyEngine.Core.Input;
+using FlyEngine.Core.Utils;
 using Silk.NET.Maths;
 
 namespace FlyEngine.Editor.Systems;

@@ -1,8 +1,8 @@
 ﻿using System.Text.Json;
 using System.Text.Json.Serialization;
-using FlyEngine.Core.Components.Common;
+using Component = FlyEngine.Core.Components.Component;
 
-namespace FlyEngine.Core.Serialization;
+namespace FlyEngine.Core.Serialization.Json;
 
 public class ComponentRefConverter<T> : JsonConverter<ComponentRef<T>> where T : Component
 {

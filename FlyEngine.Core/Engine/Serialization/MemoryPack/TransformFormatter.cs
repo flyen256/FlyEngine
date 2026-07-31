@@ -1,9 +1,7 @@
-﻿using FlyEngine.Core.Components.Common;
-using FlyEngine.Core.Extensions;
-using FlyEngine.Core.SceneManagement;
-using MemoryPack;
+﻿using MemoryPack;
+using Transform = FlyEngine.Core.Components.Transform;
 
-namespace FlyEngine.Core.Serialization;
+namespace FlyEngine.Core.Serialization.MemoryPack;
 
 public class TransformFormatter : MemoryPackFormatter<Transform?>
 {

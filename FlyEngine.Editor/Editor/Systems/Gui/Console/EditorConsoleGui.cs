@@ -3,7 +3,7 @@ using FlyEngine.Editor.Systems.Console;
 using ImGuiNET;
 using Microsoft.Extensions.Logging;
 
-namespace FlyEngine.Editor.Systems.Gui;
+namespace FlyEngine.Editor.Systems;
 
 public class EditorConsoleGui : EditorGuiWindow
 {
@@ -16,7 +16,7 @@ public class EditorConsoleGui : EditorGuiWindow
 
     protected override void OnRender(double deltaTime)
     {
-        if (Core.Gui.ImGui.ImGui.Controller == null) return;
+        if (Core.Gui.ImGui.Controller == null) return;
         if (ImGui.Button("Clear")) { EditorConsole.Messages.Clear(); }
         ImGui.SameLine();
         ImGui.TextUnformatted($"Messages: {EditorConsole.Messages.Count}");
@@ -29,7 +29,7 @@ public class EditorConsoleGui : EditorGuiWindow
             foreach (var msg in EditorConsole.Messages)
             {
                 var color = GetColorForLevel(msg.Level);
-                ImGui.PushFont(Core.Gui.ImGui.ImGui.Controller.ArialFont);
+                ImGui.PushFont(Core.Gui.ImGui.Controller.ArialFont);
                 ImGui.PushStyleColor(ImGuiCol.Text, color);
                 ImGui.TextUnformatted($"[{msg.Level}] {msg.Message}");
                 ImGui.PopStyleColor();

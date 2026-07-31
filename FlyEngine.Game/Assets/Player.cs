@@ -1,8 +1,10 @@
 ﻿using System.Numerics;
 using FlyEngine.Core;
-using FlyEngine.Core.Components.Renderer._3D;
+using FlyEngine.Core.Components;
 using FlyEngine.Core.Extensions;
+using FlyEngine.Core.Input;
 using FlyEngine.Core.Serialization;
+using FlyEngine.Core.Utils;
 using JoltPhysicsSharp;
 using Character = FlyEngine.Core.Components.Character;
 
@@ -12,7 +14,7 @@ public class Player : Character
 {
     public ComponentRef<Camera3D>? Camera { get; set; }
     
-    public float Sensitivity = 0.1f;
+    public float Sensitivity = 0.001f;
 
     private Vector3 _rotation = Vector3.Zero;
 

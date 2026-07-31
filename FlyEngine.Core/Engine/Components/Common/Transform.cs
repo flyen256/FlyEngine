@@ -1,9 +1,9 @@
 using System.Numerics;
 using FlyEngine.Core.Extensions;
-using FlyEngine.Core.Serialization;
+using FlyEngine.Core.Serialization.MemoryPack;
 using MemoryPack;
 
-namespace FlyEngine.Core.Components.Common;
+namespace FlyEngine.Core.Components;
 
 [MemoryPackable]
 public partial class Transform

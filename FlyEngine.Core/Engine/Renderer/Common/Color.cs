@@ -1,8 +1,8 @@
-﻿using System.Numerics;
-using System.Globalization;
+﻿using System.Globalization;
+using System.Numerics;
 using MemoryPack;
 
-namespace FlyEngine.Core.Renderer.Common;
+namespace FlyEngine.Core.Renderer;
 
 [MemoryPackable]
 public partial struct Color

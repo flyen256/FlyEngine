@@ -1,7 +1,7 @@
 using System.Numerics;
 using MemoryPack;
 
-namespace FlyEngine.Core.Renderer.Lighting;
+namespace FlyEngine.Core.Renderer;
 
 [MemoryPackable]
 public partial struct DeferredEnvironment

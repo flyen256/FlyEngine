@@ -1,17 +1,13 @@
 ﻿using System.Numerics;
 using System.Runtime.InteropServices;
-using FlyEngine.Core.Components.Renderer;
-using FlyEngine.Core.Components.Renderer._3D;
-using FlyEngine.Core.Components.Renderer.Lighting;
-using FlyEngine.Core.Renderer.Common;
-using FlyEngine.Core.Renderer.Lighting;
+using FlyEngine.Core.Components;
 using FlyEngine.Core.SceneManagement;
 using FlyEngine.Core.Utils;
 using Microsoft.Extensions.Logging;
 using Silk.NET.Maths;
 using Silk.NET.OpenGL;
 
-namespace FlyEngine.Core.Renderer.Pipelines;
+namespace FlyEngine.Core.Renderer;
 
 public class DefaultRenderPipeline(OpenGl openGl) : RenderPipeline(openGl)
 {
@@ -88,8 +84,8 @@ public class DefaultRenderPipeline(OpenGl openGl) : RenderPipeline(openGl)
                 sunLightIndex = lightCount;
                 sunLight = light;
             }
-						var packed = light.BuildPacked();
-						packed.LightMatrix = NumericsUtils.CreateLightSpaceMatrix(light);
+			var packed = light.BuildPacked();
+			packed.LightMatrix = NumericsUtils.CreateLightSpaceMatrix(light);
             lightBuf[lightCount++] = packed;
         }
 
@@ -156,7 +152,7 @@ public class DefaultRenderPipeline(OpenGl openGl) : RenderPipeline(openGl)
 	{
 		_shadowAtlasTex = Gl.GenTexture();
 		Gl.BindTexture(TextureTarget.Texture2D, _shadowAtlasTex);
-		Gl.TexImage2D(TextureTarget.Texture2D, 0, InternalFormat.DepthComponent24, 
+		Gl.TexImage2D(TextureTarget.Texture2D, 0, InternalFormat.DepthComponent32, 
 					OpenGl.ShadowMapResolution, OpenGl.ShadowMapResolution, 0,
 					PixelFormat.DepthComponent, PixelType.UnsignedInt, null);
 
@@ -350,6 +346,7 @@ public class DefaultRenderPipeline(OpenGl openGl) : RenderPipeline(openGl)
 	{
 		if (_shadowFbo == 0) return;
 
+        Gl.CullFace(GLEnum.Front);
 		Gl.BindFramebuffer(FramebufferTarget.Framebuffer, _shadowFbo);
 		Gl.Clear(ClearBufferMask.DepthBufferBit);
 		IsShadowPass = true;
@@ -547,7 +544,7 @@ public class DefaultRenderPipeline(OpenGl openGl) : RenderPipeline(openGl)
         Matrix4x4.Invert(projection, out var invProj);
         Matrix4x4.Invert(view, out var invView);
 
-        var targetFbo = Application.Window is { IsEditor: true } && FinalFbo != 0 ? FinalFbo : 0;
+        var targetFbo = Application.IsEditor && FinalFbo != 0 ? FinalFbo : 0;
         Gl.BindFramebuffer(FramebufferTarget.Framebuffer, targetFbo);
         Gl.Viewport(0, 0, (uint)viewport.X, (uint)viewport.Y);
         Gl.Clear(ClearBufferMask.ColorBufferBit);

@@ -1,5 +1,5 @@
 ﻿using FlyEngine.Core;
-using FlyEngine.Core.Components.Common;
+using FlyEngine.Core.Components;
 using FlyEngine.Network.Packets;
 using FlyEngine.Network.Serializable;
 using LiteNetLib;

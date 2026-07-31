@@ -1,9 +1,8 @@
 using System.Diagnostics.CodeAnalysis;
 using FlyEngine.Core.SceneManagement;
-using FlyEngine.Core.Serialization;
 using MemoryPack;
 
-namespace FlyEngine.Core.Components.Common;
+namespace FlyEngine.Core.Components;
 
 [MemoryPackable]
 public partial class GameObject : Object
@@ -102,6 +101,7 @@ public partial class GameObject : Object
 
     public override void Destroy()
     {
+        
         ComponentStore.Dispose();
         IsDestroyed = true;
     }

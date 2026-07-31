@@ -1,8 +1,8 @@
 using System.Drawing;
 using FlyEngine.Core.Assets;
-using FlyEngine.Core.Renderer.Pipelines;
 using Silk.NET.OpenGL;
 using Silk.NET.Windowing;
+using Window = FlyEngine.Core.Windowing.Window;
 
 namespace FlyEngine.Core.Renderer;
 
@@ -22,9 +22,9 @@ public class OpenGl
     public RenderPipeline RenderPipeline { get; set; }
     
     public readonly IWindow Window;
-    public readonly BaseWindow Handle;
+    public readonly Window Handle;
 
-    public OpenGl(IWindow window, BaseWindow handle)
+    public OpenGl(IWindow window, Window handle)
     {
         RenderPipeline = new DefaultRenderPipeline(this);
         Window = window;

@@ -1,14 +1,16 @@
 ﻿using System.Runtime.InteropServices;
 using FlyEngine.Core;
-using FlyEngine.Core.Components.Common;
+using FlyEngine.Core.Components;
+using FlyEngine.Core.Input;
 using FlyEngine.Core.SceneManagement;
 using ImGuiNET;
 using MemoryPack;
 using Microsoft.Extensions.Logging;
 using Silk.NET.Input;
 using ImGuiNet = ImGuiNET.ImGui;
+using Object = System.Object;
 
-namespace FlyEngine.Editor.Systems.Gui;
+namespace FlyEngine.Editor.Systems;
 
 public class EditorHierarchy : EditorGuiWindow
 {
@@ -65,14 +67,12 @@ public class EditorHierarchy : EditorGuiWindow
             if (ImGuiNet.BeginChild("GameObjects"))
             {
                 if (ImGuiNet.IsWindowHovered() && ImGuiNet.IsMouseReleased(ImGuiMouseButton.Left) && !ImGuiNet.IsMouseDragging(ImGuiMouseButton.Left))
-                    Editor.Selection.SelectedGameObject = null;
+                    Selection.SelectedObject = null;
                 CreateGameObjectContextWindow();
 
                 if (ImGuiNet.IsWindowFocused() && ImGuiNet.IsKeyPressed(ImGuiKey.F2) &&
-                    Editor.Selection.SelectedGameObject != null)
-                {
-                    StartRename(Editor.Selection.SelectedGameObject);
-                }
+                    Selection.SelectedObject != null)
+                    StartRename(Selection.SelectedObject);
 
                 var gameObjectsSpan = CollectionsMarshal.AsSpan((List<GameObject>)Scene.GameObjects);
                 for (var i = 0; i < gameObjectsSpan.Length; i++)
@@ -117,7 +117,7 @@ public class EditorHierarchy : EditorGuiWindow
         var flags = ImGuiTreeNodeFlags.OpenOnArrow | ImGuiTreeNodeFlags.OpenOnDoubleClick |
                     ImGuiTreeNodeFlags.SpanAvailWidth;
 
-        if (Editor.Selection.SelectedGameObject == gameObject)
+        if (Selection.SelectedObject == gameObject)
             flags |= ImGuiTreeNodeFlags.Selected;
 
         if (!hasChildren)
@@ -140,7 +140,7 @@ public class EditorHierarchy : EditorGuiWindow
             if (!ImGuiNet.IsMouseDragging(ImGuiMouseButton.Left))
             {
                 if (!ImGuiNet.IsItemToggledOpen())
-                    Editor.Selection.SelectedGameObject = gameObject;
+                    Selection.SelectedObject = gameObject;
             }
         }
 
@@ -235,8 +235,9 @@ public class EditorHierarchy : EditorGuiWindow
         }
     }
 
-    private static void StartRename(GameObject gameObject)
+    private static void StartRename(Core.Components.Object obj)
     {
+        if (obj is not GameObject gameObject) return;
         _renamingGameObject = gameObject;
         _renameBuffer = gameObject.Name;
     }
@@ -265,17 +266,10 @@ public class EditorHierarchy : EditorGuiWindow
         _gameObjectName = string.Empty;
     }
 
-    private static void DeleteSelectedGameObject(GameObject gameObject)
+    private static void DeleteSelectedGameObject(Core.Components.Object obj)
     {
-        var childrenCopy = gameObject.Transform.Children.ToList();
-        foreach (var child in childrenCopy)
-        {
-            child.Parent = null;
-        }
-
-        gameObject.Transform.Parent = null;
-        gameObject.Destroy();
-        if (gameObject == Editor.Selection.SelectedGameObject) Editor.Selection.SelectedGameObject = null;
+        obj.Destroy();
+        if (obj == Selection.SelectedObject) Selection.SelectedObject = null;
         EditorAction.MarkDirty();
     }
 

@@ -1,17 +1,11 @@
-﻿using System.Numerics;
-using FlyEngine.Core;
-using FlyEngine.Core.Assets;
-using FlyEngine.Core.Components.Common;
-using FlyEngine.Core.Components.Renderer;
-using FlyEngine.Core.Components.Renderer._3D;
-using FlyEngine.Core.Components.Renderer._3D.Meshes;
-using FlyEngine.Core.Math;
-using FlyEngine.Core.SceneManagement;
+﻿using FlyEngine.Core;
+using FlyEngine.Core.Components;
+using FlyEngine.Core.Input;
 using ImGuiNET;
 using Silk.NET.Maths;
 using ImGuiNet = ImGuiNET.ImGui;
 
-namespace FlyEngine.Editor.Systems.Gui;
+namespace FlyEngine.Editor.Systems;
 
 public class EditorScene : EditorGuiWindow
 {
@@ -60,16 +54,18 @@ public class EditorScene : EditorGuiWindow
         }
         ImGuiNet.End();
 
-        if (Editor.Selection.SelectedGameObject == null) return;
+        if (Selection.SelectedObject == null) return;
 
-        var selectedObject = Editor.Selection.SelectedGameObject;
+        var selectedObject = Selection.SelectedObject;
+
+        if (selectedObject is not GameObject gameObject) return;
         
-        var screenPosLocal = EditorGizmo.WorldToScreen(selectedObject.Transform.Position);
+        var screenPosLocal = EditorGizmo.WorldToScreen(gameObject.Transform.Position);
         var screenPosAbs = screenPosLocal + windowPos;
         
         var drawList = ImGuiNet.GetForegroundDrawList();
         drawList.PushClipRect(windowPos, windowPos + regionSize, true);
-        EditorGizmo.DrawGizmo(_operation, drawList, selectedObject.Transform, screenPosAbs, windowPos);
+        EditorGizmo.DrawGizmo(_operation, drawList, gameObject.Transform, screenPosAbs, windowPos);
         drawList.PopClipRect();
     }
 }

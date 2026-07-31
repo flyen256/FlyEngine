@@ -8,7 +8,7 @@ using Silk.NET.OpenGL;
 using Silk.NET.OpenGL.Extensions.ImGui;
 using Silk.NET.Windowing;
 
-namespace FlyEngine.Core.Gui.ImGui;
+namespace FlyEngine.Core.Gui;
 
 public class ImGuiController : IDisposable
 {

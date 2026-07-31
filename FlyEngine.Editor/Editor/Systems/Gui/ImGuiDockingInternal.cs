@@ -1,6 +1,6 @@
 ﻿using System.Runtime.InteropServices;
 
-namespace FlyEngine.Editor.Systems.Gui;
+namespace FlyEngine.Editor.Systems;
 
 public static class ImGuiDockingInternal
 {

@@ -1,7 +1,7 @@
 ﻿using System.Numerics;
 using ImGuiNet = ImGuiNET.ImGui;
 
-namespace FlyEngine.Core.Gui.Layout;
+namespace FlyEngine.Core.Gui;
 
 public class GuiList<TElement>(
     Func<IEnumerable<TElement>> listGetter,

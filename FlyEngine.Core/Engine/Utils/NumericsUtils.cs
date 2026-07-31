@@ -1,5 +1,5 @@
 ﻿using System.Numerics;
-using FlyEngine.Core.Components.Renderer.Lighting;
+using FlyEngine.Core.Components;
 using FlyEngine.Core.Math;
 
 namespace FlyEngine.Core.Utils;
