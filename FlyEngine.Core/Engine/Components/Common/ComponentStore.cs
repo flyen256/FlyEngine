@@ -28,10 +28,9 @@ public partial class ComponentStore : IDisposable
         NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals,
         Converters =
         {
-            new AssetConverterFactory(),
+            new AssetReferenceConverterFactory(),
             new AssetArrayConverterFactory(),
-            new ComponentRefConverterFactory(),
-            new TransformReferenceConverterFactory()
+            new ComponentRefConverterFactory()
         },
     };
 

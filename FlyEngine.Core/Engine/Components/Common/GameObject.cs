@@ -12,9 +12,9 @@ public partial class GameObject : Object
     [MemoryPackIgnore]
     public bool IsDestroyed { get; private set; }
 
-    [MemoryPackIgnore]
-    private string _name;
     [MemoryPackInclude]
+    private string _name;
+    [MemoryPackIgnore]
     public string Name
     {
         get => _name;
@@ -22,7 +22,7 @@ public partial class GameObject : Object
         {
             if (value.Length == 0)
                 return;
-            if (Application.Scene != null && Application.Scene.ObjectExistsWithName(value))
+            if (Application.Scene != null && Application.Scene.ObjectExistsWithName(value) && !value.Equals(_name))
             {
                 var count = Application.Scene.GameObjects.Count(g => g.Name == value);
                 _name = value + $"_{count}";
@@ -31,19 +31,15 @@ public partial class GameObject : Object
                 _name = value;
         }
     }
+    
+    [MemoryPackInclude]
+    public int EntityId { get; set; }
 
     [MemoryPackIgnore]
-    private Transform? _transform;
-
-    [MemoryPackInclude]
-    public Transform Transform
+    public TransformComponent Transform
     {
-        get => _transform!;
-        set
-        {
-            _transform = value;
-            _transform.GameObject = this;
-        }
+        get => Scene.EcsWorld.GetComponent<TransformComponent>(EntityId);
+        set => Scene.EcsWorld.SetComponent(EntityId, value);
     }
 
     [MemoryPackIgnore]
@@ -63,8 +59,10 @@ public partial class GameObject : Object
     [MemoryPackIgnore]
     public string LazyGameObjectName;
 
-    public static GameObject CreateWithLazyReference(string name) =>
-        new GameObject() { LazyGameObjectName = name };
+    [MemoryPackIgnore]
+    public Scene Scene;
+
+    public static GameObject CreateWithLazyReference(string name) => new() { LazyGameObjectName = name };
 
     [MemoryPackConstructor]
     private GameObject()
@@ -75,8 +73,13 @@ public partial class GameObject : Object
         };
     }
     
-    private GameObject(Transform transform, string name = "New game object")
+    private GameObject(Scene scene, string name = "New game object")
     {
+        Scene = scene;
+        EntityId = Scene.EcsWorld.CreateEntity();
+        Transform = new TransformComponent(Guid.NewGuid());
+        var transform = Transform;
+        transform.GameObject = this;
         Transform = transform;
         if (name.Length == 0)
             name = "New game object";
@@ -92,7 +95,7 @@ public partial class GameObject : Object
     {
         if (SceneManager.CurrentScene == null)
             throw new InvalidOperationException("No scene loaded");
-        var gameObject = new GameObject(new Transform(Guid.NewGuid()), name);
+        var gameObject = new GameObject(SceneManager.CurrentScene, name);
         foreach (var component in components ?? [])
             gameObject.AddComponent(component);
         SceneManager.CurrentScene.AddGameObject(gameObject);
@@ -101,9 +104,9 @@ public partial class GameObject : Object
 
     public override void Destroy()
     {
-        
         ComponentStore.Dispose();
         IsDestroyed = true;
+        Scene.EcsWorld.DestroyEntity(EntityId);
     }
 
     public T? GetComponent<T>() where T : class

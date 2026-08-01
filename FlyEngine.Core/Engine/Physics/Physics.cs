@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+﻿using Debug = System.Diagnostics.Debug;
 using System.Numerics;
 using FlyEngine.Core.Components;
 using JoltPhysicsSharp;
@@ -12,9 +12,9 @@ public static class Physics
     
     private static readonly ILogger Logger = new Logger<PhysicsClass>(LoggerFactory.Create(b => b.AddConsole()));
     
-    public static PhysicsSystem System;
+    public static PhysicsSystem System = null!;
     public static BodyInterface BodyInterface;
-    public static JobSystem JobSystem;
+    public static JobSystem JobSystem = null!;
     
     public static ObjectLayerPairFilterTable ObjectLayerPairFilter = new(2);
     public static BroadPhaseLayerInterfaceTable BroadPhaseLayerInterface = new(2, 2);
@@ -26,8 +26,8 @@ public static class Physics
         public static readonly ObjectLayer NonMoving = 0;
         public static readonly ObjectLayer Moving = 1;
     }
-    
-    protected static class BroadPhaseLayers
+
+    private static class BroadPhaseLayers
     {
         public static readonly BroadPhaseLayer NonMoving = 0;
         public static readonly BroadPhaseLayer Moving = 1;

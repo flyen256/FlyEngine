@@ -65,7 +65,7 @@ public class EditorScene : EditorGuiWindow
         
         var drawList = ImGuiNet.GetForegroundDrawList();
         drawList.PushClipRect(windowPos, windowPos + regionSize, true);
-        EditorGizmo.DrawGizmo(_operation, drawList, gameObject.Transform, screenPosAbs, windowPos);
+        EditorGizmo.DrawGizmo(_operation, drawList, gameObject, screenPosAbs, windowPos);
         drawList.PopClipRect();
     }
 }

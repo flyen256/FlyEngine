@@ -1,13 +1,13 @@
 ﻿using System.Numerics;
 using System.Runtime.InteropServices;
 using FlyEngine.Core.Components;
+using FlyEngine.Core.Debugging;
 using FlyEngine.Core.Gui;
 using FlyEngine.Core.Math;
 using FlyEngine.Core.Renderer;
 using FlyEngine.Core.SceneManagement;
 using Silk.NET.Maths;
 using Silk.NET.Windowing;
-using GameObject = FlyEngine.Core.Components.GameObject;
 
 namespace FlyEngine.Core.Windowing;
 
@@ -139,34 +139,43 @@ public class Window
         if (Scene == null) return;
         foreach (var behaviour in Scene.Behaviours.Where(behaviour => behaviour.IsActive()))
             behaviour.OnUpdate((float)deltaTime * TimeManager.TimeScale);
+        Scene.EcsWorld.Update((float)deltaTime);
     }
 
     private void OnRender(double deltaTime)
     {
+        if (Profiler.Enabled)
+            Profiler.Stopwatch.Restart();
         var activeCameras = Scene?.Cameras.Where(camera => camera.IsActive()).ToList();
-        Camera3D? camera3D = null;
+        Camera? camera = null;
         if (activeCameras != null)
         {
-            camera3D = activeCameras.Count > 0 && activeCameras.OfType<Camera3D>().Any() ?
-                activeCameras.OfType<Camera3D>().First(c => c.IsActive()) :
+            camera = activeCameras.Count > 0 ?
+                activeCameras.First(c => c.IsActive()) :
                 null;
-            Camera.CurrentCamera = camera3D;
+            Camera.CurrentCamera = camera;
         }
-        camera3D?.UpdateMatrices(AspectRatio);
+        camera?.UpdateMatrices(AspectRatio);
         if (Application.IsEditor)
             UpdateMatrices();
         
         if (OpenGl == null) return;
 
         OpenGl.RenderPipeline.Render((float)deltaTime * TimeManager.TimeScale, IsEditorSceneOpened);
+        if (Profiler.Enabled || Profiler.Stopwatch.IsRunning)
+        {
+            Profiler.Stopwatch.Stop();
+            Profiler.UpdateMetrics((float)deltaTime);
+        }
 
         if (!ImGui.Initialized || ImGui.Controller == null) return;
         ImGui.Controller.Update((float)deltaTime);
         if (Scene != null)
         {
             var renderers = CollectionsMarshal.AsSpan(Scene.GuiWindows.ToList());
-            foreach (var renderer in renderers)
+            for (var i = 0; i < renderers.Length; i++)
             {
+                var renderer = renderers[i];
                 if (!renderer.IsActive()) continue;
                 renderer.Render();
             }

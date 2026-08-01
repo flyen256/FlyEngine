@@ -44,10 +44,15 @@ public partial class Component : Object
     [JsonIgnore]
     [HideInInspector]
     public GameObject GameObject;
+
     [MemoryPackIgnore]
     [JsonIgnore]
     [HideInInspector]
-    public Transform Transform => GameObject.Transform;
+    public TransformComponent Transform
+    {
+        get => GameObject.Transform;
+        set => GameObject.Transform = value;
+    }
     [MemoryPackIgnore]
     [JsonIgnore]
     [HideInInspector]

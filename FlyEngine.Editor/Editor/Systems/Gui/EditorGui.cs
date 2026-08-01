@@ -30,6 +30,7 @@ public class EditorGui : EditorSystem
         AddWindow<EditorInspector>();
         AddWindow<EditorConsoleGui>();
         AddWindow<EditorNavBar>();
+        AddWindow<EditorProfiler>();
     }
 
     public override void OnUpdate(double deltaTime)

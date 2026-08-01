@@ -41,7 +41,8 @@ public class Character : Behaviour
 			Core.Physics.Physics.Layers.Moving,
 			Core.Physics.Physics.System
 		);
-		
-		Transform.Position = _character.Position;
-	}
+        var transform = Transform;
+		transform.Position = _character.Position;
+        Transform = transform;
+    }
 }

@@ -34,7 +34,8 @@ public class CameraController : Behaviour
         _rotation.X += Input.Input.MouseInput.Y * Sensitivity;
         _rotation.Y -= Input.Input.MouseInput.X * Sensitivity;
         _rotation.X = System.Math.Clamp(_rotation.X, -90f, 90f);
-        Transform.Rotation = QuaternionUtils.FromVector3(_rotation);
+        var transform = Transform;
+        transform.Rotation = QuaternionUtils.FromVector3(_rotation);
         var moveInput = Input.Input.GetMoveInput();
         if (moveInput == Vector2D<float>.Zero) return;
         var moveSpeed = 5.0f * (float)deltaTime;
@@ -43,6 +44,7 @@ public class CameraController : Behaviour
 
         var direction = Vector3.Transform(inputVector, Transform.Rotation);
 
-        Transform.Position += direction * moveSpeed;
+        transform.Position += direction * moveSpeed;
+        Transform = transform;
     }
 }

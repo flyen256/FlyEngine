@@ -4,10 +4,10 @@ using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using FlyEngine.Core;
 using FlyEngine.Core.Components;
+using FlyEngine.Core.Debugging;
 using FlyEngine.Core.Extensions;
 using FlyEngine.Core.SceneManagement;
 using FlyEngine.Core.Utils;
-using FlyEngine.Editor.Systems.Console;
 using FlyEngine.Network;
 using ImGuiNET;
 using Microsoft.Extensions.Logging;
@@ -34,13 +34,16 @@ public class GameObjectInspector(EditorInspector editorInspector) : Inspector(ed
         if (EditorInspector.LastSelectedObject != SelectedObject)
         {
             EditorInspector.LastSelectedObject = SelectedObject;
-            SelectedObject.Transform.Rotation.ToEulerAngles();
+            var transform = SelectedObject.Transform;
+            transform.Rotation.ToEulerAngles();
+            SelectedObject.Transform = transform;
         }
         RenderTransform();
         RenderComponents();
         if (ImGuiNet.Button("Add Component"))
         {
             _searchComponent = string.Empty;
+            RefreshComponents();
             _addComponentModal = true;
         }
         RenderAddComponentModal();
@@ -95,11 +98,7 @@ public class GameObjectInspector(EditorInspector editorInspector) : Inspector(ed
         if (type.IsAbstract) return;
         if (!type.IsSubclassOf(typeof(Component)))
         {
-            EditorConsole.Messages.Add(new EditorConsoleMessage
-            {
-                Level = LogLevel.Error,
-                Message = $"Type: {type.Name} is not Component"
-            });
+            Debug.LogError($"Type: {type.Name} is not Component");
             return;
         }
         var component = SelectedObject.AddComponent(type);
@@ -115,13 +114,14 @@ public class GameObjectInspector(EditorInspector editorInspector) : Inspector(ed
         var coreAssembly = Assembly.GetAssembly(typeof(Application));
         var editorAssembly = Assembly.GetAssembly(typeof(Editor));
         var networkAssembly = Assembly.GetAssembly(typeof(NetworkManager));
+        if (coreAssembly != null)
+            _componentTypes.AddRange(coreAssembly.GetTypes().Where(t => t.IsSubclassOf(typeof(Component))));
+        if (editorAssembly != null)
+            _componentTypes.AddRange(editorAssembly.GetTypes().Where(t => t.IsSubclassOf(typeof(Component))));
+        if (networkAssembly != null)
+            _componentTypes.AddRange(networkAssembly.GetTypes().Where(t => t.IsSubclassOf(typeof(Component))));
+        if (Editor.Scripts.CompileError || !Editor.Scripts.Compiled) return;
         var gameAssembly = Application.ScriptsLoader.LoadFromAssemblyName(new AssemblyName(Application.ScriptsAssemblyName));
-        if (coreAssembly == null ||
-            editorAssembly == null ||
-            networkAssembly == null) return;
-        _componentTypes.AddRange(coreAssembly.GetTypes().Where(t => t.IsSubclassOf(typeof(Component))));
-        _componentTypes.AddRange(editorAssembly.GetTypes().Where(t => t.IsSubclassOf(typeof(Component))));
-        _componentTypes.AddRange(networkAssembly.GetTypes().Where(t => t.IsSubclassOf(typeof(Component))));
         _componentTypes.AddRange(gameAssembly.GetTypes().Where(t => t.IsSubclassOf(typeof(Component))));
     }
 
@@ -198,6 +198,7 @@ public class GameObjectInspector(EditorInspector editorInspector) : Inspector(ed
                 transform.Scale = scale;
                 EditorAction.MarkDirty();
             }
+            SelectedObject.Transform = transform;
 
             ImGui.Separator();
         }

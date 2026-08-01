@@ -10,6 +10,9 @@ public static class Input
     public static IInputContext? InputContext { get; private set; }
 
     private static readonly List<Key> PressedKeys = [];
+    
+    public delegate void OnKeyDownDelegate(IKeyboard keyboard, Key key, int keyCode);
+    public static event OnKeyDownDelegate? OnKeyDownEvent;
 
     private static Vector2 _mouseDeltaAccumulated;
 
@@ -71,6 +74,8 @@ public static class Input
         }
     }
 
+    public static bool BlockInput { get; set; } = false;
+
     public static void LockAndHideCursor()
     {
         CursorLocked = true;
@@ -102,6 +107,7 @@ public static class Input
         var raw = _mouseDeltaAccumulated;
         _mouseDeltaAccumulated = Vector2.Zero;
 
+        if (BlockInput) raw = Vector2.Zero;
         MouseInput = raw;
     }
 
@@ -119,6 +125,7 @@ public static class Input
     {
         if (PressedKeys.Contains(key)) return;
         PressedKeys.Add(key);
+        OnKeyDownEvent?.Invoke(keyboard, key, keyCode);
         if (!Application.IsRunning) return;
         if (key == Key.Escape &&
             Application.IsEditor)
@@ -144,7 +151,7 @@ public static class Input
                 _previousStateVisible = null;
             }
         }
-        if (Application.Scene == null) return;
+        if (Application.Scene == null || BlockInput) return;
         foreach (var behaviour in Application.Scene.Behaviours)
         {
             var onKeyDownMethod = behaviour.GetType().GetMethod("OnKeyDown");
@@ -156,10 +163,10 @@ public static class Input
     private static void OnKeyUp(IKeyboard keyboard, Key key, int keyCode)
     {
         PressedKeys.Remove(key);
-        if (!Application.IsRunning) return;
+        if (!Application.IsRunning || BlockInput) return;
     }
 
-    public static bool GetKey(Key key) => PressedKeys.Contains(key);
+    public static bool GetKey(Key key) => PressedKeys.Contains(key) && !BlockInput;
 
     public static Vector2D<float> GetMoveInput()
     {

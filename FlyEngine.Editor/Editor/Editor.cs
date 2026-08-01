@@ -6,7 +6,6 @@ using FlyEngine.Core.Windowing;
 using FlyEngine.Editor.Assets;
 using FlyEngine.Editor.Scripting;
 using FlyEngine.Editor.Systems;
-using FlyEngine.Editor.Systems.Console;
 using FlyEngine.Editor.TaskQueue;
 using Microsoft.Extensions.Logging;
 using Silk.NET.Assimp;
@@ -48,7 +47,6 @@ public static class Editor
     public static readonly EditorTaskQueue TaskQueue = new();
     
     public static bool IsRunningTask => TaskQueue.IsProcessing;
-    public static bool CompileError { get; private set; }
 
     public static bool IsSceneOpened
     {
@@ -68,7 +66,7 @@ public static class Editor
     private static FileSystemWatcher? _assetsWatcher;
     private static readonly List<EditorSystem> Systems = [
         new EditorGui(),
-        new EditorConsole(),
+        new EditorInput(),
         new EditorCameraMovement()];
     
     private static readonly ConcurrentQueue<Action> MainThreadQueue = new();

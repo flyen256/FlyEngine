@@ -1,6 +1,7 @@
 ﻿using System.Numerics;
 using System.Runtime.InteropServices;
 using FlyEngine.Core.Components;
+using FlyEngine.Core.Debugging;
 using FlyEngine.Core.SceneManagement;
 using FlyEngine.Core.Utils;
 using Microsoft.Extensions.Logging;
@@ -44,8 +45,14 @@ public class DefaultRenderPipeline(OpenGl openGl) : RenderPipeline(openGl)
     public override void Render(float deltaTime, bool editor = false)
     {
         if (Application.Window == null || Application.Scene == null) return;
-        var currentCam = Camera.CurrentCamera as Camera3D;
+        var currentCam = Camera.CurrentCamera;
         if (!editor && currentCam == null) return;
+        uint queryId = 0;
+        if (Profiler.Enabled)
+        {
+            queryId = Gl.GenQuery();
+            Gl.BeginQuery(QueryTarget.TimeElapsed, queryId);
+        }
         var projection = editor ?
             Application.Window.EditorCameraProjectionMatrix :
             currentCam!.ProjectionMatrix;
@@ -136,6 +143,10 @@ public class DefaultRenderPipeline(OpenGl openGl) : RenderPipeline(openGl)
             sunLightIndex,
             sunDirection);
         Gl.Clear((uint)ClearBufferMask.DepthBufferBit);
+        if ((!Profiler.Enabled || !Gl.IsQuery(queryId)) && !Gl.IsQuery(queryId)) return;
+        Gl.EndQuery(QueryTarget.TimeElapsed);
+        Gl.GetQueryObject(queryId, QueryObjectParameterName.QueryResult, out ulong timeElapsed);
+        Profiler.GpuLatencyMilliseconds = timeElapsed / 1000000.0;
     }
 
     public override void ProcessShaders(string vertexCode)
