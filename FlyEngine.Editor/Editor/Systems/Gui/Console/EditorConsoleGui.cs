@@ -1,5 +1,5 @@
 ﻿using System.Numerics;
-using FlyEngine.Editor.Systems.Console;
+using FlyEngine.Core.Debugging;
 using ImGuiNET;
 using Microsoft.Extensions.Logging;
 
@@ -17,16 +17,16 @@ public class EditorConsoleGui : EditorGuiWindow
     protected override void OnRender(double deltaTime)
     {
         if (Core.Gui.ImGui.Controller == null) return;
-        if (ImGui.Button("Clear")) { EditorConsole.Messages.Clear(); }
+        if (ImGui.Button("Clear")) { Debug.ClearLogs(); }
         ImGui.SameLine();
-        ImGui.TextUnformatted($"Messages: {EditorConsole.Messages.Count}");
+        ImGui.TextUnformatted($"Messages: {Debug.LogList.Count}");
     
         ImGui.Separator();
 
         if (ImGui.BeginChild("ConsoleMessages", new Vector2(0, 0), ImGuiChildFlags.None, base.Flags | ImGuiWindowFlags.HorizontalScrollbar))
         {
             ImGui.PushTextWrapPos(-1.0f);
-            foreach (var msg in EditorConsole.Messages)
+            foreach (var msg in Debug.LogList)
             {
                 var color = GetColorForLevel(msg.Level);
                 ImGui.PushFont(Core.Gui.ImGui.Controller.ArialFont);

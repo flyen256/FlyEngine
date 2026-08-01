@@ -133,7 +133,11 @@ public class EditorInspector : EditorGuiWindow
             ImGuiNet.Spacing();
 
             ImGuiNet.EndPopup();
+            return;
         }
+        // ReSharper disable once RedundantCheckBeforeAssignment
+        if (_selectedComponent != null)
+            _selectedComponent = null;
     }
     
     private List<Asset> SearchAssets() =>

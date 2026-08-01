@@ -18,7 +18,7 @@ public class EditorNavBar : EditorGuiWindow
     {
         if (ImGui.Button(Application.IsRunning ? "+" : "-"))
         {
-            if (Editor.CompileError)
+            if (Editor.Scripts.CompileError)
             {
                 await Editor.TaskQueue.Enqueue(Editor.Scripts.CompileScriptsAsync, "Compiling scripts");
                 return;

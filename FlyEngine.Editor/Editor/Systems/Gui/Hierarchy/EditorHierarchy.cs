@@ -1,14 +1,11 @@
 ﻿using System.Runtime.InteropServices;
 using FlyEngine.Core;
 using FlyEngine.Core.Components;
-using FlyEngine.Core.Input;
 using FlyEngine.Core.SceneManagement;
 using ImGuiNET;
 using MemoryPack;
 using Microsoft.Extensions.Logging;
-using Silk.NET.Input;
 using ImGuiNet = ImGuiNET.ImGui;
-using Object = System.Object;
 
 namespace FlyEngine.Editor.Systems;
 
@@ -37,20 +34,6 @@ public class EditorHierarchy : EditorGuiWindow
     protected override void BeforeBegin()
     {
         ImGuiNet.SetNextWindowDockID(EditorGui.LeftDockId);
-    }
-
-    protected internal override async void OnUpdate(double deltaTime)
-    {
-        try
-        {
-            if (!Input.GetKey(Key.S) || !Input.GetKey(Key.ControlLeft) || !EditorAction.IsDirty) return;
-            await Editor.TaskQueue.Enqueue(TrySaveScene, "Saving scene");
-            EditorAction.IsDirty = false;
-        }
-        catch (Exception e)
-        {
-            Logger.LogError("{error}", e);
-        }
     }
 
     protected override void OnRender(double deltaTime)
@@ -108,9 +91,7 @@ public class EditorHierarchy : EditorGuiWindow
     {
         if (gameObject.IsDestroyed) return;
 
-        var transform = gameObject.Transform;
-
-        var validChildrenCount = transform.Children.Count(child => !child.GameObject.IsDestroyed);
+        var validChildrenCount = gameObject.Transform.ChildrenGameObjects.Count(child => !child.IsDestroyed);
 
         var hasChildren = validChildrenCount > 0;
 
@@ -134,7 +115,7 @@ public class EditorHierarchy : EditorGuiWindow
                 ApplyRename(gameObject);
             return;
         }
-        var isNodeOpen = ImGuiNet.TreeNodeEx($"{gameObject.Name}###GO_{gameObject.GetHashCode()}", flags);
+        var isNodeOpen = ImGuiNet.TreeNodeEx($"{gameObject.Name} (Entity id: {gameObject.EntityId})###GO_{gameObject.GetHashCode()}", flags);
         if (ImGuiNet.IsItemHovered() && ImGuiNet.IsMouseReleased(ImGuiMouseButton.Left))
         {
             if (!ImGuiNet.IsMouseDragging(ImGuiMouseButton.Left))
@@ -153,6 +134,7 @@ public class EditorHierarchy : EditorGuiWindow
             }
 
             ImGuiNet.Text(gameObject.Name);
+            ImGuiNet.Text($"(Entity id: {gameObject.EntityId})");
             ImGuiNet.EndDragDropSource();
         }
 
@@ -167,7 +149,9 @@ public class EditorHierarchy : EditorGuiWindow
 
                     if (draggedOuter != gameObject && !IsChildOf(gameObject.Transform, draggedOuter.Transform))
                     {
-                        draggedOuter.Transform.Parent = gameObject.Transform;
+                        var tr = draggedOuter.Transform;
+                        tr.SetParent(gameObject);
+                        draggedOuter.Transform = tr;
                         EditorAction.MarkDirty();
                     }
                 }
@@ -178,24 +162,27 @@ public class EditorHierarchy : EditorGuiWindow
 
         if (isNodeOpen)
         {
-            var childrenCopy = transform.Children.ToList();
-            foreach (var childTransform in childrenCopy)
+            var children = gameObject.Transform.ChildrenGameObjects;
+            foreach (var childTransform in children)
             {
-                if (!childTransform.GameObject.IsDestroyed)
-                    RenderGameObjectNode(childTransform.GameObject);
+                if (!childTransform.IsDestroyed)
+                    RenderGameObjectNode(childTransform);
             }
 
             ImGuiNet.TreePop();
         }
     }
 
-    private static bool IsChildOf(Transform potentialParent, Transform potentialChild)
+    private static bool IsChildOf(TransformComponent potentialParent, TransformComponent potentialChild)
     {
-        var current = potentialParent;
-        while (current != null)
+        var current = potentialChild.Parent;
+
+        while (current.HasValue)
         {
-            if (current == potentialChild) return true;
-            current = current.Parent;
+            if (current.Value.GameObject.EntityId == potentialParent.GameObject.EntityId) 
+                return true;
+            
+            current = current.Value.Parent;
         }
 
         return false;
@@ -213,7 +200,9 @@ public class EditorHierarchy : EditorGuiWindow
             if (ImGuiNet.MenuItem("Create Child Game Object"))
             {
                 var child = GameObject.Create("New Child");
-                child.Transform.Parent = gameObject.Transform;
+                var transform = child.Transform;
+                transform.SetParent(gameObject);
+                child.Transform = transform;
                 EditorAction.MarkDirty();
             }
 
@@ -221,7 +210,9 @@ public class EditorHierarchy : EditorGuiWindow
             {
                 if (ImGuiNet.MenuItem("Detach (Make Root)"))
                 {
-                    gameObject.Transform.Parent = null;
+                    var transform = gameObject.Transform;
+                    transform.SetParent(null);
+                    gameObject.Transform = transform;
                     EditorAction.MarkDirty();
                 }
             }
@@ -244,7 +235,7 @@ public class EditorHierarchy : EditorGuiWindow
 
     private static void ApplyRename(GameObject gameObject)
     {
-        if (!string.IsNullOrWhiteSpace(_renameBuffer))
+        if (!string.IsNullOrWhiteSpace(_renameBuffer) && !_renameBuffer.Equals(gameObject.Name))
         {
             gameObject.Name = _renameBuffer;
             EditorAction.MarkDirty();
@@ -281,13 +272,5 @@ public class EditorHierarchy : EditorGuiWindow
                 _createGameObject = true;
             ImGuiNet.EndPopup();
         }
-    }
-
-    private async Task TrySaveScene()
-    {
-        if (Scene?.Path == null || Application.IsRunning) return;
-        var fs = File.Open(Scene.Path, FileMode.Create);
-        await MemoryPackSerializer.SerializeAsync(fs, Scene);
-        fs.Close();
     }
 }

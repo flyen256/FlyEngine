@@ -1,7 +1,5 @@
 ﻿using System.Numerics;
-using FlyEngine.Core;
 using FlyEngine.Core.Components;
-using FlyEngine.Core.Extensions;
 using FlyEngine.Core.Input;
 using FlyEngine.Core.Serialization;
 using FlyEngine.Core.Utils;
@@ -12,7 +10,7 @@ namespace FlyEngine.Game;
 
 public class Player : Character
 {
-    public ComponentRef<Camera3D>? Camera { get; set; }
+    public ComponentRef<Camera>? Camera { get; set; }
     
     public float Sensitivity = 0.001f;
 
@@ -72,13 +70,14 @@ public class Player : Character
     {
         _rotation.X += Input.MouseInput.Y * Sensitivity;
         _rotation.Y -= Input.MouseInput.X * Sensitivity;
-        _rotation.X = System.Math.Clamp(_rotation.X, -89.9f, 89.9f);
+        _rotation.X = Math.Clamp(_rotation.X, -89.9f, 89.9f);
 
-        Transform.Rotation = QuaternionUtils.FromVector3(new Vector3(0, _rotation.Y, 0));
+        var transform = Transform;
+        transform.Rotation = QuaternionUtils.FromVector3(new Vector3(0, _rotation.Y, 0));
 
-        if (Camera?.Value != null)
-        {
-            Camera.Value.Transform.LocalRotation = QuaternionUtils.FromVector3(new Vector3(_rotation.X, 0, 0));
-        }
+        if (Camera?.Value == null) return;
+        var cameraTransform = Camera.Value.Transform;
+        cameraTransform.LocalRotation = QuaternionUtils.FromVector3(new Vector3(_rotation.X, 0, 0));
+        Camera.Value.Transform = cameraTransform;
     }
 }

@@ -9,7 +9,7 @@ public class Collider : Component
     protected override void OnInitialize()
     {
         CreateBody(TryGetComponent(out Rigidbody? rigidBody) ? rigidBody.MotionType : MotionType.Static);
-        Core.Physics.Physics.SetPosition(BodyId, Transform.Position);
+        Physics.Physics.SetPosition(BodyId, Transform.Position);
     }
 
     protected virtual void CreateBody(MotionType motionType) { }

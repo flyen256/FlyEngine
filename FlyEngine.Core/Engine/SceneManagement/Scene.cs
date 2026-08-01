@@ -2,13 +2,13 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using FlyEngine.Core.Assets;
 using FlyEngine.Core.Components;
+using FlyEngine.Core.ECS;
 using FlyEngine.Core.Extensions;
 using FlyEngine.Core.Gui;
 using MemoryPack;
 using Component = FlyEngine.Core.Components.Component;
 using DeferredEnvironment = FlyEngine.Core.Renderer.DeferredEnvironment;
 using GameObject = FlyEngine.Core.Components.GameObject;
-using Transform = FlyEngine.Core.Components.Transform;
 
 namespace FlyEngine.Core.SceneManagement;
 
@@ -45,20 +45,28 @@ public partial class Scene(Guid guid) : Asset(guid)
     [MemoryPackIgnore]
     public IReadOnlyList<MeshRenderer> MeshRenderers => _meshRenderers;
 
+    [MemoryPackInclude]
+    public World EcsWorld = new();
+    
+    public DeferredEnvironment Environment { get; private set; } = DeferredEnvironment.Default;
+
     [MemoryPackOnDeserialized]
     private void OnDeserialized()
     {
-        Console.WriteLine($"Scene guid: {Guid}");
         var gameObjects = CollectionsMarshal.AsSpan(_gameObjects);
+
         for (var i = 0; i < gameObjects.Length; i++)
         {
             var gameObject = gameObjects[i];
-            var components = CollectionsMarshal.AsSpan(gameObjects[i].ComponentStore.List.ToList());
+            gameObject.Scene = this;
+
+            var components = CollectionsMarshal.AsSpan(gameObject.ComponentStore.List.ToList());
+            
             for (var o = 0; o < components.Length; o++)
             {
                 var component = components[o];
-                Console.WriteLine($"Component: {component.GetType().Name} guid: {component.Guid}");
                 RegisterComponent(component, gameObject);
+
                 var componentFields = GetComponentFields(component.GetType(), typeof(Component));
                 foreach (var field in componentFields)
                 {
@@ -66,18 +74,39 @@ public partial class Scene(Guid guid) : Asset(guid)
                     if (value == null || value.LazyGuid == Guid.Empty) continue;
                     field.SetValue(GetComponentByGuid(value.LazyGuid), value);
                 }
-                var transformFields = GetComponentFields(component.GetType(), typeof(Transform));
+
+                var transformFields = GetComponentFields(component.GetType(), typeof(TransformComponent));
                 foreach (var field in transformFields)
                 {
-                    var value = (Transform?)field.GetValue(component);
-                    if (value == null || value.LazyGuid == Guid.Empty) continue;
-                    field.SetValue(GetTransformByGuid(value.LazyGuid), value);
+                    var value = (TransformComponent?)field.GetValue(component);
+                    if (value == null || value.Value.LazyGuid == Guid.Empty) continue;
+                    
+                    var go = GetTransformByGuid(value.Value.LazyGuid);
+                    if (go == null) continue;
+                    
+                    var transform = go.Transform;
+                    field.SetValue(transform, value);
+                    go.Transform = transform;
                 }
             }
         }
-        
+
         for (var i = 0; i < gameObjects.Length; i++)
-            gameObjects[i].Transform.ResolveReferences(gameObjects);
+        {
+            var gameObject = gameObjects[i];
+            var transformCopy = gameObject.Transform;
+            transformCopy.GameObject = gameObject;
+            transformCopy.ResolveReferences(gameObjects);
+            gameObjects[i].Transform = transformCopy;
+        }
+    }
+    
+    public async Task SaveAsync()
+    {
+        if (Path == null || Application.IsRunning) return;
+        var fs = File.Open(Path, FileMode.Create);
+        await MemoryPackSerializer.SerializeAsync(fs, this);
+        fs.Close();
     }
     
     public static FieldInfo[] GetComponentFields(Type targetType, Type fieldType)
@@ -87,8 +116,6 @@ public partial class Scene(Guid guid) : Asset(guid)
         var result = fields.Where(field => fieldType.IsAssignableFrom(field.FieldType)).ToArray();
         return result;
     }
-    
-    public DeferredEnvironment Environment { get; private set; } = DeferredEnvironment.Default;
 
     public Component? GetComponentByGuid(Guid guid)
     {
@@ -107,14 +134,14 @@ public partial class Scene(Guid guid) : Asset(guid)
         return null;
     }
     
-    public Transform? GetTransformByGuid(Guid guid)
+    public GameObject? GetTransformByGuid(Guid guid)
     {
         var gameObjects = CollectionsMarshal.AsSpan(_gameObjects);
         for (var i = 0; i < gameObjects.Length; i++)
         {
             var gameObject = gameObjects[i];
             if (gameObject.Transform.Guid == guid)
-                return gameObject.Transform;
+                return gameObject;
         }
         return null;
     }

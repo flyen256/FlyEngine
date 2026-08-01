@@ -21,17 +21,17 @@ public static class EditorGizmo
     public static void DrawGizmo(
         Operation operation,
         ImDrawListPtr drawListPtr,
-        Transform transform,
+        GameObject gameObject,
         Vector2 screenPos,
         Vector2 windowPos)
     {
         switch (operation)
         {
             case Operation.Translate:
-                DrawTranslate(drawListPtr, transform, screenPos, windowPos);
+                DrawTranslate(drawListPtr, gameObject, screenPos, windowPos);
                 break;
             case Operation.Rotate:
-                DrawRotate(drawListPtr, transform, windowPos);
+                DrawRotate(drawListPtr, gameObject, windowPos);
                 break;
             default:
                 break;
@@ -40,18 +40,19 @@ public static class EditorGizmo
 
     private static void DrawTranslate(
         ImDrawListPtr drawListPtr,
-        Transform transform,
+        GameObject gameObject,
         Vector2 screenPos,
         Vector2 windowPos)
     {
+        var transformComponent = gameObject.Transform;
         var mousePosition = ImGui.GetMousePos();
         var xColor = ImGui.GetColorU32(new Vector4(0.75f, 0.0f, 0.0f, 1.0f));
         var yColor = ImGui.GetColorU32(new Vector4(0.0f, 0.75f, 0.0f, 1.0f));
         var zColor = ImGui.GetColorU32(new Vector4(0.0f, 0.0f, 0.75f, 1.0f));
-        var scale = GetGizmoScale(transform.Position);
-        var endX = WorldToScreen(transform.Position + transform.Right * scale) + windowPos;
-        var endY = WorldToScreen(transform.Position + transform.Up * scale) + windowPos;
-        var endZ = WorldToScreen(transform.Position + transform.Forward * scale) + windowPos;
+        var scale = GetGizmoScale(transformComponent.Position);
+        var endX = WorldToScreen(transformComponent.Position + transformComponent.Right * scale) + windowPos;
+        var endY = WorldToScreen(transformComponent.Position + transformComponent.Up * scale) + windowPos;
+        var endZ = WorldToScreen(transformComponent.Position + transformComponent.Forward * scale) + windowPos;
         var isOverX = IsMouseOverLine(mousePosition, screenPos, endX) || _pressedX;
         var isOverY = IsMouseOverLine(mousePosition, screenPos, endY) || _pressedY;
         var isOverZ = IsMouseOverLine(mousePosition, screenPos, endZ) || _pressedZ;
@@ -117,28 +118,30 @@ public static class EditorGizmo
         const float moveSpeed = 0.01f;
         var deltaMove = Vector3.Zero;
         if (_pressedX)
-            deltaMove = transform.Right * (Input.MouseInput.X * moveSpeed);
+            deltaMove = transformComponent.Right * (Input.MouseInput.X * moveSpeed);
         if (_pressedY)
-            deltaMove = transform.Up * (Input.MouseInput.X * moveSpeed);
+            deltaMove = transformComponent.Up * (Input.MouseInput.X * moveSpeed);
         if (_pressedZ)
-            deltaMove = transform.Forward * (Input.MouseInput.X * moveSpeed);
+            deltaMove = transformComponent.Forward * (Input.MouseInput.X * moveSpeed);
         if (deltaMove == Vector3.Zero) return;
         EditorAction.MarkDirty();
-        transform.Position += deltaMove;
+        transformComponent.Position += deltaMove;
+        gameObject.Transform = transformComponent;
     }
 
     private static void DrawRotate(
         ImDrawListPtr drawListPtr,
-        Transform transform,
+        GameObject gameObject,
         Vector2 windowPos)
     {
-        var scale = GetGizmoScale(transform.Position);
+        var transformComponent = gameObject.Transform;
+        var scale = GetGizmoScale(transformComponent.Position);
 
         var anyOtherHovered = false;
         anyOtherHovered = DrawRotationCircle(
             drawListPtr,
-            transform,
-            transform.Right,
+            transformComponent,
+            transformComponent.Right,
             new Vector4(1, 0, 0, 1),
             scale,
             windowPos,
@@ -147,8 +150,8 @@ public static class EditorGizmo
             anyOtherHovered);
         anyOtherHovered = DrawRotationCircle(
             drawListPtr,
-            transform,
-            transform.Up,
+            transformComponent,
+            transformComponent.Up,
             new Vector4(0, 1, 0, 1),
             scale,
             windowPos,
@@ -157,19 +160,20 @@ public static class EditorGizmo
             anyOtherHovered);
         anyOtherHovered = DrawRotationCircle(
             drawListPtr,
-            transform,
-            transform.Forward,
+            transformComponent,
+            transformComponent.Forward,
             new Vector4(0, 0, 1, 1),
             scale,
             windowPos,
             ref _pressedZ,
             "Z",
             anyOtherHovered);
+        gameObject.Transform = transformComponent;
     }
 
     private static bool DrawRotationCircle(
         ImDrawListPtr drawListPtr,
-        Transform transform,
+        TransformComponent transformComponent,
         Vector3 axis,
         Vector4 color,
         float radius,
@@ -189,7 +193,7 @@ public static class EditorGizmo
         for (var i = 0; i <= segments; i++)
         {
             var angle = (i / (float)segments) * MathF.PI * 2.0f;
-            var pointWorld = transform.Position + (perp1 * MathF.Cos(angle) + perp2 * MathF.Sin(angle)) * radius;
+            var pointWorld = transformComponent.Position + (perp1 * MathF.Cos(angle) + perp2 * MathF.Sin(angle)) * radius;
             points[i] = WorldToScreen(pointWorld) + windowPos;
 
             if (i > 0)
@@ -226,10 +230,10 @@ public static class EditorGizmo
 
             var deltaRotation = Quaternion.CreateFromAxisAngle(axis, delta);
                 
-            var targetRotation = Quaternion.Normalize(deltaRotation * transform.Rotation);
-            if (transform.Rotation != targetRotation)
+            var targetRotation = Quaternion.Normalize(deltaRotation * transformComponent.Rotation);
+            if (transformComponent.Rotation != targetRotation)
                 EditorAction.MarkDirty();
-            transform.Rotation = targetRotation;
+            transformComponent.Rotation = targetRotation;
         }
         return isHovered;
     }

@@ -31,8 +31,11 @@ public class Rigidbody : Behaviour
             Core.Physics.Physics.SetPosition(_collider.BodyId, Transform.Position);
             return;
         }
-        Transform.Position = GetPosition();
-        Transform.Rotation = GetRotation();
+
+        var transform = Transform;
+        transform.Position = GetPosition();
+        transform.Rotation = GetRotation();
+        Transform = transform;
     }
 
     public void AddForce(Vector3 force)

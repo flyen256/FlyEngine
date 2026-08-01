@@ -62,9 +62,11 @@ public class NetworkTransform : NetworkBehaviour
 
     private void UpdateRemote(float deltaTime)
     {
-        Transform.Position = Vector3.Lerp(Transform.Position, _targetPosition, deltaTime * InterpolationSpeed);
-        Transform.Rotation = Quaternion.Slerp(Transform.Rotation, _targetRotation, deltaTime * InterpolationSpeed);
-        Transform.Scale = Vector3.Lerp(Transform.Position, _targetScale, deltaTime * InterpolationSpeed);
+        var transform = Transform;
+        transform.Position = Vector3.Lerp(Transform.Position, _targetPosition, deltaTime * InterpolationSpeed);
+        transform.Rotation = Quaternion.Slerp(Transform.Rotation, _targetRotation, deltaTime * InterpolationSpeed);
+        transform.Scale = Vector3.Lerp(Transform.Position, _targetScale, deltaTime * InterpolationSpeed);
+        Transform = transform;
     }
 
     public void ApplySync(TransformPacket packet)
