@@ -1,5 +1,4 @@
 ﻿using System.Text.Json.Serialization;
-using FlyEngine.Core.Components;
 using FlyEngine.Core.SceneManagement;
 using FlyEngine.Core.Serialization.Json;
 using Component = FlyEngine.Core.Components.Component;
@@ -11,7 +10,7 @@ public class ComponentRef<T> where T : Component
 {
     private T? _cachedComponent;
     
-    public Guid Guid { get; set; } = Guid.Empty;
+    public Guid Guid { get; private set; } = Guid.Empty;
 
     [JsonIgnore]
     public T? Value
@@ -31,14 +30,12 @@ public class ComponentRef<T> where T : Component
         }
     }
 
-    public ComponentRef() { }
-
     public ComponentRef(Guid guid)
     {
         Guid = guid;
     }
 
-    public ComponentRef(T? component)
+    private ComponentRef(T? component)
     {
         Value = component;
     }

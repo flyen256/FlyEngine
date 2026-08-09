@@ -5,7 +5,7 @@ using FlyEngine.Core.Assets;
 using FlyEngine.Core.Components;
 using ImGuiNET;
 using ImGuiNet = ImGuiNET.ImGui;
-using Object = FlyEngine.Core.Components.Object;
+using Object = FlyEngine.Core.Assets.Object;
 
 namespace FlyEngine.Editor.Systems;
 

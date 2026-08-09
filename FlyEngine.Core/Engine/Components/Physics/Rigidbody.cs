@@ -32,10 +32,8 @@ public class Rigidbody : Behaviour
             return;
         }
 
-        var transform = Transform;
-        transform.Position = GetPosition();
-        transform.Rotation = GetRotation();
-        Transform = transform;
+        Transform.Position = GetPosition();
+        Transform.Rotation = GetRotation();
     }
 
     public void AddForce(Vector3 force)

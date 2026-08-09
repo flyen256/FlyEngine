@@ -2,9 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using FlyEngine.Core.SceneManagement;
-using FlyEngine.Core.Serialization.Json;
 using MemoryPack;
 
 namespace FlyEngine.Core.Components;
@@ -13,29 +11,16 @@ namespace FlyEngine.Core.Components;
 public partial class ComponentStore : IDisposable
 {
     [MemoryPackIgnore]
-    public GameObject GameObject { get; init; }
+    public GameObject GameObject { get; init; } = null!;
 
     [MemoryPackIgnore]
     public IReadOnlyList<Component> List => _components;
     
     [MemoryPackInclude]
     private List<Component> _components = [];
-    
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        IncludeFields = true,
-        PropertyNameCaseInsensitive = true,
-        NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals,
-        Converters =
-        {
-            new AssetReferenceConverterFactory(),
-            new AssetArrayConverterFactory(),
-            new ComponentRefConverterFactory()
-        },
-    };
 
     [MemoryPackInclude]
-    private List<ComponentDataHolder> SerializedData
+    private List<ComponentDataHolder>? SerializedData
     {
         get
         {
@@ -44,8 +29,8 @@ public partial class ComponentStore : IDisposable
             {
                 holders.Add(new ComponentDataHolder
                 {
-                    TypeName = comp.GetType().AssemblyQualifiedName,
-                    JsonPayload = JsonSerializer.Serialize(comp, comp.GetType(), JsonOptions)
+                    TypeName = comp.GetType().AssemblyQualifiedName!,
+                    JsonPayload = JsonSerializer.Serialize(comp, comp.GetType(), ComponentSerializer.JsonOptions)
                 });
             }
 
@@ -59,15 +44,13 @@ public partial class ComponentStore : IDisposable
             foreach (var holder in value)
             {
                 var type = Type.GetType(holder.TypeName) ?? Application.ScriptsLoader.LoadFromAssemblyName(
-                    new AssemblyName(Application.ScriptsAssemblyName)).GetType(holder.TypeName.Split(",")[0]);
+                    new AssemblyName(Scripting.Scripting.ScriptsAssemblyName)).GetType(holder.TypeName.Split(",")[0]);
                 if (type == null) continue;
 
-                var comp = (Component)JsonSerializer.Deserialize(holder.JsonPayload, type, JsonOptions);
-                if (comp != null)
-                {
-                    comp.GameObject = GameObject;
-                    _components.Add(comp);
-                }
+                var compObject = JsonSerializer.Deserialize(holder.JsonPayload, type, ComponentSerializer.JsonOptions);
+                if (compObject is not Component comp) continue;
+                comp.GameObject = GameObject;
+                _components.Add(comp);
             }
         }
     }
@@ -115,8 +98,7 @@ public partial class ComponentStore : IDisposable
         SceneManager.CurrentScene?.RegisterComponent(instance, GameObject);
         if (!Application.IsRunning) return instance;
         instance.Initialize();
-        if (instance is Behaviour behaviour)
-            behaviour.OnLoad();
+        instance.OnLoad();
         return instance;
     }
     
@@ -129,8 +111,7 @@ public partial class ComponentStore : IDisposable
         instance.GameObject = GameObject;
         if (!Application.IsRunning) return instance;
         instance.Initialize();
-        if (instance is Behaviour behaviour)
-            behaviour.OnLoad();
+        instance.OnLoad();
         return instance;
     }
 
@@ -141,8 +122,7 @@ public partial class ComponentStore : IDisposable
         component.GameObject = GameObject;
         if (!Application.IsRunning) return component;
         component.Initialize();
-        if (component is Behaviour behaviour)
-            behaviour.OnLoad();
+        component.OnLoad();
         return component;
     }
 
@@ -155,7 +135,6 @@ public partial class ComponentStore : IDisposable
     public void RemoveComponent(Component component)
     {
         component.OnRemoved();
-        component.OnDisable();
         if (SceneManager.CurrentScene != null)
             SceneManager.CurrentScene.RemoveComponent(component);
         _components.Remove(component);
@@ -175,6 +154,7 @@ public partial class ComponentStore : IDisposable
         {
             component.OnRemoved();
             component.OnDisable();
+            component.OnDestroy();
             if (SceneManager.CurrentScene != null)
                 SceneManager.CurrentScene.RemoveComponent(component);
         }

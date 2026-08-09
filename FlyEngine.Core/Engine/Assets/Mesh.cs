@@ -1,42 +1,63 @@
-﻿using FlyEngine.Core.Renderer;
+﻿using System.Numerics;
+using FlyEngine.Core.Renderer;
+using MemoryPack;
 using Silk.NET.OpenGL;
 
 namespace FlyEngine.Core.Assets;
 
-public class Mesh : Asset
+[MemoryPackable]
+public partial class Mesh : Asset
 {
-    public readonly IReadOnlyList<MeshVertex> Vertices = [];
-    public readonly IReadOnlyList<uint> Indices = [];
-    public readonly uint IndexCount;
+    public List<MeshVertex> Vertices { get; init; } = [];
+    public List<uint> Indices { get; init; } = [];
+    public uint IndexCount { get; init; }
 
-    public IReadOnlyList<Texture> Textures => _textures;
-    
-    private readonly List<Texture> _textures;
-    private VertexArrayObject<float, uint> _vao = null!;
-    private BufferObject<uint> _ebo = null!;
-    private BufferObject<float> _vbo = null!;
-    
-    public Mesh(Guid guid, List<Texture> textures, List<MeshVertex> vertices, List<uint> indices, uint indexCount) : base(guid)
+    [MemoryPackIgnore] private VertexArrayObject<float, uint>? _vao;
+    [MemoryPackIgnore] private BufferObject<uint>? _ebo;
+    [MemoryPackIgnore] private BufferObject<float>? _vbo;
+
+    [MemoryPackConstructor]
+    private Mesh(Guid guid): base(guid) {}
+
+    [MemoryPackOnDeserialized]
+    private void OnDeserialized()
     {
-        Vertices = vertices;
-        Indices = indices;
-        _textures = textures;
-        IndexCount = indexCount;
+        if (Application.Window?.OpenGl != null)
+            SetupMesh(Application.Window.OpenGl.Gl);
         AssetsManager.AddAsset(this);
     }
     
-    public Mesh(Guid guid, GL gl, List<Texture> textures, float[] vertices, uint[] indices, uint indexCount) : base(guid)
+    public Mesh(Guid guid, List<MeshVertex> vertices, List<uint> indices, uint indexCount, GL? gl = null) : base(guid)
+    {
+        Vertices = vertices;
+        Indices = indices;
+        IndexCount = indexCount;
+        
+        if (gl != null)
+            SetupMesh(gl);
+        
+        AssetsManager.AddAsset(this);
+    }
+
+    public Mesh(Guid guid, GL gl, float[] vertices, uint[] indices, uint indexCount, int stride = 8) : base(guid)
     {
         IndexCount = indexCount;
-        _textures = textures;
-        _vbo = new BufferObject<float>(gl, vertices, BufferTargetARB.ArrayBuffer);
-        _ebo = new BufferObject<uint>(gl, indices, BufferTargetARB.ElementArrayBuffer);
-        _vao = new VertexArrayObject<float, uint>(gl, _vbo, _ebo);
-        _vao.VertexAttributePointer(0, 3, VertexAttribPointerType.Float, 8, 0);
-        _vao.VertexAttributePointer(1, 2, VertexAttribPointerType.Float, 8, 3);
-        _vao.VertexAttributePointer(2, 3, VertexAttribPointerType.Float, 8, 5);
-        _vao.Unbind();
-        Loaded = true;
+        Indices = [.. indices];
+
+        var meshVerticesList = new List<MeshVertex>();
+        for (var i = 0; i < vertices.Length; i += stride)
+        {
+            var vertex = new MeshVertex
+            {
+                Position = new Vector3(vertices[i], vertices[i + 1], vertices[i + 2]),
+                TextureCoordinates = stride >= 5 ? new Vector2(vertices[i + 3], vertices[i + 4]) : Vector2.Zero,
+                Normal = stride >= 8 ? new Vector3(vertices[i + 5], vertices[i + 6], vertices[i + 7]) : Vector3.UnitY
+            };
+            meshVerticesList.Add(vertex);
+        }
+        Vertices = meshVerticesList;
+        
+        SetupMesh(gl);
         AssetsManager.AddAsset(this);
     }
 
@@ -44,50 +65,56 @@ public class Mesh : Asset
     {
         if (gl == null)
             throw new NullReferenceException(nameof(gl));
+            
+        SetupMesh(gl);
+    }
+
+    private void SetupMesh(GL gl)
+    {
+        _vbo?.Dispose();
+        _ebo?.Dispose();
+        _vao?.Dispose();
+
         _vbo = new BufferObject<float>(gl, BuildVertices(), BufferTargetARB.ArrayBuffer);
         _ebo = new BufferObject<uint>(gl, BuildIndices(), BufferTargetARB.ElementArrayBuffer);
         _vao = new VertexArrayObject<float, uint>(gl, _vbo, _ebo);
-        _vao.VertexAttributePointer(0, 3, VertexAttribPointerType.Float, 5, 0);
-        _vao.VertexAttributePointer(1, 2, VertexAttribPointerType.Float, 5, 3);
-        _vao.VertexAttributePointer(2, 3, VertexAttribPointerType.Float, 5, 0);
+
+        _vao.VertexAttributePointer(0, 3, VertexAttribPointerType.Float, 8, 0);
+        _vao.VertexAttributePointer(1, 2, VertexAttribPointerType.Float, 8, 3);
+        _vao.VertexAttributePointer(2, 3, VertexAttribPointerType.Float, 8, 5);
         _vao.Unbind();
+        
+        Loaded = true;
     }
 
     public override void Unload()
     {
-        _vbo.Dispose();
-        _ebo.Dispose();
-        _vao.Dispose();
+        _vbo?.Dispose();
+        _ebo?.Dispose();
+        _vao?.Dispose();
+        base.Unload();
     }
 
     private float[] BuildVertices()
     {
-        var vertices = new List<float>();
+        var vertices = new float[Vertices.Count * 8];
+        var index = 0;
 
         foreach (var vertex in Vertices)
         {
-            vertices.Add(vertex.Position.X);
-            vertices.Add(vertex.Position.Y);
-            vertices.Add(vertex.Position.Z);
-            vertices.Add(vertex.TextureCoordinates.X);
-            vertices.Add(vertex.TextureCoordinates.Y);
+            vertices[index++] = vertex.Position.X;
+            vertices[index++] = vertex.Position.Y;
+            vertices[index++] = vertex.Position.Z;
+            
+            vertices[index++] = vertex.TextureCoordinates.X;
+            vertices[index++] = vertex.TextureCoordinates.Y;
+            
+            vertices[index++] = vertex.Normal.X;
+            vertices[index++] = vertex.Normal.Y;
+            vertices[index++] = vertex.Normal.Z;
         }
 
-        return vertices.ToArray();
-    }
-
-    private float[] BuildVerticesWithoutTextureCoordinates()
-    {
-        var vertices = new List<float>();
-        
-        foreach (var vertex in Vertices)
-        {
-            vertices.Add(vertex.Position.X);
-            vertices.Add(vertex.Position.Y);
-            vertices.Add(vertex.Position.Z);
-        }
-
-        return vertices.ToArray();
+        return vertices;
     }
 
     private uint[] BuildIndices()
@@ -95,5 +122,13 @@ public class Mesh : Asset
         return Indices.ToArray();
     }
 
-    public void Bind() => _vao.Bind();
+    public void Bind() => _vao?.Bind();
+
+    public static Mesh Create(string name, Guid guid, GL gl, float[] vertices, uint[] indices, uint indexCount)
+    {
+        return new Mesh(guid, gl, vertices, indices, indexCount)
+        {
+            Name = name
+        };
+    }
 }

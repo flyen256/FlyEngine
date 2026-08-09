@@ -119,7 +119,7 @@ public static class Editor
     {
         TaskQueue.Enqueue(Scripts.CompileScriptsAsync, "Compiling scripts");
         TaskQueue.Enqueue(Assets.LoadModelsAsync, "Loading models");
-        TaskQueue.Enqueue(Assets.LoadAssetsAsync, "Loading assets");
+        TaskQueue.Enqueue(EditorAssets.LoadAssetsAsync, "Loading assets");
     }
 
     private static void OnFocusChanged(bool value)

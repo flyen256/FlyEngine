@@ -11,8 +11,9 @@ public static class Input
 
     private static readonly List<Key> PressedKeys = [];
     
-    public delegate void OnKeyDownDelegate(IKeyboard keyboard, Key key, int keyCode);
-    public static event OnKeyDownDelegate? OnKeyDownEvent;
+    public delegate void OnKeyDelegate(IKeyboard keyboard, Key key, int keyCode);
+    public static event OnKeyDelegate? OnKeyDownEvent;
+    public static event OnKeyDelegate? OnKeyUpEvent;
 
     private static Vector2 _mouseDeltaAccumulated;
 
@@ -127,43 +128,25 @@ public static class Input
         PressedKeys.Add(key);
         OnKeyDownEvent?.Invoke(keyboard, key, keyCode);
         if (!Application.IsRunning) return;
-        if (key == Key.Escape &&
-            Application.IsEditor)
-        {
-            if (CursorLocked)
-            {
-                _previousStateLocked = CursorLocked;
-                CursorLocked = false;
-            }
-            else if (_previousStateLocked != null)
-            {
-                CursorLocked = (bool)_previousStateLocked;
-                _previousStateLocked = null;
-            }
-            if (!CursorVisible)
-            {
-                _previousStateVisible = CursorVisible;
-                CursorVisible = true;
-            }
-            else if (_previousStateVisible != null)
-            {
-                CursorVisible = (bool)_previousStateVisible;
-                _previousStateVisible = null;
-            }
-        }
         if (Application.Scene == null || BlockInput) return;
         foreach (var behaviour in Application.Scene.Behaviours)
         {
-            var onKeyDownMethod = behaviour.GetType().GetMethod("OnKeyDown");
-            if (onKeyDownMethod == null) continue;
-            onKeyDownMethod.Invoke(behaviour, [key, keyCode]);
+            if (behaviour is not IKeyEvents keyEvents) continue;
+            keyEvents.OnKeyDown(key, keyCode);
         }
     }
 
     private static void OnKeyUp(IKeyboard keyboard, Key key, int keyCode)
     {
         PressedKeys.Remove(key);
-        if (!Application.IsRunning || BlockInput) return;
+        OnKeyUpEvent?.Invoke(keyboard, key, keyCode);
+        if (!Application.IsRunning) return;
+        if (Application.Scene == null || BlockInput) return;
+        foreach (var behaviour in Application.Scene.Behaviours)
+        {
+            if (behaviour is not IKeyEvents keyEvents) continue;
+            keyEvents.OnKeyUp(key, keyCode);
+        }
     }
 
     public static bool GetKey(Key key) => PressedKeys.Contains(key) && !BlockInput;

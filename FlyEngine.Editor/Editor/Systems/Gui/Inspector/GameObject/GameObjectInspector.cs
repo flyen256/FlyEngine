@@ -34,9 +34,8 @@ public class GameObjectInspector(EditorInspector editorInspector) : Inspector(ed
         if (EditorInspector.LastSelectedObject != SelectedObject)
         {
             EditorInspector.LastSelectedObject = SelectedObject;
-            var transform = SelectedObject.Transform;
+            ref var transform = ref SelectedObject.Transform;
             transform.Rotation.ToEulerAngles();
-            SelectedObject.Transform = transform;
         }
         RenderTransform();
         RenderComponents();
@@ -121,7 +120,7 @@ public class GameObjectInspector(EditorInspector editorInspector) : Inspector(ed
         if (networkAssembly != null)
             _componentTypes.AddRange(networkAssembly.GetTypes().Where(t => t.IsSubclassOf(typeof(Component))));
         if (Editor.Scripts.CompileError || !Editor.Scripts.Compiled) return;
-        var gameAssembly = Application.ScriptsLoader.LoadFromAssemblyName(new AssemblyName(Application.ScriptsAssemblyName));
+        var gameAssembly = Application.ScriptsLoader.LoadFromAssemblyName(new AssemblyName(Core.Scripting.Scripting.ScriptsAssemblyName));
         _componentTypes.AddRange(gameAssembly.GetTypes().Where(t => t.IsSubclassOf(typeof(Component))));
     }
 
@@ -136,7 +135,7 @@ public class GameObjectInspector(EditorInspector editorInspector) : Inspector(ed
         {
             var component = SelectedObject.ComponentStore.List[i];
             var componentEnabled = component.Enabled;
-            var variables = GetComponentVariables(component);
+            var variables = component.GetComponentVariables(component);
             ImGuiNet.Checkbox($"###{component.GetType().Name + $"{i}"}", ref componentEnabled);
             ImGuiNet.SameLine();
             if (ImGuiNet.Button($"X##{component.GetType().Name}-{component.SceneIndex}"))
@@ -159,24 +158,12 @@ public class GameObjectInspector(EditorInspector editorInspector) : Inspector(ed
         }
     }
 
-    private Span<VariableInfo> GetComponentVariables(Component component)
-    {
-        var type = component.GetType();
-
-        var properties = type.GetProperties()
-            .Where(f => f.GetSetMethod(false) != null).Cast<MemberInfo>();
-        var variables =
-            type.GetFields().Concat(properties);
-
-        return CollectionsMarshal.AsSpan(variables.Select(v => new VariableInfo(v)).ToList());
-    }
-
     private void RenderTransform()
     {
         if (EditorHierarchy.Instance == null) return;
         if (ImGuiNet.CollapsingHeader($"Transform##{SelectedObject.Name}", ImGuiTreeNodeFlags.AllowOverlap | ImGuiTreeNodeFlags.DefaultOpen))
         {
-            var transform = SelectedObject.Transform;
+            ref var transform = ref SelectedObject.Transform;
             var pos = transform.Position;
             if (ImGuiNet.DragFloat3("Position", ref pos, 0.1f))
             {
@@ -198,7 +185,6 @@ public class GameObjectInspector(EditorInspector editorInspector) : Inspector(ed
                 transform.Scale = scale;
                 EditorAction.MarkDirty();
             }
-            SelectedObject.Transform = transform;
 
             ImGui.Separator();
         }

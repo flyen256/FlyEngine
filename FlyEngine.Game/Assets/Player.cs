@@ -76,8 +76,6 @@ public class Player : Character
         transform.Rotation = QuaternionUtils.FromVector3(new Vector3(0, _rotation.Y, 0));
 
         if (Camera?.Value == null) return;
-        var cameraTransform = Camera.Value.Transform;
-        cameraTransform.LocalRotation = QuaternionUtils.FromVector3(new Vector3(_rotation.X, 0, 0));
-        Camera.Value.Transform = cameraTransform;
+        Camera.Value.Transform.LocalRotation = QuaternionUtils.FromVector3(new Vector3(_rotation.X, 0, 0));
     }
 }

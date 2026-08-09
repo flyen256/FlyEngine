@@ -60,7 +60,9 @@ public class Texture : Asset
         if (findName == null)
             return null;
         var stream = assembly.GetManifestResourceStream(findName);
-        return stream == null ? throw new Exception($"Resource {findName} not found!") : ImageResult.FromStream(stream, ColorComponents.RedGreenBlueAlpha);
+        return stream == null ?
+            throw new Exception($"Resource {findName} not found!") :
+            ImageResult.FromStream(stream, ColorComponents.RedGreenBlueAlpha);
     }
     
     private ImageResult? LoadAssimpImage()

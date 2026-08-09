@@ -11,8 +11,6 @@ public class RotationTimer : Behaviour
     {
         if (Application.Window == null) return;
         var time = Application.Window.Handle.Time;
-        var transform = Transform;
-        transform.Rotation = Quaternion.CreateFromAxisAngle(Axis, (float)(time * 2f));
-        Transform = transform;
+        Transform.Rotation = Quaternion.CreateFromAxisAngle(Axis, (float)(time * 2f));
     }
 }

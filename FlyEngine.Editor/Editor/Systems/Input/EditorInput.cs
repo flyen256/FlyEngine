@@ -1,3 +1,4 @@
+using FlyEngine.Core;
 using FlyEngine.Core.Debugging;
 using FlyEngine.Core.Input;
 using FlyEngine.Core.SceneManagement;
@@ -9,16 +10,28 @@ public class EditorInput : EditorSystem
 {
     private readonly ShortcutManager _shortcutManager = new();
 
+    private bool _releaseInputCursorLocked;
+    private bool _releaseInputCursorVisible;
+    private bool _inputReleased;
+
     public EditorInput()
     {
         _shortcutManager.Register(Key.S, KeyModifiers.Ctrl, Save, "Save");
+        _shortcutManager.Register(Key.F1, KeyModifiers.Shift, ReleaseInput, "Release input");
         
         Input.OnKeyDownEvent += OnKeyDown;
+        Application.OnApplicationState += OnApplicationState;
     }
     
     private void OnKeyDown(IKeyboard keyboard, Key key, int keyCode)
     {
         _shortcutManager.ProcessKeyDown(keyboard, key);
+    }
+
+    private void OnApplicationState(bool isRunning)
+    {
+        if (isRunning) return;
+        _inputReleased = false;
     }
 
     private static async Task Save()
@@ -34,5 +47,23 @@ public class EditorInput : EditorSystem
         {
             Debug.LogError("Failed to save scene: " + e);
         }
+    }
+
+    private void ReleaseInput()
+    {
+        _releaseInputCursorLocked = Input.CursorLocked;
+        _releaseInputCursorVisible = Input.CursorVisible;
+        Input.CursorLocked = false;
+        Input.CursorVisible = true;
+        _inputReleased = true;
+        Input.BlockInput = _inputReleased;
+    }
+
+    public void BlockInput()
+    {
+        Input.CursorLocked = _releaseInputCursorLocked;
+        Input.CursorVisible = _releaseInputCursorVisible;
+        _inputReleased = false;
+        Input.BlockInput = _inputReleased;
     }
 }

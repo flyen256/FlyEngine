@@ -71,7 +71,7 @@ public class EditorFileBrowser : EditorGuiWindow
                 FileContextWindow(file);
 
                 if (ImGuiNet.IsItemHovered() && ImGuiNet.IsMouseDoubleClicked(0))
-                    HandleFileOpen(file);
+                    _ = HandleFileOpen(file);
             }
 
             if (_createFile && _currentCreateType != null)
@@ -99,7 +99,7 @@ public class EditorFileBrowser : EditorGuiWindow
     
     private void ExecuteFileCreation(string name)
     {
-        if (string.IsNullOrWhiteSpace(name)) return;
+        if (string.IsNullOrWhiteSpace(name) || _currentDirectory == null) return;
 
         var extension = _currentCreateType == typeof(Scene) ? ".scene" : ".data";
         var fullPath = Path.Combine(_currentDirectory, name + extension);
@@ -164,7 +164,7 @@ public class EditorFileBrowser : EditorGuiWindow
         }
     }
     
-    private async void HandleFileOpen(string path)
+    private async Task HandleFileOpen(string path)
     {
         if (path.EndsWith(".scene")) 
         {
@@ -174,7 +174,7 @@ public class EditorFileBrowser : EditorGuiWindow
                     await Editor.TaskQueue.Enqueue(SceneSnapshot.CreateSnapshotAsync, SceneManager.CurrentScene, "Creating scene snapshot");
                 SceneManager.UnloadScene();
 
-                await Editor.TaskQueue.Enqueue(LoadScene, path);
+                await Editor.TaskQueue.Enqueue(SceneManager.LoadScene, path);
                 
                 SceneSnapshot.DeleteSnapshot();
         
@@ -183,20 +183,8 @@ public class EditorFileBrowser : EditorGuiWindow
             catch (Exception ex)
             {
                 _logger.LogError($"Failed to load scene: {ex}");
-                SceneSnapshot.RestoreSnapshotAsync();
+                await SceneSnapshot.RestoreSnapshotAsync();
             }
         }
-    }
-
-    private async Task LoadScene(string path)
-    {
-        var bytes = await File.ReadAllBytesAsync(path);
-        var name = Path.GetFileName(path).Replace(".scene", "");
-        var scene = MemoryPackSerializer.Deserialize<Scene>(bytes);
-        if (scene == null)
-            throw new Exception("Deserialize failed");
-        scene.Path = path;
-        scene.Name = name;
-        await SceneManager.LoadSceneAsync(scene);
     }
 }

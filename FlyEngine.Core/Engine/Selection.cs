@@ -1,6 +1,8 @@
+using Object = FlyEngine.Core.Assets.Object;
+
 namespace FlyEngine.Core;
 
 public static class Selection
 {
-    public static Components.Object? SelectedObject { get; set; }
+    public static Object? SelectedObject { get; set; }
 }

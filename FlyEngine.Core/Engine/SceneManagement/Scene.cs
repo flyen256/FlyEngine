@@ -27,8 +27,6 @@ public partial class Scene(Guid guid) : Asset(guid)
     private readonly List<GuiWindow> _guiWindows = [];
     [MemoryPackIgnore]
     private readonly List<Collider> _colliders = [];
-    [MemoryPackIgnore]
-    private readonly List<MeshRenderer> _meshRenderers = [];
 
     [MemoryPackIgnore]
     public IReadOnlyList<GameObject> GameObjects => _gameObjects;
@@ -42,8 +40,6 @@ public partial class Scene(Guid guid) : Asset(guid)
     public IReadOnlyList<GuiWindow> GuiWindows => _guiWindows;
     [MemoryPackIgnore]
     public IReadOnlyList<Collider> Colliders => _colliders;
-    [MemoryPackIgnore]
-    public IReadOnlyList<MeshRenderer> MeshRenderers => _meshRenderers;
 
     [MemoryPackInclude]
     public World EcsWorld = new();
@@ -60,9 +56,9 @@ public partial class Scene(Guid guid) : Asset(guid)
             var gameObject = gameObjects[i];
             gameObject.Scene = this;
 
-            var components = CollectionsMarshal.AsSpan(gameObject.ComponentStore.List.ToList());
+            var components = gameObject.ComponentStore.List;
             
-            for (var o = 0; o < components.Length; o++)
+            for (var o = 0; o < components.Count; o++)
             {
                 var component = components[o];
                 RegisterComponent(component, gameObject);
@@ -84,9 +80,8 @@ public partial class Scene(Guid guid) : Asset(guid)
                     var go = GetTransformByGuid(value.Value.LazyGuid);
                     if (go == null) continue;
                     
-                    var transform = go.Transform;
+                    ref var transform = ref go.Transform;
                     field.SetValue(transform, value);
-                    go.Transform = transform;
                 }
             }
         }
@@ -94,11 +89,11 @@ public partial class Scene(Guid guid) : Asset(guid)
         for (var i = 0; i < gameObjects.Length; i++)
         {
             var gameObject = gameObjects[i];
-            var transformCopy = gameObject.Transform;
-            transformCopy.GameObject = gameObject;
-            transformCopy.ResolveReferences(gameObjects);
-            gameObjects[i].Transform = transformCopy;
+            ref var transform = ref gameObject.Transform;
+            transform.GameObject = gameObject;
+            transform.ResolveReferences(gameObjects);
         }
+        AssetsManager.AddAsset(this);
     }
     
     public async Task SaveAsync()
@@ -122,9 +117,8 @@ public partial class Scene(Guid guid) : Asset(guid)
         var gameObjects = CollectionsMarshal.AsSpan(_gameObjects);
         for (var i = 0; i < gameObjects.Length; i++)
         {
-            var gameObject = gameObjects[i];
-            var components = CollectionsMarshal.AsSpan(gameObjects[i].ComponentStore.List.ToList());
-            for (var o = 0; o < components.Length; o++)
+            var components = gameObjects[i].ComponentStore.List;
+            for (var o = 0; o < components.Count; o++)
             {
                 var component = components[o];
                 if (component.Guid == guid)
@@ -151,29 +145,21 @@ public partial class Scene(Guid guid) : Asset(guid)
         if (!Application.IsRunning) return;
         foreach (var gameObject in _gameObjects)
             gameObject.ComponentStore.InitializeComponents();
-        foreach (var behaviour in Behaviours.Where(behaviour => behaviour.IsActive()))
-            behaviour.OnLoad();
 
         if (!ImGui.Initialized) return;
         foreach (var uiWindow in GuiWindows)
             uiWindow.OnLoadUi();
     }
 
-    public void PreLoad()
-    {
-        
-    }
-
     public override void Unload()
     {
+        base.Unload();
         _gameObjects.Clear();
         _behaviours.Clear();
         _lights.Clear();
         _cameras.Clear();
         _guiWindows.Clear();
         _colliders.Clear();
-        _meshRenderers.Clear();
-        base.Unload();
     }
 
     public void Update(double deltaTime)
@@ -197,10 +183,6 @@ public partial class Scene(Guid guid) : Asset(guid)
         component.GameObject = gameObject;
         switch (component)
         {
-            case MeshRenderer meshRenderer:
-                meshRenderer.SceneIndex = _meshRenderers.Count;
-                _meshRenderers.Add(meshRenderer);
-                break;
             case Behaviour behaviour:
                 behaviour.SceneIndex = _behaviours.Count;
                 _behaviours.Add(behaviour);
@@ -228,9 +210,6 @@ public partial class Scene(Guid guid) : Asset(guid)
     {
         switch (component)
         {
-            case MeshRenderer meshRenderer:
-                _meshRenderers.RemoveAtSwapBack(meshRenderer.SceneIndex);
-                break;
             case Behaviour behaviour:
                 _behaviours.RemoveAtSwapBack(behaviour.SceneIndex);
                 break;

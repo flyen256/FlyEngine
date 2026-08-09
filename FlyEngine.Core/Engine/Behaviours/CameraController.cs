@@ -1,12 +1,13 @@
 ﻿using System.Numerics;
 using FlyEngine.Core.Components;
+using FlyEngine.Core.Input;
 using FlyEngine.Core.Utils;
 using Silk.NET.Input;
 using Silk.NET.Maths;
 
 namespace FlyEngine.Core.Behaviours;
 
-public class CameraController : Behaviour
+public class CameraController : Behaviour, IKeyEvents
 {
     public float Sensitivity = 0.1f;
 
@@ -34,17 +35,15 @@ public class CameraController : Behaviour
         _rotation.X += Input.Input.MouseInput.Y * Sensitivity;
         _rotation.Y -= Input.Input.MouseInput.X * Sensitivity;
         _rotation.X = System.Math.Clamp(_rotation.X, -90f, 90f);
-        var transform = Transform;
-        transform.Rotation = QuaternionUtils.FromVector3(_rotation);
+        Transform.Rotation = QuaternionUtils.FromVector3(_rotation);
         var moveInput = Input.Input.GetMoveInput();
         if (moveInput == Vector2D<float>.Zero) return;
-        var moveSpeed = 5.0f * (float)deltaTime;
+        var moveSpeed = 5.0f * deltaTime;
 
         var inputVector = new Vector3(moveInput.X, 0, -moveInput.Y);
 
         var direction = Vector3.Transform(inputVector, Transform.Rotation);
 
-        transform.Position += direction * moveSpeed;
-        Transform = transform;
+        Transform.Position += direction * moveSpeed;
     }
 }

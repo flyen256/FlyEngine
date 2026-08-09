@@ -1,6 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using FlyEngine.Core.SceneManagement;
 using MemoryPack;
+using Object = FlyEngine.Core.Assets.Object;
 
 namespace FlyEngine.Core.Components;
 
@@ -8,7 +9,23 @@ namespace FlyEngine.Core.Components;
 public partial class GameObject : Object
 {
     [MemoryPackInclude]
-    public bool Enabled { get; set; } = true;
+    private bool _enabled = true;
+    [MemoryPackInclude]
+    public bool Enabled
+    {
+        get => _enabled;
+        set
+        {
+            if (_enabled.Equals(value)) return;
+            _enabled = value;
+            if (_enabled)
+                for (var i = 0; i < ComponentStore.List.Count; i++)
+                    ComponentStore.List[i].OnEnable();
+            else
+                for (var i = 0; i < ComponentStore.List.Count; i++)
+                    ComponentStore.List[i].OnDisable();
+        }
+    }
     [MemoryPackIgnore]
     public bool IsDestroyed { get; private set; }
 
@@ -31,16 +48,13 @@ public partial class GameObject : Object
                 _name = value;
         }
     }
-    
+
     [MemoryPackInclude]
-    public int EntityId { get; set; }
+    private TransformComponent _transform;
 
     [MemoryPackIgnore]
-    public TransformComponent Transform
-    {
-        get => Scene.EcsWorld.GetComponent<TransformComponent>(EntityId);
-        set => Scene.EcsWorld.SetComponent(EntityId, value);
-    }
+    public ref TransformComponent Transform =>
+        ref _transform;
 
     [MemoryPackIgnore]
     private ComponentStore _componentStore = null!;
@@ -62,6 +76,11 @@ public partial class GameObject : Object
     [MemoryPackIgnore]
     public Scene Scene;
 
+    [MemoryPackIgnore] public GameObject? ParentGameObject { get; private set; }
+
+    [MemoryPackIgnore] private readonly List<GameObject> _childrenGameObjects = [];
+    [MemoryPackIgnore] public IReadOnlyList<GameObject> ChildrenGameObjects => _childrenGameObjects;
+
     public static GameObject CreateWithLazyReference(string name) => new() { LazyGameObjectName = name };
 
     [MemoryPackConstructor]
@@ -76,11 +95,10 @@ public partial class GameObject : Object
     private GameObject(Scene scene, string name = "New game object")
     {
         Scene = scene;
-        EntityId = Scene.EcsWorld.CreateEntity();
-        Transform = new TransformComponent(Guid.NewGuid());
-        var transform = Transform;
-        transform.GameObject = this;
-        Transform = transform;
+        _transform = new TransformComponent(Guid.NewGuid())
+        {
+            GameObject = this
+        };
         if (name.Length == 0)
             name = "New game object";
         _name = name;
@@ -89,6 +107,21 @@ public partial class GameObject : Object
         {
             GameObject = this
         };
+    }
+
+    internal void AddChild(GameObject child)
+    {
+        _childrenGameObjects.Add(child);
+    }
+
+    internal void RemoveChild(GameObject child)
+    {
+        _childrenGameObjects.Remove(child);
+    }
+
+    internal void SetParent(GameObject? parent)
+    {
+        ParentGameObject = parent;
     }
 
     public static GameObject Create(string name, Component[]? components = null)
@@ -106,7 +139,24 @@ public partial class GameObject : Object
     {
         ComponentStore.Dispose();
         IsDestroyed = true;
-        Scene.EcsWorld.DestroyEntity(EntityId);
+    }
+
+    public override void CopyTo(ref Object? copy)
+    {
+        if (SceneManager.CurrentScene == null)
+            throw new InvalidOperationException("No scene loaded");
+        var gameObject = new GameObject(SceneManager.CurrentScene, Name);
+        var copyTransform = _transform;
+        copyTransform.Guid = Guid.NewGuid();
+        gameObject._transform = _transform;
+        copy = gameObject;
+    }
+
+    public override void PasteCopy()
+    {
+        if (SceneManager.CurrentScene == null)
+            throw new InvalidOperationException("No scene loaded");
+        
     }
 
     public T? GetComponent<T>() where T : class

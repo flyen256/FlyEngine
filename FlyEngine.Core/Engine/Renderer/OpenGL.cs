@@ -2,7 +2,6 @@ using System.Drawing;
 using FlyEngine.Core.Assets;
 using Silk.NET.OpenGL;
 using Silk.NET.Windowing;
-using Window = FlyEngine.Core.Windowing.Window;
 
 namespace FlyEngine.Core.Renderer;
 
@@ -22,13 +21,11 @@ public class OpenGl
     public RenderPipeline RenderPipeline { get; set; }
     
     public readonly IWindow Window;
-    public readonly Window Handle;
 
-    public OpenGl(IWindow window, Window handle)
+    public OpenGl(IWindow window)
     {
         RenderPipeline = new DefaultRenderPipeline(this);
         Window = window;
-        Handle = handle;
         Gl = window.CreateOpenGL();
         CreateCubeMesh();
     }
@@ -94,13 +91,13 @@ public class OpenGl
             16, 17, 18, 18, 19, 16,
             20, 21, 22, 22, 23, 20
         ];
-        var mesh = new Mesh(CubeMeshGuid, Gl, [], vertices, indices, (uint)indices.Length)
-        {
-            Name = "Cube"
-        };
+        Mesh.Create("Cube", CubeMeshGuid, Gl, vertices, indices, (uint)indices.Length);
+        var meshes = ModelManager.LoadModelMeshesFromAssembly(this, "sphere.fbx");
+        if (meshes.Count == 1)
+            meshes[0].Guid = SphereMeshGuid;
     }
 
-    public string? LoadEmbeddedResourceShaderCode(string shader)
+    public static string? LoadEmbeddedResourceShaderCode(string shader)
     {
         var assembly = typeof(OpenGl).Assembly;
     
@@ -112,9 +109,7 @@ public class OpenGl
         if (stream == null) return null;
         using var reader = new StreamReader(stream);
         var text = reader.ReadToEnd();
-        if (string.IsNullOrWhiteSpace(text))
-            return null;
-        return text.TrimStart('\uFEFF');
+        return string.IsNullOrWhiteSpace(text) ? null : text.TrimStart('\uFEFF');
     }
 
     public unsafe void ProcessShaders()

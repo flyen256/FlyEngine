@@ -1,7 +1,12 @@
 using System.Diagnostics.CodeAnalysis;
+using System.Reflection;
+using System.Runtime.InteropServices;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 using FlyEngine.Core.CustomAttributes;
+using FlyEngine.Editor.Systems;
 using MemoryPack;
+using Object = FlyEngine.Core.Assets.Object;
 
 namespace FlyEngine.Core.Components;
 
@@ -15,27 +20,12 @@ public partial class Component : Object
     [MemoryPackIgnore]
     [JsonIgnore]
     public Guid LazyGuid { get; set; } = Guid.Empty;
-    
-    [HideInInspector]
-    [MemoryPackIgnore]
-    private bool _enabled = true;
 
     [HideInInspector]
     [MemoryPackIgnore]
     [JsonInclude]
-    public bool Enabled
-    {
-        get => _enabled;
-        set
-        {
-            if (value == _enabled) return;
-            _enabled = value;
-            if (_enabled && Application.IsRunning)
-                OnEnable();
-            else if (Application.IsRunning)
-                OnDisable();
-        }
-    }
+    public bool Enabled { get; set; } = true;
+
     [HideInInspector]
     [MemoryPackIgnore]
     [JsonIgnore]
@@ -43,16 +33,12 @@ public partial class Component : Object
     [MemoryPackIgnore]
     [JsonIgnore]
     [HideInInspector]
-    public GameObject GameObject;
+    public GameObject GameObject = null!;
 
     [MemoryPackIgnore]
     [JsonIgnore]
     [HideInInspector]
-    public TransformComponent Transform
-    {
-        get => GameObject.Transform;
-        set => GameObject.Transform = value;
-    }
+    public ref TransformComponent Transform => ref GameObject.Transform;
     [MemoryPackIgnore]
     [JsonIgnore]
     [HideInInspector]
@@ -61,11 +47,18 @@ public partial class Component : Object
     [JsonIgnore]
     [HideInInspector]
     public int SceneIndex { get; internal set; } = -1;
+    
+    [MemoryPackIgnore]
+    [JsonIgnore]
+    [HideInInspector]
+    public ComponentDataHolder? CopyDataHolder { get; set; }
 
     protected virtual void OnInitialize() { }
 
-    protected virtual void OnEnable() { }
+    public virtual void OnLoad() { }
+    public virtual void OnEnable() { }
     public virtual void OnDisable() { }
+    public virtual void OnDestroy() { }
     protected internal virtual void OnRemoved() { }
 
     public void Initialize()
@@ -73,13 +66,102 @@ public partial class Component : Object
         if (Initialized) return;
         Initialized = true;
         OnInitialize();
-        if (Enabled)
+        OnLoad();
+        if (GameObject.Enabled)
             OnEnable();
     }
 
     public override void Destroy()
     {
         GameObject.ComponentStore.RemoveComponent(this);
+    }
+
+    public override void CopyTo(ref Object? copy)
+    {
+        var component = new Component
+        {
+            CopyDataHolder = new ComponentDataHolder
+            {
+                TypeName = GetType().AssemblyQualifiedName!,
+                JsonPayload = JsonSerializer.Serialize(this, GetType(), ComponentSerializer.JsonOptions)
+            }
+        };
+        copy = component;
+    }
+
+    public override void PasteCopy()
+    {
+        if (!CopyDataHolder.HasValue || Selection.SelectedObject is not GameObject gameObject) return;
+        var type = Type.GetType(CopyDataHolder.Value.TypeName) ?? Application.ScriptsLoader.LoadFromAssemblyName(
+            new AssemblyName(Scripting.Scripting.ScriptsAssemblyName)).GetType(CopyDataHolder.Value.TypeName.Split(",")[0]);
+        if (type == null) return;
+
+        var compObject = JsonSerializer.Deserialize(CopyDataHolder.Value.JsonPayload, type, ComponentSerializer.JsonOptions);
+        if (compObject is not Component comp) return;
+        comp.GameObject = GameObject;
+        gameObject.AddComponent(comp);
+    }
+
+    public void PasteValues(Component component)
+    {
+        if (!CopyDataHolder.HasValue) return;
+    
+        var type = component.GetType();
+
+        var sourceType = Type.GetType(CopyDataHolder.Value.TypeName) ?? 
+                         Application.ScriptsLoader.LoadFromAssemblyName(
+                                 new AssemblyName(Scripting.Scripting.ScriptsAssemblyName))
+                             .GetType(CopyDataHolder.Value.TypeName.Split(",")[0]);
+    
+        if (sourceType == null || !sourceType.IsAssignableFrom(type)) 
+            return;
+
+        var sourceComponent = JsonSerializer.Deserialize(
+            CopyDataHolder.Value.JsonPayload, 
+            type, 
+            ComponentSerializer.JsonOptions);
+    
+        if (sourceComponent == null) 
+            return;
+
+        var variables = GetComponentVariables(component);
+    
+        foreach (var variable in variables)
+        {
+            switch (variable.Name)
+            {
+                case null:
+                case nameof(Guid) or 
+                    nameof(LazyGuid) or 
+                    nameof(GameObject) or 
+                    nameof(Transform) or 
+                    nameof(Initialized) or 
+                    nameof(SceneIndex) or 
+                    nameof(CopyDataHolder) or
+                    nameof(Enabled):
+                case "AllowMultipleInstances":
+                    continue;
+            }
+
+            if (variable.GetCustomAttribute(typeof(JsonIgnoreAttribute), true) != null ||
+                variable.GetCustomAttribute(typeof(MemoryPackIgnoreAttribute), true) != null)
+                continue;
+
+            var value = variable.GetValue(sourceComponent);
+            variable.SetValue(component, value!);
+        }
+    }
+    
+    public Span<VariableInfo> GetComponentVariables(Component component)
+    {
+        var type = component.GetType();
+
+        var properties = type.GetProperties()
+            .Where(f => f.GetSetMethod(false) != null).Cast<MemberInfo>();
+        var variables =
+            type.GetFields().Concat(properties);
+
+        return CollectionsMarshal.AsSpan(variables.Select(v => new VariableInfo(v)).ToList());
     }
 
     public static T CreateGameObject<T>(string? name = null) where T : Component

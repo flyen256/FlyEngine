@@ -1,4 +1,5 @@
 ﻿using System.Numerics;
+using FlyEngine.Core.Extensions;
 using FlyEngine.Core.Renderer;
 using Silk.NET.Assimp;
 using File = System.IO.File;
@@ -8,21 +9,37 @@ namespace FlyEngine.Core.Assets;
 public static class ModelManager
 {
     public static readonly Assimp Assimp = Assimp.GetApi();
-    
-    public static unsafe List<Mesh> LoadModelMeshes(OpenGl openGl, string path)
+
+    public static Model LoadModel(OpenGl openGl, string path, string name)
     {
-        if (AssetsManager.LoadedAssetsPaths.Contains(path))
-            throw new Exception($"Mesh {path} is already loaded");
-        var stream = File.ReadAllBytes(path);
-        if (stream.Length == 0) return [];
+        if (AssetsManager.LoadedAssets.Contains(path))
+            throw new Exception($"Model {path} is already loaded");
+        AssetsManager.TryLoadAssetGlobal(path, out Model? model);
+        var meshes = LoadModelMeshes(openGl, path);
+        for (var i = 0; i < meshes.Count; i++)
+        {
+            if (model == null) break;
+            if (i >= model.MeshesGuids.Count) break;
+            meshes[i].Guid = model.MeshesGuids[i];
+        }
+        return new Model(model?.Guid ?? Guid.NewGuid(), path, name, meshes);
+    }
+
+    private static unsafe List<Mesh> LoadModelMeshes(OpenGl openGl, string path)
+    {
+        if (AssetsManager.LoadedAssets.Contains(path))
+            throw new Exception($"Model {path} is already loaded");
+        var streamBytes = File.ReadAllBytes(path);
+        if (streamBytes.Length == 0) return [];
+        
         var meshes = new List<Mesh>();
         var ext = path.Split('.').Last();
         var hintBytes = System.Text.Encoding.ASCII.GetBytes(ext + "\0");
-        fixed (byte* pData = stream)
+        fixed (byte* pData = streamBytes)
         {
             fixed (byte* pHint = hintBytes)
             {
-                var scene = Assimp.ImportFileFromMemory(pData, (uint)stream.Length,
+                var scene = Assimp.ImportFileFromMemory(pData, (uint)streamBytes.Length,
                     (uint)(PostProcessSteps.Triangulate |
                            PostProcessSteps.GenerateNormals |
                            PostProcessSteps.JoinIdenticalVertices), pHint);
@@ -35,6 +52,42 @@ public static class ModelManager
             }
         }
         
+        return meshes;
+    }
+    
+    public static unsafe List<Mesh> LoadModelMeshesFromAssembly(OpenGl openGl, string name)
+    {
+        var assembly = typeof(OpenGl).Assembly;
+        var names = assembly.GetManifestResourceNames();
+        
+        var findName = names.ToList().Find(s => s.Contains("sphere.fbx"));
+        if (findName == null) return [];
+        
+        var stream = assembly.GetManifestResourceStream(findName);
+        if (stream == null) return [];
+        
+        var streamBytes = stream.StreamToByteArray();
+        if (streamBytes.Length == 0) return [];
+        
+        var meshes = new List<Mesh>();
+        var ext = name.Split('.').Last();
+        var hintBytes = System.Text.Encoding.ASCII.GetBytes(ext + "\0");
+        fixed (byte* pData = streamBytes)
+        {
+            fixed (byte* pHint = hintBytes)
+            {
+                var scene = Assimp.ImportFileFromMemory(pData, (uint)streamBytes.Length,
+                    (uint)(PostProcessSteps.Triangulate |
+                           PostProcessSteps.GenerateNormals |
+                           PostProcessSteps.JoinIdenticalVertices), pHint);
+                if (scene == null || scene->MFlags == Assimp.SceneFlagsIncomplete || scene->MRootNode == null)
+                {
+                    var error = Assimp.GetErrorStringS();
+                    throw new Exception(error);
+                }
+                ProcessNode(scene->MRootNode, scene, ref meshes, openGl);
+            }
+        }
         return meshes;
     }
 
@@ -60,8 +113,6 @@ public static class ModelManager
             var meshVertex = mesh->MVertices[i];
             var vertex = new MeshVertex
             {
-                // BoneIds = new int[Vertex.MAX_BONE_INFLUENCE];
-                // Weights = new float[Vertex.MAX_BONE_INFLUENCE];
                 Position = meshVertex,
                 Normal = mesh->MNormals != null ? mesh->MNormals[i] : new Vector3(0, 1, 0)
             };
@@ -94,7 +145,7 @@ public static class ModelManager
         LoadMaterialTextures(material, textures, TextureType.Height, openGl);
         LoadMaterialTextures(material, textures, TextureType.Ambient, openGl);
 
-        return new Mesh(Guid.NewGuid(), textures, vertices, indices, (uint)indices.Count)
+        return new Mesh(Guid.NewGuid(), vertices, indices, (uint)indices.Count)
         {
             Name = mesh->MName
         };

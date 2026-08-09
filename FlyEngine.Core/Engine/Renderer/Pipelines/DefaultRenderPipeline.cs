@@ -67,13 +67,6 @@ public class DefaultRenderPipeline(OpenGl openGl) : RenderPipeline(openGl)
             if (!behaviour.IsActive()) continue;
             behaviour.OnRender(deltaTime);
         }
-        var meshRenderers = CollectionsMarshal.AsSpan(Application.Scene.MeshRenderers.ToList());
-        for (var i = 0; i < meshRenderers.Length; i++)
-        {
-            var meshRenderer = meshRenderers[i];
-            if (!meshRenderer.IsActive()) continue;
-            meshRenderer.OnRender(deltaTime);
-        }
 
         var camPos = editor ? Application.Window.EditorCameraPosition : currentCam!.Transform.Position;
         var camPosSys = new Vector3(camPos.X, camPos.Y, camPos.Z);
@@ -86,7 +79,7 @@ public class DefaultRenderPipeline(OpenGl openGl) : RenderPipeline(openGl)
             if (!light.IsActive()) continue;
             if (lightCount >= OpenGl.MaxDeferredLights) return;
 
-            if (sunLightIndex < 0 && light.CastShadows && light.Type == LightType.Directional)
+            if (sunLightIndex < 0 && light is { CastShadows: true, Type: LightType.Directional })
             {
                 sunLightIndex = lightCount;
                 sunLight = light;
@@ -122,13 +115,6 @@ public class DefaultRenderPipeline(OpenGl openGl) : RenderPipeline(openGl)
                 var behaviour = behaviours[i];
                 if (!behaviour.IsActive()) continue;
                 behaviour.OnRender(deltaTime);
-            }
-            var meshRenderers = CollectionsMarshal.AsSpan(Application.Scene.MeshRenderers.ToList());
-            for (var i = 0; i < meshRenderers.Length; i++)
-            {
-                var meshRenderer = meshRenderers[i];
-                if (!meshRenderer.IsActive()) continue;
-                meshRenderer.OnRender(deltaTime);
             }
         }, deltaTime, sunLightIndex);
 

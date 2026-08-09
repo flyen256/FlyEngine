@@ -7,10 +7,8 @@ namespace FlyEngine.Core;
 
 public static class Application
 {
-    public const string ScriptsAssemblyName = "ScriptsAssembly";
-
     public static bool IsEditor { get; private set; }
-    public static AssemblyLoadContext ScriptsLoader { get; set; } = new("ScriptsAssemblyContext", isCollectible: true);
+    public static AssemblyLoadContext ScriptsLoader { get; set; } = new(Scripting.Scripting.ScriptsAssemblyName + "Context", isCollectible: true);
     
     public static Scene? Scene => SceneManager.CurrentScene;
     public static bool IsRunning => _isRunning && Window is { IsRunning: true, IsLoaded: true };
@@ -26,6 +24,8 @@ public static class Application
             _window = value;
         }
     }
+
+    public static event Action<bool>? OnApplicationState;
     
     public static double UpdatesPerSecond
     {
@@ -81,6 +81,7 @@ public static class Application
         if (Window == null) return;
         Physics.Physics.Init();
         _isRunning = true;
+        OnApplicationState?.Invoke(_isRunning);
         TimeManager.Timer = 0f;
         if (!Window.IsRunning)
             OpenWindow();
@@ -91,6 +92,7 @@ public static class Application
         if (!_initialized)
             throw new InvalidOperationException("Application is not initialized");
         _isRunning = false;
+        OnApplicationState?.Invoke(_isRunning);
         TimeManager.Timer = 0f;
         Physics.Physics.Shutdown();
         if (!IsEditor)

@@ -44,7 +44,7 @@ public static class EditorGizmo
         Vector2 screenPos,
         Vector2 windowPos)
     {
-        var transformComponent = gameObject.Transform;
+        ref var transformComponent = ref gameObject.Transform;
         var mousePosition = ImGui.GetMousePos();
         var xColor = ImGui.GetColorU32(new Vector4(0.75f, 0.0f, 0.0f, 1.0f));
         var yColor = ImGui.GetColorU32(new Vector4(0.0f, 0.75f, 0.0f, 1.0f));
@@ -126,7 +126,6 @@ public static class EditorGizmo
         if (deltaMove == Vector3.Zero) return;
         EditorAction.MarkDirty();
         transformComponent.Position += deltaMove;
-        gameObject.Transform = transformComponent;
     }
 
     private static void DrawRotate(
@@ -134,7 +133,7 @@ public static class EditorGizmo
         GameObject gameObject,
         Vector2 windowPos)
     {
-        var transformComponent = gameObject.Transform;
+        ref var transformComponent = ref gameObject.Transform;
         var scale = GetGizmoScale(transformComponent.Position);
 
         var anyOtherHovered = false;
@@ -168,7 +167,6 @@ public static class EditorGizmo
             ref _pressedZ,
             "Z",
             anyOtherHovered);
-        gameObject.Transform = transformComponent;
     }
 
     private static bool DrawRotationCircle(

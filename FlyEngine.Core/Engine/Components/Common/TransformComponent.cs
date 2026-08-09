@@ -1,9 +1,6 @@
-using System;
-using System.Collections.Generic;
 using System.Numerics;
 using FlyEngine.Core.Extensions;
 using FlyEngine.Core.SceneManagement;
-using FlyEngine.Core.Serialization.MemoryPack;
 using MemoryPack;
 
 namespace FlyEngine.Core.Components;
@@ -12,46 +9,33 @@ namespace FlyEngine.Core.Components;
 public partial struct TransformComponent : IEquatable<TransformComponent>
 {
     [MemoryPackInclude] public Guid Guid { get; set; }
-
     [MemoryPackIgnore] public Guid LazyGuid { get; set; } = Guid.Empty;
 
-    [MemoryPackIgnore] private int _parentEntityId = -1;
-    [MemoryPackIgnore] private readonly List<int> _childrenEntityIds = [];
+    [MemoryPackInclude] private int _parentEntityId = -1;
+    [MemoryPackInclude] private int _firstChildEntityId = -1;
+    [MemoryPackInclude] private int _nextSiblingEntityId = -1;
+    [MemoryPackInclude] private int _prevSiblingEntityId = -1;
 
-    [MemoryPackIgnore] public IReadOnlyList<int> ChildrenEntityIds => _childrenEntityIds;
+    [MemoryPackInclude] public Guid ParentGuid { get; set; } = Guid.Empty;
 
-    [MemoryPackInclude]
-    public Guid ParentGuid { get; set; } = Guid.Empty;
-    
-    [MemoryPackIgnore] private GameObject? _parentGameObject;
-    [MemoryPackIgnore] private readonly List<GameObject> _childrenGameObjects = [];
-    
-    [MemoryPackIgnore] public IReadOnlyList<GameObject> ChildrenGameObjects => _childrenGameObjects;
-
-    [MemoryPackInclude]
-    [GameObjectFormatter]
-    public GameObject? GameObject { get; set; }
-
+    [MemoryPackIgnore] public GameObject? GameObject { get; set; }
+    [MemoryPackIgnore] public bool IsEcsMode => GameObject == null;
     [MemoryPackInclude] public int EntityId { get; set; }
 
-    [MemoryPackIgnore] public bool IsEcsMode => GameObject == null;
-
+    [MemoryPackInclude] public Vector3 Euler { get; set; }
     [MemoryPackInclude] private Vector3 _localPosition = Vector3.Zero;
     [MemoryPackInclude] private Quaternion _localRotation = Quaternion.Identity;
     [MemoryPackInclude] private Vector3 _localScale = Vector3.One;
-    [MemoryPackInclude] public Vector3 Euler { get; set; }
-
     [MemoryPackInclude] private Matrix4x4 _worldMatrix = Matrix4x4.Identity;
+    
     [MemoryPackIgnore] private bool _isDirty = true;
-
-    [MemoryPackIgnore] public string LazyGameObjectName = string.Empty;
 
     [MemoryPackIgnore]
     public TransformComponent? Parent
     {
         get
         {
-            if (!IsEcsMode) return _parentGameObject?.Transform;
+            if (!IsEcsMode) return GameObject?.ParentGameObject?.Transform;
             if (SceneManager.CurrentScene == null || _parentEntityId == -1) return null;
             var pool = SceneManager.CurrentScene.EcsWorld.GetPool<TransformComponent>();
             return _parentEntityId >= 0 && _parentEntityId < pool.Instances.Length
@@ -67,39 +51,67 @@ public partial struct TransformComponent : IEquatable<TransformComponent>
             if (SceneManager.CurrentScene == null) return;
             var pool = SceneManager.CurrentScene.EcsWorld.GetPool<TransformComponent>();
             
+            ref var current = ref pool.Instances[EntityId];
+
             if (_parentEntityId != -1 && _parentEntityId < pool.Instances.Length)
             {
-                pool.Instances[_parentEntityId]._childrenEntityIds.Remove(EntityId);
-                pool.Instances[_parentEntityId].SetDirty();
+                ref var oldParent = ref pool.Instances[_parentEntityId];
+
+                if (oldParent._firstChildEntityId == EntityId)
+                    oldParent._firstChildEntityId = current._nextSiblingEntityId;
+
+                if (current._prevSiblingEntityId != -1)
+                    pool.Instances[current._prevSiblingEntityId]._nextSiblingEntityId = current._nextSiblingEntityId;
+                    
+                if (current._nextSiblingEntityId != -1)
+                    pool.Instances[current._nextSiblingEntityId]._prevSiblingEntityId = current._prevSiblingEntityId;
+
+                current._parentEntityId = -1;
+                current._nextSiblingEntityId = -1;
+                current._prevSiblingEntityId = -1;
+                
+                oldParent.SetDirty();
             }
 
             _parentEntityId = newParentEntityId;
+
             if (_parentEntityId != -1 && _parentEntityId < pool.Instances.Length)
             {
-                pool.Instances[_parentEntityId]._childrenEntityIds.Add(EntityId);
-                pool.Instances[_parentEntityId].SetDirty();
+                ref var newParent = ref pool.Instances[_parentEntityId];
+                current._parentEntityId = _parentEntityId;
+                
+                var formerFirstChildId = newParent._firstChildEntityId;
+                
+                newParent._firstChildEntityId = EntityId;
+                current._nextSiblingEntityId = formerFirstChildId;
+                current._prevSiblingEntityId = -1;
+
+                if (formerFirstChildId != -1)
+                    pool.Instances[formerFirstChildId]._prevSiblingEntityId = EntityId;
+                
+                newParent.SetDirty();
             }
+        
+            current.SetDirty();
         }
         else if (GameObject != null)
         {
-            if (_parentGameObject != null)
+            var parentGameObject = GameObject.ParentGameObject;
+            if (parentGameObject != null)
             {
-                var transform = _parentGameObject.Transform;
-                transform._childrenGameObjects.Remove(GameObject);
-                transform.SetDirty();
-                _parentGameObject.Transform = transform;
+                parentGameObject.RemoveChild(GameObject);
+                parentGameObject.Transform.SetDirty();
             }
 
-            _parentGameObject = newParentGo;
+            parentGameObject = newParentGo;
+            GameObject.SetParent(parentGameObject);
 
             ParentGuid = newParentGo != null ? newParentGo.Transform.Guid : Guid.Empty;
 
-            if (_parentGameObject != null)
+            if (parentGameObject != null)
             {
-                var transform = _parentGameObject.Transform;
-                transform._childrenGameObjects.Add(GameObject);
-                transform.SetDirty();
-                _parentGameObject.Transform = transform;
+                parentGameObject.AddChild(GameObject);
+                parentGameObject.Transform.SetDirty();
             }
         }
 
@@ -218,7 +230,6 @@ public partial struct TransformComponent : IEquatable<TransformComponent>
 
     private void UpdateWorldMatrix()
     {
-        Console.WriteLine("Update world matrix");
         var localMatrix = Matrix4x4.CreateScale(_localScale) *
                           Matrix4x4.CreateFromQuaternion(_localRotation) *
                           Matrix4x4.CreateTranslation(_localPosition);
@@ -230,16 +241,6 @@ public partial struct TransformComponent : IEquatable<TransformComponent>
             _worldMatrix = localMatrix * parent.Value.WorldMatrix;
 
         _isDirty = false;
-        
-        if (IsEcsMode)
-        {
-            var pool = SceneManager.CurrentScene?.EcsWorld.GetPool<TransformComponent>();
-            if (pool == null || !pool.HasEntity(EntityId)) return;
-
-            pool.Instances[EntityId] = this;
-        }
-        else if (GameObject != null)
-            GameObject.Transform = this;
     }
 
     public Vector3 GetWorldScaleFromMatrix()
@@ -262,21 +263,22 @@ public partial struct TransformComponent : IEquatable<TransformComponent>
             var pool = SceneManager.CurrentScene?.EcsWorld.GetPool<TransformComponent>();
             if (pool == null) return;
 
-            foreach (var childId in _childrenEntityIds)
+            var currentChildId = _firstChildEntityId;
+
+            while (currentChildId != -1)
             {
-                if (childId < 0 || childId >= pool.Instances.Length) continue;
-                var child = pool.Instances[childId];
-                child.SetDirty();
-                pool.Instances[childId] = child;
+                ref var childTransform = ref pool.Instances[currentChildId];
+
+                currentChildId = childTransform._nextSiblingEntityId; 
+                pool.Instances[currentChildId].SetDirty();
             }
         }
-        else
+        else if (GameObject != null)
         {
-            foreach (var childGo in _childrenGameObjects)
+            foreach (var childGo in GameObject.ChildrenGameObjects)
             {
-                var transform = childGo.Transform;
+                ref var transform = ref childGo.Transform;
                 transform.SetDirty();
-                childGo.Transform = transform;
             }
         }
     }
@@ -288,18 +290,8 @@ public partial struct TransformComponent : IEquatable<TransformComponent>
             var gameObject = gameObjects[i];
             if (!IsEcsMode && ParentGuid != Guid.Empty && gameObject.Transform.Guid == ParentGuid)
                 SetParent(gameObject);
-
-            var parent = Parent;
-            if (IsEcsMode && parent.HasValue && gameObject.Name == parent.Value.LazyGameObjectName)
-                SetParent(gameObject, gameObject.EntityId);
         }
     }
-
-    public static TransformComponent CreateWithLazyReference(string parentName) =>
-        new() { LazyGameObjectName = parentName };
-
-    public static TransformComponent CreateWithLazyGuid(Guid guid) =>
-        new() { LazyGuid = guid };
 
     public bool Equals(TransformComponent other) => Guid == other.Guid && EntityId == other.EntityId;
     public override bool Equals(object? obj) => obj is TransformComponent other && Equals(other);

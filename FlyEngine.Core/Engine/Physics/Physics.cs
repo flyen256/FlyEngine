@@ -1,6 +1,7 @@
 ﻿using Debug = System.Diagnostics.Debug;
 using System.Numerics;
 using FlyEngine.Core.Components;
+using FlyEngine.Core.Extensions;
 using JoltPhysicsSharp;
 using Microsoft.Extensions.Logging;
 
@@ -121,7 +122,7 @@ public static class Physics
         if (!System.NarrowPhaseQuery.CastRay(new Ray(origin, direction * maxDistance), out var rayCastResult))
             return false;
         hit.Point = origin + direction * (maxDistance * rayCastResult.Fraction);
-        var findGameObject = Application.Scene?.Colliders.ToList()
+        var findGameObject = Application.Scene?.Colliders
             .Find(o => o.BodyId == rayCastResult.BodyID);
         if (findGameObject == null)
             return true;

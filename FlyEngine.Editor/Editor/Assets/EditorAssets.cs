@@ -34,7 +34,7 @@ public class EditorAssets
         
     }
     
-    public async Task LoadAssetsAsync()
+    public static async Task LoadAssetsAsync()
     {
         if (Editor.Window?.OpenGl == null) return;
         await Task.Run(() => Editor.Dispatch(() => AssetsManager.LoadAssets(Editor.Window.OpenGl.Gl)));
@@ -48,57 +48,55 @@ public class EditorAssets
             var startDate = DateTime.UtcNow;
             var loadResult = await LoadModelsDataAsync();
             var loadTime = DateTime.UtcNow - startDate;
-            _logger.LogInformation($"Loaded {loadResult.Item1} models," +
-                                    $" {loadResult.Item2.Count} meshes in {loadTime.TotalSeconds} seconds");
+            _logger.LogInformation("Loaded {Item1} models," +
+                                    " {Item2} meshes in {TotalSeconds} seconds",
+                loadResult.Item1,
+                loadResult.Item2,
+                loadTime.TotalSeconds);
         }
         catch (Exception ex)
         {
-            _logger.LogError($"Load models failed: {ex}");
+            _logger.LogError("Load models failed: {Exception}", ex);
         }
     }
 
-    private async Task<(int, List<Mesh>)> LoadModelsDataAsync()
+    private async Task<(int, int)> LoadModelsDataAsync()
     {
-        if (Editor.AssetsPath == null || Editor.Window?.OpenGl == null) return (0, []);
+        if (Editor.AssetsPath == null || Editor.Window?.OpenGl == null) return (0, 0);
         try
         {
             var loadResult = await Task.Run(() =>
             {
                 if (Editor.AssimpExtensions.Length == 0) return null;
                 var filePaths = new List<string>();
-                for (var i = 0; i < Editor.AssimpExtensions.Length; i++)
+                foreach (var extension in Editor.AssimpExtensions)
                 {
-                    var extension = Editor.AssimpExtensions[i];
                     filePaths.AddRange(
                         Directory
                             .EnumerateFiles(Editor.AssetsPath, $"*.{extension}", SearchOption.AllDirectories));
                 }
                 if (filePaths.Count == 0) return null;
                 var modelsCount = 0;
-                var meshes = new List<Mesh>();
+                var meshesCount = 0;
                 for (var i = 0; i < filePaths.Count; i++)
                 {
                     var filePath = filePaths[i];
                     var fileInfo = new FileInfo(filePath);
-                    var loadedMeshes = ModelManager.LoadModelMeshes(Editor.Window.OpenGl, filePath);
-                    meshes.AddRange(loadedMeshes);
                     var name = fileInfo.Exists ? fileInfo.Name : string.Empty;
-                    var model = new Model(Guid.NewGuid(), loadedMeshes)
-                    {
-                        Name = name
-                    };
+                    var model = ModelManager.LoadModel(Editor.Window.OpenGl, filePath, name);
+                    meshesCount += model.Meshes.Count;
                     modelsCount++;
                 }
-                return new { Models = modelsCount, Meshes = meshes };
+                return new { Models = modelsCount, MeshesCount = meshesCount };
             });
-            if (loadResult != null) return (loadResult.Models, loadResult.Meshes);
+            if (loadResult != null) return (loadResult.Models, loadResult.MeshesCount);
             _logger.LogInformation($"No models found to load");
-            return (0, []);
+            return (0, 0);
         }
         catch (Exception ex)
         {
-            _logger.LogError($"Load models failed: {ex}");
-            return (0, []);
+            _logger.LogError("Load models failed: {Exception}", ex);
+            return (0, 0);
         }
     }
 }

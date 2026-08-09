@@ -103,7 +103,7 @@ public class Window
 
     private void OnLoad()
     {
-        OpenGl = new OpenGl(Handle, this);
+        OpenGl = new OpenGl(Handle);
         OpenGl.Initialize();
         OpenGl.ProcessShaders();
 

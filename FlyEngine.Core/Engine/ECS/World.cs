@@ -1,3 +1,4 @@
+using FlyEngine.Core.Components;
 using FlyEngine.Core.ECS.Systems;
 using MemoryPack;
 
@@ -9,7 +10,11 @@ public partial class World
     [MemoryPackInclude]
     private int _capacity = 1024;
     [MemoryPackInclude]
-    private int _entityCount;
+    private int _nextId = 0;
+    [MemoryPackInclude]
+    private int[] _versions = new int[1024];
+    [MemoryPackInclude]
+    private string[] _names = new string[1024];
     [MemoryPackInclude]
     private Queue<int> _freeIds = [];
     
@@ -74,25 +79,46 @@ public partial class World
             _systems[i].Update(this, deltaTime);
     }
     
-    public int CreateEntity()
+    public Entity CreateEntity(string name)
     {
-        if (_freeIds.Count > 0) return _freeIds.Dequeue();
-        
-        var id = _entityCount++;
-        if (id >= _capacity) ResizeWorld(_capacity * 2);
-        return id;
+        int id;
+        if (_freeIds.Count > 0) 
+            id = _freeIds.Dequeue();
+        else 
+        {
+            id = _nextId++;
+            if (id >= _capacity) 
+                ResizeWorld(_capacity * 2);
+        }
+        _names[id] = name;
+        return new Entity(id, _versions[id]);
     }
 
-    public void DestroyEntity(int id)
+    public void DestroyEntity(Entity entity)
     {
-        _entityCount--;
-        _freeIds.Enqueue(id);
+        if (!IsAlive(entity)) return;
+        var id = entity.Id;
+        _versions[id]++;
+        _names[id] = string.Empty;
+        _freeIds.Enqueue(entity.Id);
+        
+        var transformPool = GetPool<TransformComponent>();
+        if (transformPool.HasEntity(id))
+            transformPool.Instances[id].SetParent(null);
         
         for (var i = 0; i < _pools.Length; i++)
         {
             var pool = _pools[i];
             pool?.Remove(id);
         }
+    }
+    
+    public bool IsAlive(Entity entity)
+    {
+        if (entity.IsNull || (uint)entity.Id >= (uint)_capacity) 
+            return false;
+
+        return _versions[entity.Id] == entity.Version;
     }
 
     public ComponentPool<T> GetPool<T>() where T : struct
@@ -107,7 +133,19 @@ public partial class World
         return (ComponentPool<T>)_pools[typeId]!;
     }
     
-    public List<IComponentPool> GetEntityComponents(int entityId)
+    public string GetEntityName(Entity entity)
+    {
+        if (!IsAlive(entity)) return "Destroyed Entity";
+        return _names[entity.Id] ?? $"Entity {entity.Id}";
+    }
+    
+    public void SetEntityName(Entity entity, string newName)
+    {
+        if (IsAlive(entity))
+            _names[entity.Id] = newName;
+    }
+    
+    public List<IComponentPool> GetEntityComponents(Entity entity)
     {
         var activePools = new List<IComponentPool>();
 
@@ -115,11 +153,25 @@ public partial class World
         {
             var pool = _pools[i];
             
-            if (pool != null && pool.HasEntity(entityId))
+            if (pool != null && pool.HasEntity(entity.Id))
                 activePools.Add(pool);
         }
 
         return activePools;
+    }
+    
+    public List<Entity> GetAllEntities()
+    {
+        var list = new List<Entity>(_nextId - _freeIds.Count);
+    
+        for (var id = 0; id < _nextId; id++)
+        {
+            var entity = new Entity(id, _versions[id]);
+            if (IsAlive(entity))
+                list.Add(entity);
+        }
+    
+        return list;
     }
     
     public T AddSystem<T>() where T : ISystem, new()
@@ -143,6 +195,10 @@ public partial class World
     private void ResizeWorld(int newCapacity)
     {
         _capacity = newCapacity;
+        
+        Array.Resize(ref _versions, _capacity);
+        Array.Resize(ref _names, _capacity);
+        
         foreach (var pool in _pools)
             pool?.Resize(_capacity);
     }

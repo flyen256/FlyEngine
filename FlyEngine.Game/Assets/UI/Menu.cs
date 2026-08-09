@@ -42,7 +42,7 @@ public class Menu : GuiWindow
         _playersListElement.Children.Add(new Button("Disconnect", OnDisconnectButtonClicked));
     }
 
-    protected override void OnEnable()
+    public override void OnEnable()
     {
         if (NetworkManager.Instance == null) return;
         NetworkManager.Instance.Client.OnPeerDisconnectedEvent += OnClientPeerDisconnected;

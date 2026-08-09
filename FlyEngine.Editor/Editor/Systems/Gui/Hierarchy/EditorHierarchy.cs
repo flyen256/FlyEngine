@@ -1,11 +1,12 @@
 ﻿using System.Runtime.InteropServices;
 using FlyEngine.Core;
 using FlyEngine.Core.Components;
+using FlyEngine.Core.ECS;
 using FlyEngine.Core.SceneManagement;
 using ImGuiNET;
-using MemoryPack;
 using Microsoft.Extensions.Logging;
 using ImGuiNet = ImGuiNET.ImGui;
+using Object = FlyEngine.Core.Assets.Object;
 
 namespace FlyEngine.Editor.Systems;
 
@@ -19,9 +20,12 @@ public class EditorHierarchy : EditorGuiWindow
         "Hierarchy" + (EditorAction.IsDirty ? " *" : string.Empty) + "###EditorHierarchy";
 
     private bool _createGameObject;
+    private bool _createEntity;
     private string _gameObjectName = string.Empty;
+    private string _entityName = string.Empty;
 
     private static GameObject? _renamingGameObject;
+    private static int _renamingEntityId = -1;
     private static string _renameBuffer = string.Empty;
 
     private static Scene? Scene => SceneManager.CurrentScene;
@@ -51,7 +55,7 @@ public class EditorHierarchy : EditorGuiWindow
             {
                 if (ImGuiNet.IsWindowHovered() && ImGuiNet.IsMouseReleased(ImGuiMouseButton.Left) && !ImGuiNet.IsMouseDragging(ImGuiMouseButton.Left))
                     Selection.SelectedObject = null;
-                CreateGameObjectContextWindow();
+                HierarchyContextWindow();
 
                 if (ImGuiNet.IsWindowFocused() && ImGuiNet.IsKeyPressed(ImGuiKey.F2) &&
                     Selection.SelectedObject != null)
@@ -91,7 +95,7 @@ public class EditorHierarchy : EditorGuiWindow
     {
         if (gameObject.IsDestroyed) return;
 
-        var validChildrenCount = gameObject.Transform.ChildrenGameObjects.Count(child => !child.IsDestroyed);
+        var validChildrenCount = gameObject.ChildrenGameObjects.Count(child => !child.IsDestroyed);
 
         var hasChildren = validChildrenCount > 0;
 
@@ -115,7 +119,7 @@ public class EditorHierarchy : EditorGuiWindow
                 ApplyRename(gameObject);
             return;
         }
-        var isNodeOpen = ImGuiNet.TreeNodeEx($"{gameObject.Name} (Entity id: {gameObject.EntityId})###GO_{gameObject.GetHashCode()}", flags);
+        var isNodeOpen = ImGuiNet.TreeNodeEx($"{gameObject.Name}###GO_{gameObject.GetHashCode()}", flags);
         if (ImGuiNet.IsItemHovered() && ImGuiNet.IsMouseReleased(ImGuiMouseButton.Left))
         {
             if (!ImGuiNet.IsMouseDragging(ImGuiMouseButton.Left))
@@ -134,7 +138,6 @@ public class EditorHierarchy : EditorGuiWindow
             }
 
             ImGuiNet.Text(gameObject.Name);
-            ImGuiNet.Text($"(Entity id: {gameObject.EntityId})");
             ImGuiNet.EndDragDropSource();
         }
 
@@ -149,9 +152,8 @@ public class EditorHierarchy : EditorGuiWindow
 
                     if (draggedOuter != gameObject && !IsChildOf(gameObject.Transform, draggedOuter.Transform))
                     {
-                        var tr = draggedOuter.Transform;
+                        ref var tr = ref draggedOuter.Transform;
                         tr.SetParent(gameObject);
-                        draggedOuter.Transform = tr;
                         EditorAction.MarkDirty();
                     }
                 }
@@ -162,7 +164,7 @@ public class EditorHierarchy : EditorGuiWindow
 
         if (isNodeOpen)
         {
-            var children = gameObject.Transform.ChildrenGameObjects;
+            var children = gameObject.ChildrenGameObjects;
             foreach (var childTransform in children)
             {
                 if (!childTransform.IsDestroyed)
@@ -175,11 +177,13 @@ public class EditorHierarchy : EditorGuiWindow
 
     private static bool IsChildOf(TransformComponent potentialParent, TransformComponent potentialChild)
     {
+        if (potentialParent.GameObject == null) return false;
         var current = potentialChild.Parent;
 
         while (current.HasValue)
         {
-            if (current.Value.GameObject.EntityId == potentialParent.GameObject.EntityId) 
+            if (current.Value.GameObject == null) continue;
+            if (current.Value.GameObject == potentialParent.GameObject) 
                 return true;
             
             current = current.Value.Parent;
@@ -200,9 +204,8 @@ public class EditorHierarchy : EditorGuiWindow
             if (ImGuiNet.MenuItem("Create Child Game Object"))
             {
                 var child = GameObject.Create("New Child");
-                var transform = child.Transform;
+                ref var transform = ref child.Transform;
                 transform.SetParent(gameObject);
-                child.Transform = transform;
                 EditorAction.MarkDirty();
             }
 
@@ -210,9 +213,8 @@ public class EditorHierarchy : EditorGuiWindow
             {
                 if (ImGuiNet.MenuItem("Detach (Make Root)"))
                 {
-                    var transform = gameObject.Transform;
+                    ref var transform = ref gameObject.Transform;
                     transform.SetParent(null);
-                    gameObject.Transform = transform;
                     EditorAction.MarkDirty();
                 }
             }
@@ -226,7 +228,7 @@ public class EditorHierarchy : EditorGuiWindow
         }
     }
 
-    private static void StartRename(Core.Components.Object obj)
+    private static void StartRename(Object obj)
     {
         if (obj is not GameObject gameObject) return;
         _renamingGameObject = gameObject;
@@ -257,19 +259,20 @@ public class EditorHierarchy : EditorGuiWindow
         _gameObjectName = string.Empty;
     }
 
-    private static void DeleteSelectedGameObject(Core.Components.Object obj)
+    private static void DeleteSelectedGameObject(Object obj)
     {
         obj.Destroy();
         if (obj == Selection.SelectedObject) Selection.SelectedObject = null;
         EditorAction.MarkDirty();
     }
 
-    private void CreateGameObjectContextWindow()
+    private void HierarchyContextWindow()
     {
         if (ImGuiNet.BeginPopupContextWindow("HierarchyContextWindow"))
         {
-            if (ImGuiNet.MenuItem("New Game Object"))
+            if (ImGuiNet.MenuItem("New Game Object") && !_createEntity)
                 _createGameObject = true;
+            
             ImGuiNet.EndPopup();
         }
     }
