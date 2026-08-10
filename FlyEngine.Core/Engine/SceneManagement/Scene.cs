@@ -151,6 +151,18 @@ public partial class Scene(Guid guid) : Asset(guid)
             uiWindow.OnLoadUi();
     }
 
+    public void UnloadScene()
+    {
+        foreach (var gameObject in _gameObjects)
+            gameObject.ComponentStore.Dispose();
+        _gameObjects.Clear();
+        _behaviours.Clear();
+        _lights.Clear();
+        _cameras.Clear();
+        _guiWindows.Clear();
+        _colliders.Clear();
+    }
+
     public override void Unload()
     {
         base.Unload();

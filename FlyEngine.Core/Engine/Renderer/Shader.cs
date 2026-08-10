@@ -1,10 +1,13 @@
 ﻿using System.Numerics;
+using Microsoft.Extensions.Logging;
 using Silk.NET.OpenGL;
 
 namespace FlyEngine.Core.Renderer;
 
 public class Shader
 {
+    private readonly ILogger _logger = new Logger<Shader>(LoggerFactory.Create(builder => builder.AddConsole()));
+    
     public readonly uint Handle;
     private readonly GL _gl;
 
@@ -12,8 +15,15 @@ public class Shader
     {
         _gl = gl;
 
-        var vertex = LoadShader(ShaderType.VertexShader, vertexCode);
-        var fragment = LoadShader(ShaderType.FragmentShader, fragmentCode);
+        var vertexInt = LoadShader(ShaderType.VertexShader, vertexCode);
+        var fragmentInt = LoadShader(ShaderType.FragmentShader, fragmentCode);
+        if (vertexInt < 0 || fragmentInt < 0)
+        {
+            _logger.LogError("Failed to load vertex and fragment shaders");
+            return;
+        }
+        var vertex = (uint)vertexInt;
+        var fragment = (uint)fragmentInt;
         Handle = _gl.CreateProgram();
         _gl.AttachShader(Handle, vertex);
         _gl.AttachShader(Handle, fragment);
@@ -21,7 +31,8 @@ public class Shader
         _gl.GetProgram(Handle, GLEnum.LinkStatus, out var status);
         if (status == 0)
         {
-            throw new Exception($"Program failed to link with error: {_gl.GetProgramInfoLog(Handle)}");
+            _logger.LogError("Program failed to link with error: {GetProgramInfoLog}", _gl.GetProgramInfoLog(Handle));
+            return;
         }
         _gl.DetachShader(Handle, vertex);
         _gl.DetachShader(Handle, fragment);
@@ -38,7 +49,10 @@ public class Shader
     {
         var location = _gl.GetUniformLocation(Handle, name);
         if (location == -1)
-            throw new Exception($"{name} uniform not found on shader.");
+        {
+            _logger.LogError("{Name} uniform not found on shader.", name);
+            return;
+        }
         _gl.Uniform1(location, value);
     }
 
@@ -46,7 +60,10 @@ public class Shader
     {
         var location = _gl.GetUniformLocation(Handle, name);
         if (location == -1)
-            throw new Exception($"{name} uniform not found on shader.");
+        {
+            _logger.LogError("{Name} uniform not found on shader.", name);
+            return;
+        }
         _gl.UniformMatrix4(location, 1, false, (float*) &value);
     }
 
@@ -54,7 +71,10 @@ public class Shader
     {
         var location = _gl.GetUniformLocation(Handle, name);
         if (location == -1)
-            throw new Exception($"{name} uniform not found on shader.");
+        {
+            _logger.LogError("{Name} uniform not found on shader.", name);
+            return;
+        }
         _gl.Uniform1(location, value);
     }
 
@@ -62,7 +82,10 @@ public class Shader
     {
         var location = _gl.GetUniformLocation(Handle, name);
         if (location == -1)
-            throw new Exception($"{name} uniform not found on shader.");
+        {
+            _logger.LogError("{Name} uniform not found on shader.", name);
+            return;
+        }
         _gl.Uniform3(location, value.X, value.Y, value.Z);
     }
     
@@ -70,7 +93,10 @@ public class Shader
     {
         var location = _gl.GetUniformLocation(Handle, name);
         if (location == -1)
-            throw new Exception($"{name} uniform not found on shader.");
+        {
+            _logger.LogError("{Name} uniform not found on shader.", name);
+            return;
+        }
         _gl.Uniform2(location, value.X, value.Y);
     }
     
@@ -78,18 +104,21 @@ public class Shader
     {
         var location = _gl.GetUniformLocation(Handle, name);
         if (location == -1)
-            throw new Exception($"{name} uniform not found on shader.");
+        {
+            _logger.LogError("{Name} uniform not found on shader.", name);
+            return;
+        }
         _gl.Uniform4(location, value.X, value.Y, value.Z, value.W);
     }
     
-    private uint LoadShader(ShaderType type, string code)
+    private int LoadShader(ShaderType type, string code)
     {
         var handle = _gl.CreateShader(type);
         _gl.ShaderSource(handle, code);
         _gl.CompileShader(handle);
         var infoLog = _gl.GetShaderInfoLog(handle);
-        if (!string.IsNullOrWhiteSpace(infoLog))
-            throw new Exception($"Error compiling shader of type {type}, failed with error {infoLog}");
-        return handle;
+        if (string.IsNullOrWhiteSpace(infoLog)) return (int)handle;
+        _logger.LogError("Error compiling shader of type {ShaderType}, failed with error {InfoLog}", type, infoLog);
+        return -1;
     }
 }

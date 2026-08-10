@@ -28,5 +28,6 @@ public class BufferObject<TDataType> : IDisposable
     public void Dispose()
     {
         _gl.DeleteBuffer(_handle);
+        GC.SuppressFinalize(this);
     }
 }

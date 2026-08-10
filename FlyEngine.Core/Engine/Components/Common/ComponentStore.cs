@@ -71,24 +71,21 @@ public partial class ComponentStore : IDisposable
     public List<T> GetComponents<T>() where T : class
     {
         var result = new List<T>();
-        var span = CollectionsMarshal.AsSpan(_components);
-        for (var i = 0; i < span.Length; i++)
-        {
-            if (span[i] is T t) result.Add(t);
-        }
+        for (var i = 0; i < _components.Count; i++)
+            if (_components[i] is T t) result.Add(t);
         return result;
     }
 
     public Component? GetComponent(Type type)
     {
-        var span = CollectionsMarshal.AsSpan(_components);
-        for (var i = 0; i < span.Length; i++)
+        for (var i = 0; i < _components.Count; i++)
         {
-            var comp = span[i];
+            var comp = _components[i];
             if (type.IsInstanceOfType(comp)) return comp;
         }
         return null;
     }
+
 
     public T AddComponent<T>() where T : Component
     {
@@ -159,5 +156,6 @@ public partial class ComponentStore : IDisposable
                 SceneManager.CurrentScene.RemoveComponent(component);
         }
         _components.Clear();
+        GC.SuppressFinalize(this);
     }
 }

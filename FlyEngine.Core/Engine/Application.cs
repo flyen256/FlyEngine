@@ -26,36 +26,6 @@ public static class Application
     }
 
     public static event Action<bool>? OnApplicationState;
-    
-    public static double UpdatesPerSecond
-    {
-        get => Window?.Handle.UpdatesPerSecond ?? 0.0f;
-        set
-        {
-            if (Window == null) return;
-            Window.Handle.UpdatesPerSecond = value;
-        }
-    }
-    
-    public static double FramesPerSecond
-    {
-        get => Window?.Handle.FramesPerSecond ?? 0.0f;
-        set
-        {
-            if (Window == null) return;
-            Window.Handle.FramesPerSecond = value;
-        }
-    }
-    
-    public static bool VSync
-    {
-        get => Window?.Handle.VSync ?? false;
-        set
-        {
-            if (Window == null) return;
-            Window.Handle.VSync = value;
-        }
-    }
 
     private static bool _initialized;
     private static bool _isRunning;
@@ -95,6 +65,8 @@ public static class Application
         OnApplicationState?.Invoke(_isRunning);
         TimeManager.Timer = 0f;
         Physics.Physics.Shutdown();
+        Input.Input.UnlockAndShowCursor();
+        Window.Clear();
         if (!IsEditor)
             CloseWindow();
         Input.Input.CursorVisible = true;

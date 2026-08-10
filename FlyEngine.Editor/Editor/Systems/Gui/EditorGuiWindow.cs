@@ -7,6 +7,7 @@ namespace FlyEngine.Editor.Systems;
 public abstract class EditorGuiWindow
 {
     protected virtual string Title => "Editor GUI Window";
+    public virtual bool IsVisible => true;
     protected virtual ImGuiWindowFlags Flags => ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoCollapse;
     
     protected internal virtual void OnLoad() { }
@@ -32,8 +33,8 @@ public abstract class EditorGuiWindow
         BeforeBegin();
         if (Begin())
         {
-            var currentSize = ImGui.GetWindowSize();
-
+            var currentSize = ImGuiNet.GetWindowSize();
+            
             if (currentSize != _lastWindowSize)
             {
                 EditorAction.WindowResize(currentSize);

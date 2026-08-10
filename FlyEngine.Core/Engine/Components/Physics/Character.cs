@@ -1,5 +1,6 @@
 using System.Numerics;
 using System.Text.Json.Serialization;
+using FlyEngine.Core.CustomAttributes;
 using JoltPhysicsSharp;
 
 namespace FlyEngine.Core.Components;
@@ -13,10 +14,12 @@ public class Character : Behaviour
 	private CharacterVirtual? _character;
 
 	[JsonIgnore]
+    [HideInInspector]
 	public GroundState GroundState =>
 		_character?.GroundState ?? GroundState.NotSupported;
 	
 	[JsonIgnore]
+    [HideInInspector]
 	public Vector3 Velocity = Vector3.Zero;
 
 	public override void OnLoad()

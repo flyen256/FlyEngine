@@ -11,8 +11,10 @@ public abstract class RenderPipeline(OpenGl openGl)
     public bool IsDeferredGeometryPass { get; protected set; }
     public bool IsShadowPass { get; protected set; }
     
-    protected uint FinalFbo;
+    public uint DeferredLightVao { get; protected set; }
+    public uint FinalFbo { get; protected set; }
     public uint FinalTexture { get; protected set; }
+    public uint DepthTexture { get; protected set; }
     
     public abstract void Render(float deltaTime, bool editor = false);
     public abstract Shader GetRenderShader();

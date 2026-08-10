@@ -1,5 +1,5 @@
-using System.Drawing;
 using FlyEngine.Core.Assets;
+using Silk.NET.OpenAL;
 using Silk.NET.OpenGL;
 using Silk.NET.Windowing;
 
@@ -7,8 +7,8 @@ namespace FlyEngine.Core.Renderer;
 
 public class OpenGl
 {
-    public static Guid CubeMeshGuid => Guid.Parse("ac8dab28-605c-4020-8e74-7c1a1a5f2a95");
-    public static Guid SphereMeshGuid => Guid.Parse("d91df955-1522-4520-928b-c62abc363eb4");
+    private static Guid CubeMeshGuid => Guid.Parse("ac8dab28-605c-4020-8e74-7c1a1a5f2a95");
+    private static Guid SphereMeshGuid => Guid.Parse("d91df955-1522-4520-928b-c62abc363eb4");
     
     public readonly GL Gl;
     
@@ -19,14 +19,16 @@ public class OpenGl
 	public uint ShadowMapTileSize { get; set; } = 1024;
 
     public RenderPipeline RenderPipeline { get; set; }
+    public PostProcessVolume PostProcessVolume { get; set; }
     
     public readonly IWindow Window;
 
     public OpenGl(IWindow window)
     {
-        RenderPipeline = new DefaultRenderPipeline(this);
+        RenderPipeline = new DefaultDeferredRenderPipeline(this);
         Window = window;
         Gl = window.CreateOpenGL();
+        PostProcessVolume = new PostProcessVolume(Gl);
         CreateCubeMesh();
     }
 
@@ -95,6 +97,15 @@ public class OpenGl
         var meshes = ModelManager.LoadModelMeshesFromAssembly(this, "sphere.fbx");
         if (meshes.Count == 1)
             meshes[0].Guid = SphereMeshGuid;
+    }
+
+    public static Shader? LoadEmbeddedResourceShader(GL gl, string shaderName)
+    {
+        var vs = LoadEmbeddedResourceShaderCode($"{shaderName}.vert");
+        var fs = LoadEmbeddedResourceShaderCode($"{shaderName}.frag");
+        if (vs == null || fs == null)
+            throw new Exception($"{shaderName} shaders not found in resources!");
+        return new Shader(gl, vs, fs);
     }
 
     public static string? LoadEmbeddedResourceShaderCode(string shader)

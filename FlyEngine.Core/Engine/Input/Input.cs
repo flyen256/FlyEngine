@@ -1,4 +1,5 @@
 using System.Numerics;
+using FlyEngine.Core.Debugging;
 using Silk.NET.Input;
 using Silk.NET.Maths;
 using Silk.NET.Windowing;
@@ -21,8 +22,6 @@ public static class Input
     public static Vector2 MousePosition { get; private set; } = Vector2.Zero;
 
     private static bool _cursorVisible = true;
-    private static bool? _previousStateVisible;
-    private static bool? _previousStateLocked;
 
     public static bool CursorVisible
     {

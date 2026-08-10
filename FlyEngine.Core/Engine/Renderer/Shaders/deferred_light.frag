@@ -39,12 +39,6 @@ uniform int uShadowEnabled;
 uniform int uShadowDirIndex;
 
 uniform vec3 uSunDirWorld;
-uniform float uFogDensity;
-uniform float uFogHeight;
-uniform float uFogFalloff;
-uniform float uFogScatter;
-uniform vec3 uFogColor;
-uniform int uFogEnabled;
 
 out vec4 out_color;
 
@@ -176,49 +170,6 @@ float phaseHG(float cosTheta, float g)
 {
     float g2 = g * g;
     return (1.0 - g2) / (4.0 * PI * pow(1.0 + g2 - 2.0 * g * cosTheta, 1.5));
-}
-
-vec3 applyVolumetricFog(vec3 hdrLinear, vec3 rd, float sceneDist)
-{
-    if (uFogEnabled == 0) return hdrLinear;
-
-    float dist = min(sceneDist, 120.0);
-    if (dist < 0.02) return hdrLinear;
-
-    float stepLen = dist / float(FOG_STEPS);
-
-    vec3 accum = vec3(0.0);
-    float trans = 1.0;
-
-    float cosTheta = dot(rd, normalize(uSunDirWorld));
-    float phase = phaseHG(cosTheta, 0.6);
-
-    vec3 sunColor = uFogColor * uFogScatter;
-
-    for (int s = 0; s < FOG_STEPS; s++)
-    {
-        float t = (float(s) + 0.5) * stepLen;
-        vec3 sp = uCameraPos + rd * t;
-
-        float heightFactor = exp(-(sp.y - uFogHeight) * uFogFalloff);
-
-        float density = uFogDensity * heightFactor;
-
-        float noise = fract(sin(dot(sp.xz, vec2(12.9898, 78.233))) * 43758.5453);
-        density *= mix(0.9, 1.1, noise);
-
-        float absorb = exp(-density * stepLen);
-
-        vec3 scatter = sunColor * phase;
-
-        accum += trans * scatter * density * stepLen;
-
-        trans *= absorb;
-
-        if (trans < 0.01) break;
-    }
-
-    return hdrLinear * trans + accum;
 }
 
 vec3 evalLight(int i, vec3 worldPos, vec3 N, vec3 V, float roughness, vec3 albedo, float metallic)
@@ -362,8 +313,6 @@ void main()
 
     vec3 ambient = uAmbientColor * albedo * (metallic * 0.15 + (1.0 - metallic));
     vec3 color = ambient + Lo;
-
-    color = applyVolumetricFog(color, rd, sceneDist);
 
     color = color / (color + vec3(1.0));
     color = pow(color, vec3(1.0 / 2.2));

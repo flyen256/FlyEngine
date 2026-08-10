@@ -152,18 +152,40 @@ public partial class Component : Object
         }
     }
     
-    public Span<VariableInfo> GetComponentVariables(Component component)
+    public static VariableInfo[] GetComponentVariables(Component component)
     {
         var type = component.GetType();
 
-        var properties = type.GetProperties()
-            .Where(f => f.GetSetMethod(false) != null).Cast<MemberInfo>();
-        var variables =
-            type.GetFields().Concat(properties);
+        var typeHierarchy = new List<Type>();
+        var currentType = type;
+        while (currentType != null && currentType != typeof(object))
+        {
+            typeHierarchy.Insert(0, currentType);
+            currentType = currentType.BaseType;
+        }
 
-        return CollectionsMarshal.AsSpan(variables.Select(v => new VariableInfo(v)).ToList());
+        var properties = type.GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
+            .Where(f => f.GetSetMethod(false) != null);
+
+        var fields = type.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
+            .Where(f => f.IsPublic || f.GetCustomAttribute<ShowInInspectorAttribute>() != null);
+
+        var orderedVariables = fields.Cast<MemberInfo>()
+            .Concat(properties)
+            .OrderBy(m => typeHierarchy.IndexOf(m.DeclaringType!))
+            .ThenBy(m => 
+            {
+                if (m is not PropertyInfo prop) return m.MetadataToken;
+                var backingField = prop.DeclaringType?.GetField($"<{prop.Name}>k__BackingField", 
+                    BindingFlags.Instance | BindingFlags.NonPublic);
+                return backingField != null ? backingField.MetadataToken : m.MetadataToken;
+            })
+            .Select(v => new VariableInfo(v))
+            .ToArray();
+
+        return orderedVariables;
     }
-
+    
     public static T CreateGameObject<T>(string? name = null) where T : Component
     {
         var instance = Activator.CreateInstance<T>();

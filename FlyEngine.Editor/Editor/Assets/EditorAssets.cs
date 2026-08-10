@@ -1,5 +1,6 @@
 ﻿using FlyEngine.Core.Assets;
 using FlyEngine.Core.SceneManagement;
+using FlyEngine.Core.Threading;
 using Microsoft.Extensions.Logging;
 
 namespace FlyEngine.Editor.Assets;
@@ -19,7 +20,7 @@ public class EditorAssets
             SceneManager.UnloadScene();
     }
     
-    private void ValidateOnScript(FileInfo fileInfo)
+    private static void ValidateOnScript(FileInfo fileInfo)
     {
         if (!fileInfo.Extension.EndsWith(".cs")) return;
         if (Editor.Window is { IsFocused: true })
@@ -28,7 +29,7 @@ public class EditorAssets
             Editor.Scripts.IsDirty = true;
     }
 
-    private void ValidateOnModel(FileInfo fileInfo)
+    private static void ValidateOnModel(FileInfo fileInfo)
     {
         if (!Editor.AssimpExtensions.Contains(fileInfo.Extension)) return;
         
@@ -37,7 +38,7 @@ public class EditorAssets
     public static async Task LoadAssetsAsync()
     {
         if (Editor.Window?.OpenGl == null) return;
-        await Task.Run(() => Editor.Dispatch(() => AssetsManager.LoadAssets(Editor.Window.OpenGl.Gl)));
+        await Task.Run(() => Dispatcher.Dispatch(() => AssetsManager.LoadAssets(Editor.Window.OpenGl.Gl)));
     }
 
     public async Task LoadModelsAsync()

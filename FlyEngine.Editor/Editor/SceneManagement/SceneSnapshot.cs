@@ -1,4 +1,5 @@
 ﻿using FlyEngine.Core.SceneManagement;
+using FlyEngine.Core.Threading;
 using MemoryPack;
 using Microsoft.Extensions.Logging;
 
@@ -46,7 +47,7 @@ public static class SceneSnapshot
                 scene = await MemoryPackSerializer.DeserializeAsync<Scene>(snapshotFile);
             if (scene == null)
                 throw new Exception("Failed to deserialize scene");
-            Editor.Dispatch(() => 
+            Dispatcher.Dispatch(() => 
             {
                 SceneManager.LoadScene(scene);
                 Logger.LogInformation("Restored scene from snapshot in Main Thread");

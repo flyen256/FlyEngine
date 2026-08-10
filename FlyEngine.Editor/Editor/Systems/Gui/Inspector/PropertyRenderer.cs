@@ -1,4 +1,5 @@
 ﻿using System.Numerics;
+using System.Reflection;
 using FlyEngine.Core.Assets;
 using FlyEngine.Core.Components;
 using FlyEngine.Core.CustomAttributes;
@@ -38,7 +39,7 @@ public class PropertyRenderer
     public void Render(VariableInfo variableInfo, Component component)
     {
         if (variableInfo.VariableType == null) return;
-        if (variableInfo.GetCustomAttribute(typeof(HideInInspector), true) != null) return;
+        if (variableInfo.GetCustomAttribute(typeof(HideInInspectorAttribute), true) != null) return;
 
         var currentType = variableInfo.VariableType;
 
@@ -71,10 +72,10 @@ public class PropertyRenderer
     {
         changed = false;
         if (variableInfo.GetValue(component) is not float f) return false;
-        if (variableInfo.GetCustomAttribute(typeof(PropertyRange<float>), true) is PropertyRange<float> range)
-            changed = ImGuiNet.DragFloat(variableInfo.Name + "##slider", ref f, 1f, range.Min, range.Max, "%.2f");
+        if (variableInfo.GetCustomAttribute(typeof(PropertyRangeAttribute<float>), true) is PropertyRangeAttribute<float> range)
+            changed = ImGuiNet.DragFloat(variableInfo.DisplayName + "##slider", ref f, 1f, range.Min, range.Max, "%.2f");
         else
-            changed = ImGuiNet.DragFloat(variableInfo.Name + $"##{component.GetType().Name}", ref f);
+            changed = ImGuiNet.DragFloat(variableInfo.DisplayName + $"##{component.GetType().Name}", ref f);
         if (!changed) return false;
         variableInfo.SetValue(component, f);
         EditorAction.MarkDirty();
@@ -85,10 +86,10 @@ public class PropertyRenderer
     {
         changed = false;
         if (variableInfo.GetValue(component) is not int i) return false;
-        if (variableInfo.GetCustomAttribute(typeof(PropertyRange<int>), true) is PropertyRange<int> range)
-            changed = ImGuiNet.DragInt(variableInfo.Name + "##slider", ref i, 1f, range.Min, range.Max);
+        if (variableInfo.GetCustomAttribute(typeof(PropertyRangeAttribute<int>), true) is PropertyRangeAttribute<int> range)
+            changed = ImGuiNet.DragInt(variableInfo.DisplayName + "##slider", ref i, 1f, range.Min, range.Max);
         else
-            changed = ImGuiNet.DragInt(variableInfo.Name + $"##{component.GetType().Name}", ref i);
+            changed = ImGuiNet.DragInt(variableInfo.DisplayName + $"##{component.GetType().Name}", ref i);
         if (!changed) return false;
         variableInfo.SetValue(component, i);
         EditorAction.MarkDirty();
@@ -99,7 +100,7 @@ public class PropertyRenderer
     {
         changed = false;
         if (variableInfo.VariableType == null || variableInfo.GetValue(component) is not Enum e) return false;
-        if (ImGuiNet.BeginCombo(variableInfo.Name + $"##{component.GetType().Name}", e.ToString()))
+        if (ImGuiNet.BeginCombo(variableInfo.DisplayName + $"##{component.GetType().Name}", e.ToString()))
         {
             foreach (var state in Enum.GetValues(variableInfo.VariableType))
             {
@@ -123,10 +124,10 @@ public class PropertyRenderer
     {
         changed = false;
         if (variableInfo.GetValue(component) is not Vector2 v2) return false;
-        if (variableInfo.GetCustomAttribute(typeof(PropertyRange<float>), true) is PropertyRange<float> range)
-            changed = ImGuiNet.DragFloat2(variableInfo.Name + $"##{component.GetType().Name}", ref v2, 1f, range.Min, range.Max, "%.2f");
+        if (variableInfo.GetCustomAttribute(typeof(PropertyRangeAttribute<float>), true) is PropertyRangeAttribute<float> range)
+            changed = ImGuiNet.DragFloat2(variableInfo.DisplayName + $"##{component.GetType().Name}", ref v2, 1f, range.Min, range.Max, "%.2f");
         else
-            changed = ImGuiNet.DragFloat2(variableInfo.Name + $"##{component.GetType().Name}", ref v2);
+            changed = ImGuiNet.DragFloat2(variableInfo.DisplayName + $"##{component.GetType().Name}", ref v2);
         if (variableInfo.GetValue(component) is not Vector2 vv2 || v2 == vv2) return false;
         changed = true;
         variableInfo.SetValue(component, v2);
@@ -138,10 +139,10 @@ public class PropertyRenderer
     {
         changed = false;
         if (variableInfo.GetValue(component) is not Vector3 v3) return false;
-        if (variableInfo.GetCustomAttribute(typeof(PropertyRange<float>), true) is PropertyRange<float> range)
-            changed = ImGuiNet.DragFloat3(variableInfo.Name + $"##{component.GetType().Name}", ref v3, 1f, range.Min, range.Max, "%.2f");
+        if (variableInfo.GetCustomAttribute(typeof(PropertyRangeAttribute<float>), true) is PropertyRangeAttribute<float> range)
+            changed = ImGuiNet.DragFloat3(variableInfo.DisplayName + $"##{component.GetType().Name}", ref v3, 1f, range.Min, range.Max, "%.2f");
         else
-            changed = ImGuiNet.DragFloat3(variableInfo.Name + $"##{component.GetType().Name}", ref v3);
+            changed = ImGuiNet.DragFloat3(variableInfo.DisplayName + $"##{component.GetType().Name}", ref v3);
         if (variableInfo.GetValue(component) is not Vector3 vv3 || v3 == vv3) return false;
         variableInfo.SetValue(component, v3);
         EditorAction.MarkDirty();
@@ -153,7 +154,7 @@ public class PropertyRenderer
         changed = false;
         if (variableInfo.GetValue(component) is not Color c) return false;
         var vec = c.ToVector3();
-        changed = ImGuiNet.ColorPicker3(variableInfo.Name + $"##{component.GetType().Name}", ref vec);
+        changed = ImGuiNet.ColorPicker3(variableInfo.DisplayName + $"##{component.GetType().Name}", ref vec);
         if (variableInfo.GetValue(component) is not Color cc || cc.ToVector3() == vec) return false;
         variableInfo.SetValue(component, Color.FromVector3(vec));
         EditorAction.MarkDirty();
@@ -172,7 +173,7 @@ public class PropertyRenderer
             _inspector.CurrentAssetsType = variableInfo.VariableType;
         }
         ImGuiNet.SameLine();
-        ImGuiNet.Text(variableInfo.Name);
+        ImGuiNet.Text(variableInfo.DisplayName);
         return false;
     }
 
@@ -180,7 +181,7 @@ public class PropertyRenderer
     {
         changed = false;
         if (variableInfo.GetValue(component) is not bool b) return false;
-        ImGuiNet.Checkbox(variableInfo.Name + $"##{component.GetType().Name}", ref b);
+        ImGuiNet.Checkbox(variableInfo.DisplayName + $"##{component.GetType().Name}", ref b);
         if (variableInfo.GetValue(component) is not bool bb || b == bb) return false;
         changed = true;
         variableInfo.SetValue(component, b);
@@ -212,8 +213,6 @@ public class PropertyRenderer
 
         if (ImGuiNet.Button(label))
         {
-            // _inspector.OpenAssetSelector(variableInfo, component);
-            // _inspector.CurrentAssetsType = componentType;
         }
 
         if (ImGuiNet.BeginDragDropTarget())
@@ -225,12 +224,25 @@ public class PropertyRenderer
                 {
                     var draggedOuter = *(GameObject*)payload.Data;
                     var foundComponent = draggedOuter.GetComponent(componentType);
-                    
+            
                     if (foundComponent != null)
                     {
-                        var newRefInstance = Activator.CreateInstance(refType, foundComponent);
+                        var valueProperty = refType.GetProperty("Value");
 
-                        if (newRefInstance != null) variableInfo.SetValue(component, newRefInstance);
+                        if (currentRefInstance == null)
+                        {
+                            currentRefInstance = Activator.CreateInstance(
+                                refType, 
+                                BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public, 
+                                null,
+                                [foundComponent], 
+                                null);
+
+                            if (currentRefInstance != null) variableInfo.SetValue(component, currentRefInstance);
+                        }
+                        else
+                            valueProperty?.SetValue(currentRefInstance, foundComponent);
+                
                         changed = true;
                         EditorAction.MarkDirty();
                     }
@@ -240,7 +252,7 @@ public class PropertyRenderer
         }
 
         ImGuiNet.SameLine();
-        ImGuiNet.Text(variableInfo.Name);
+        ImGuiNet.Text(variableInfo.DisplayName);
 
         return changed;
     }

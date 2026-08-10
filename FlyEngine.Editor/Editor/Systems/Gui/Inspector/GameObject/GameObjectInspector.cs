@@ -1,6 +1,5 @@
 using System.Numerics;
 using System.Reflection;
-using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using FlyEngine.Core;
 using FlyEngine.Core.Components;
@@ -10,7 +9,6 @@ using FlyEngine.Core.SceneManagement;
 using FlyEngine.Core.Utils;
 using FlyEngine.Network;
 using ImGuiNET;
-using Microsoft.Extensions.Logging;
 using ImGuiNet = ImGuiNET.ImGui;
 
 namespace FlyEngine.Editor.Systems;
@@ -50,17 +48,24 @@ public class GameObjectInspector(EditorInspector editorInspector) : Inspector(ed
     
     public override void OnLoad()
     {
+        SceneManager.OnLoaded += OnSceneLoaded;
         Editor.Scripts.OnCompileScripts += OnCompileScripts;
     }
 
     public override void OnUnload()
     {
+        SceneManager.OnLoaded -= OnSceneLoaded;
         Editor.Scripts.OnCompileScripts -= OnCompileScripts;
     }
     
     private void OnCompileScripts()
     {
         RefreshComponents();
+    }
+
+    private static void OnSceneLoaded(Scene? scene)
+    {
+        Selection.SelectedObject = null;
     }
     
     private void RenderAddComponentModal()
@@ -135,7 +140,7 @@ public class GameObjectInspector(EditorInspector editorInspector) : Inspector(ed
         {
             var component = SelectedObject.ComponentStore.List[i];
             var componentEnabled = component.Enabled;
-            var variables = component.GetComponentVariables(component);
+            var variables = Component.GetComponentVariables(component);
             ImGuiNet.Checkbox($"###{component.GetType().Name + $"{i}"}", ref componentEnabled);
             ImGuiNet.SameLine();
             if (ImGuiNet.Button($"X##{component.GetType().Name}-{component.SceneIndex}"))

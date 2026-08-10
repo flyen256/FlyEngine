@@ -1,15 +1,16 @@
 ﻿using System.Numerics;
 using ImGuiNET;
-using Microsoft.Extensions.Logging;
 using ImGuiNet = ImGuiNET.ImGui;
 
 namespace FlyEngine.Editor.Systems;
 
 public class EditorGui : EditorSystem
 {
-    private readonly ILogger _logger = new Logger<EditorGui>(LoggerFactory.Create(builder => builder.AddConsole()));
-
+    public static EditorGui? Instance { get; private set; }
+    
     private readonly List<EditorGuiWindow> _windows = [];
+
+    public readonly List<string> OpenedWindows = [];
 
     private bool _initialized;
     
@@ -19,10 +20,11 @@ public class EditorGui : EditorSystem
     public static uint BottomDockId { get; private set; }
     public static uint UpDockId { get; private set; }
 
-    public static uint DockSpaceId { get; private set; }
+    private static uint DockSpaceId { get; set; }
 
     public EditorGui()
     {
+        Instance = this;
         AddWindow<EditorGame>();
         AddWindow<EditorScene>();
         AddWindow<EditorFileBrowser>();
@@ -31,6 +33,8 @@ public class EditorGui : EditorSystem
         AddWindow<EditorConsoleGui>();
         AddWindow<EditorNavBar>();
         AddWindow<EditorProfiler>();
+        
+        AddWindow<EditorSettings>();
     }
 
     public override void OnUpdate(double deltaTime)
@@ -55,7 +59,10 @@ public class EditorGui : EditorSystem
         }
         RenderMainMenuBar();
         foreach (var window in _windows)
+        {
+            if (!window.IsVisible) continue;
             window.Render(deltaTime);
+        }
         RenderTaskModal();
     }
     
@@ -86,18 +93,24 @@ public class EditorGui : EditorSystem
 
     private void RenderMainMenuBar()
     {
-        if (ImGui.BeginMainMenuBar())
+        if (ImGuiNet.BeginMainMenuBar())
         {
-            if (ImGui.BeginMenu("File"))
+            // if (ImGuiNet.BeginMenu("File"))
+            // {
+            //     if (ImGuiNet.MenuItem("New", "Ctrl+N")) { /* Действие */ }
+            //     if (ImGuiNet.MenuItem("Open", "Ctrl+O")) { /* Действие */ }
+            //     ImGuiNet.Separator();
+            //     if (ImGuiNet.MenuItem("Exit")) { /* Закрыть приложение */ }
+            //     ImGuiNet.EndMenu();
+            // }
+            if (ImGuiNet.BeginMenu("Project"))
             {
-                if (ImGui.MenuItem("New", "Ctrl+N")) { /* Действие */ }
-                if (ImGui.MenuItem("Open", "Ctrl+O")) { /* Действие */ }
-                ImGui.Separator();
-                if (ImGui.MenuItem("Exit")) { /* Закрыть приложение */ }
-                ImGui.EndMenu();
+                if (ImGuiNet.MenuItem("Settings") && !OpenedWindows.Contains("Settings"))
+                    OpenedWindows.Add("Settings");
+                ImGuiNet.EndMenu();
             }
     
-            ImGui.EndMainMenuBar();
+            ImGuiNet.EndMainMenuBar();
         }
     }
     
@@ -117,6 +130,7 @@ public class EditorGui : EditorSystem
 
         ImGuiDockingInternal.igDockBuilderDockWindow("Hierarchy###EditorHierarchy", leftId);
         ImGuiDockingInternal.igDockBuilderDockWindow("Inspector", rightId);
+        ImGuiDockingInternal.igDockBuilderDockWindow("Settings", centerId); 
         ImGuiDockingInternal.igDockBuilderDockWindow("Scene", centerId);
         ImGuiDockingInternal.igDockBuilderDockWindow("File Explorer", bottomId);
 

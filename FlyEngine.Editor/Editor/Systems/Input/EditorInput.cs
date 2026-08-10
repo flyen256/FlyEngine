@@ -10,9 +10,10 @@ public class EditorInput : EditorSystem
 {
     private readonly ShortcutManager _shortcutManager = new();
 
-    private bool _releaseInputCursorLocked;
-    private bool _releaseInputCursorVisible;
-    private bool _inputReleased;
+    private static bool _releaseInputCursorLocked;
+    private static bool _releaseInputCursorVisible;
+
+    public static bool InputReleased { get; private set; }
 
     public EditorInput()
     {
@@ -28,10 +29,13 @@ public class EditorInput : EditorSystem
         _shortcutManager.ProcessKeyDown(keyboard, key);
     }
 
-    private void OnApplicationState(bool isRunning)
+    private static void OnApplicationState(bool isRunning)
     {
         if (isRunning) return;
-        _inputReleased = false;
+        InputReleased = false;
+        Input.BlockInput = false;
+        _releaseInputCursorLocked = false;
+        _releaseInputCursorVisible = true;
     }
 
     private static async Task Save()
@@ -49,21 +53,21 @@ public class EditorInput : EditorSystem
         }
     }
 
-    private void ReleaseInput()
+    private static void ReleaseInput()
     {
         _releaseInputCursorLocked = Input.CursorLocked;
         _releaseInputCursorVisible = Input.CursorVisible;
         Input.CursorLocked = false;
         Input.CursorVisible = true;
-        _inputReleased = true;
-        Input.BlockInput = _inputReleased;
+        InputReleased = true;
+        Input.BlockInput = InputReleased;
     }
 
-    public void BlockInput()
+    public static void UnReleaseInput()
     {
         Input.CursorLocked = _releaseInputCursorLocked;
         Input.CursorVisible = _releaseInputCursorVisible;
-        _inputReleased = false;
-        Input.BlockInput = _inputReleased;
+        InputReleased = false;
+        Input.BlockInput = InputReleased;
     }
 }

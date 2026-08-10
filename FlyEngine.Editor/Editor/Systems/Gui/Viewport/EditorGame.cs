@@ -1,5 +1,8 @@
 ﻿using System.Numerics;
 using FlyEngine.Core;
+using FlyEngine.Core.Debugging;
+using FlyEngine.Core.Input;
+using ImGuiNET;
 using Silk.NET.Maths;
 using ImGuiNet = ImGuiNET.ImGui;
 
@@ -37,11 +40,15 @@ public class EditorGame : EditorGuiWindow
             offset.Y = (regionSize.Y - displaySize.Y) * 0.5f;
         }
         Editor.Window.EditorViewport = new Vector2D<int>((int)displaySize.X, (int)displaySize.Y);
+        Application.Window.UpdateAspectRatio();
         var pipeline = Application.Window.OpenGl.RenderPipeline;
         if (pipeline.FinalTexture == 0) return;
         
         ImGuiNet.SetCursorScreenPos(windowPos + offset);
 
         ImGuiNet.Image((IntPtr)pipeline.FinalTexture, displaySize);
+        
+        if (ImGuiNet.IsItemHovered() && ImGuiNet.IsMouseClicked(ImGuiMouseButton.Left) && EditorInput.InputReleased)
+            EditorInput.UnReleaseInput();
     }
 }

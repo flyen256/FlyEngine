@@ -170,19 +170,14 @@ public class EditorFileBrowser : EditorGuiWindow
         {
             try
             {
-                if (SceneManager.CurrentScene != null)
-                    await Editor.TaskQueue.Enqueue(SceneSnapshot.CreateSnapshotAsync, SceneManager.CurrentScene, "Creating scene snapshot");
-                SceneManager.UnloadScene();
-
                 await Editor.TaskQueue.Enqueue(SceneManager.LoadScene, path);
-                
                 SceneSnapshot.DeleteSnapshot();
         
-                _logger.LogInformation($"Successfully loaded scene: {path}");
+                _logger.LogInformation("Successfully loaded scene: {Path}", path);
             }
             catch (Exception ex)
             {
-                _logger.LogError($"Failed to load scene: {ex}");
+                _logger.LogError("Failed to load scene: {Exception}", ex);
                 await SceneSnapshot.RestoreSnapshotAsync();
             }
         }

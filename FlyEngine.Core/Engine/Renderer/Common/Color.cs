@@ -42,7 +42,7 @@ public partial struct Color
 
     public string ToHexadecimal() => $"#{R:X2}{G:X2}{B:X2}";
 
-    public Vector3 ToVector3() =>
+    public readonly Vector3 ToVector3() =>
         new(R / 255f, G / 255f, B / 255f);
 
     public static Color FromVector3(Vector3 value) =>

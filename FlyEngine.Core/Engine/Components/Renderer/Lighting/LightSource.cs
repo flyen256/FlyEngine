@@ -7,6 +7,7 @@ namespace FlyEngine.Core.Components;
 
 public class LightSource : Component
 {
+    public static LightSource? SunLightSource { get; set; }
     public LightType Type { get; set; } = LightType.Point;
     public Color Color { get; set; } = Color.White;
     [PropertyRange<float>(0f, float.MaxValue)]

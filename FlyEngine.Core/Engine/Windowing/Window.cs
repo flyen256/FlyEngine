@@ -1,11 +1,14 @@
 ﻿using System.Numerics;
 using System.Runtime.InteropServices;
+using FlyEngine.Core.Audio;
 using FlyEngine.Core.Components;
 using FlyEngine.Core.Debugging;
 using FlyEngine.Core.Gui;
 using FlyEngine.Core.Math;
+using FlyEngine.Core.Project;
 using FlyEngine.Core.Renderer;
 using FlyEngine.Core.SceneManagement;
+using FlyEngine.Core.Threading;
 using Silk.NET.Maths;
 using Silk.NET.Windowing;
 
@@ -29,7 +32,8 @@ public class Window
     public event Action<bool>? OnFocusChanged;
     public event Action? OnClosingEvent;
     
-    public OpenGl? OpenGl { get; protected set; }
+    public OpenGl? OpenGl { get; private set; }
+    public OpenAl? OpenAl { get; private set; }
     
     public Matrix4x4 EditorCameraViewMatrix { get; protected set; }
     
@@ -49,6 +53,10 @@ public class Window
     private static Scene? Scene => SceneManager.CurrentScene;
     private static Scene? _lastLoadedScene;
     private bool _graphicsReady;
+    
+    private int _updateCount = 0;
+    private double _upsTimer = 0.0;
+    private int _currentUps = 0;
 
     protected void UpdateMatrices()
     {
@@ -95,8 +103,23 @@ public class Window
         IsRunning = false;
     }
 
+    public static void Clear()
+    {
+        _lastLoadedScene = null;
+    }
+
+    private void ApplyProjectSettings()
+    {
+        var videoSettings = ProjectFile.CurrentProject.VideoSettings;
+        var cpuSettings = ProjectFile.CurrentProject.CpuSettings;
+        Handle.FramesPerSecond = videoSettings.FramesPerSecond;
+        Handle.VSync = videoSettings.VSync;
+        Handle.UpdatesPerSecond = cpuSettings.UpdatesPerSecond;
+    }
+
     private void OnClosing()
     {
+        OpenAl?.Dispose();
         IsLoaded = false;
         OnClosingEvent?.Invoke();
     }
@@ -106,6 +129,9 @@ public class Window
         OpenGl = new OpenGl(Handle);
         OpenGl.Initialize();
         OpenGl.ProcessShaders();
+
+        OpenAl = new OpenAl();
+        OpenAl.Initialize();
 
         Input.Input.Initialize(Handle);
 
@@ -120,13 +146,30 @@ public class Window
         _graphicsReady = true;
         IsLoaded = true;
         OnLoadEvent?.Invoke();
-        AspectRatio = (float)Handle.Size.X / Handle.Size.Y;
+        if (Application.IsEditor)
+            AspectRatio = (float)EditorViewport.X /  EditorViewport.Y;
+        else
+            AspectRatio = (float)Handle.Size.X / Handle.Size.Y;
     }
 
     private void OnUpdate(double deltaTime)
     {
+        if (Profiler.Enabled)
+        {
+            _updateCount++;
+            _upsTimer += deltaTime;
+            if (_upsTimer >= 1.0)
+            {
+                _currentUps = _updateCount;
+                Profiler.UpdateMetrics(_currentUps);
+                _updateCount = 0;
+                _upsTimer -= 1.0; 
+            }
+        }
+        ApplyProjectSettings();
         TimeManager.DeltaTime = (float)deltaTime * TimeManager.TimeScale;
         Input.Input.Update(deltaTime);
+        Dispatcher.ExecuteDispatchedActions();
         OnUpdateEvent?.Invoke(deltaTime);
         if (!Application.IsRunning) return;
         TimeManager.Timer += (float)deltaTime;
@@ -165,7 +208,7 @@ public class Window
         if (Profiler.Enabled || Profiler.Stopwatch.IsRunning)
         {
             Profiler.Stopwatch.Stop();
-            Profiler.UpdateMetrics((float)deltaTime);
+            Profiler.RenderMetrics((float)deltaTime);
         }
 
         if (!ImGui.Initialized || ImGui.Controller == null) return;
@@ -197,6 +240,14 @@ public class Window
             AspectRatio = (float)EditorViewport.X /  EditorViewport.Y;
         else
             AspectRatio = (float)targetSize.X / targetSize.Y;
+    }
+
+    public void UpdateAspectRatio()
+    {
+        if (Application.IsEditor)
+            AspectRatio = (float)EditorViewport.X /  EditorViewport.Y;
+        else
+            AspectRatio = (float)Handle.Size.X / Handle.Size.Y;
     }
 
     public void Resize(Vector2D<int> newSize)

@@ -776,5 +776,6 @@ public class ImGuiController : IDisposable
     _fontTexture.Dispose();
     _shader.Dispose();
     ImGuiNET.ImGui.DestroyContext(Context);
+    GC.SuppressFinalize(this);
   }
 }

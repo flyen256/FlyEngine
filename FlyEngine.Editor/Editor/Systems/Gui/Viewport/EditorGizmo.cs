@@ -139,7 +139,7 @@ public static class EditorGizmo
         var anyOtherHovered = false;
         anyOtherHovered = DrawRotationCircle(
             drawListPtr,
-            transformComponent,
+            ref transformComponent,
             transformComponent.Right,
             new Vector4(1, 0, 0, 1),
             scale,
@@ -149,7 +149,7 @@ public static class EditorGizmo
             anyOtherHovered);
         anyOtherHovered = DrawRotationCircle(
             drawListPtr,
-            transformComponent,
+            ref transformComponent,
             transformComponent.Up,
             new Vector4(0, 1, 0, 1),
             scale,
@@ -159,7 +159,7 @@ public static class EditorGizmo
             anyOtherHovered);
         anyOtherHovered = DrawRotationCircle(
             drawListPtr,
-            transformComponent,
+            ref transformComponent,
             transformComponent.Forward,
             new Vector4(0, 0, 1, 1),
             scale,
@@ -171,7 +171,7 @@ public static class EditorGizmo
 
     private static bool DrawRotationCircle(
         ImDrawListPtr drawListPtr,
-        TransformComponent transformComponent,
+        ref TransformComponent transformComponent,
         Vector3 axis,
         Vector4 color,
         float radius,

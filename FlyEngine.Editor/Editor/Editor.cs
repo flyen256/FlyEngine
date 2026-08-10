@@ -1,15 +1,21 @@
-﻿using System.Collections.Concurrent;
-using System.Numerics;
+﻿using System.Numerics;
 using FlyEngine.Core;
 using FlyEngine.Core.Assets;
+using FlyEngine.Core.Debugging;
+using FlyEngine.Core.Extensions;
+using FlyEngine.Core.Project;
+using FlyEngine.Core.SceneManagement;
 using FlyEngine.Core.Windowing;
 using FlyEngine.Editor.Assets;
+using FlyEngine.Editor.SceneManagement;
 using FlyEngine.Editor.Scripting;
 using FlyEngine.Editor.Systems;
 using FlyEngine.Editor.TaskQueue;
-using Microsoft.Extensions.Logging;
+using MemoryPack;
 using Silk.NET.Assimp;
 using Silk.NET.Maths;
+using File = System.IO.File;
+using Scene = FlyEngine.Core.SceneManagement.Scene;
 
 namespace FlyEngine.Editor;
 
@@ -17,8 +23,6 @@ internal abstract class EditorClass;
 
 public static class Editor
 {
-    private static readonly ILogger Logger = new Logger<EditorClass>(LoggerFactory.Create(b => b.AddConsole()));
-
     public static string[] AssimpExtensions
     {
         get
@@ -68,9 +72,7 @@ public static class Editor
         new EditorGui(),
         new EditorInput(),
         new EditorCameraMovement()];
-    
-    private static readonly ConcurrentQueue<Action> MainThreadQueue = new();
-    
+
     public static void Start(Window window)
     {
         Window = window;
@@ -83,8 +85,13 @@ public static class Editor
         Application.OpenWindow();
         EditorAction.OnWindowResize += OnWindowResize;
     }
+    
+    private static void OnLoad()
+    {
+        _ = LoadProject();
+    }
 
-    public static void OnClosing()
+    private static void OnClosing()
     {
         EditorAction.OnWindowResize -= OnWindowResize;
         Window = null;
@@ -94,32 +101,48 @@ public static class Editor
     {
         Window?.Resize(newSize.ToGeneric().As<int>());
     }
-    
-    public static void Dispatch(Action action)
-    {
-        MainThreadQueue.Enqueue(action);
-    }
 
-    private static void ExecuteDispatchedActions()
+    private static async Task LoadProject()
     {
-        while (MainThreadQueue.TryDequeue(out var action))
+        await TaskQueue.Enqueue(Scripts.CompileScriptsAsync, "Compiling scripts");
+        await TaskQueue.Enqueue(Assets.LoadModelsAsync, "Loading models");
+        await TaskQueue.Enqueue(EditorAssets.LoadAssetsAsync, "Loading assets");
+        var projectPath = GetProjectPath();
+        if (projectPath == null) return;
+        var projectFileExists = File.Exists(projectPath);
+        if (projectFileExists)
         {
             try
             {
-                action.Invoke();
+                await using var file = File.Open(projectPath, FileMode.Open);
+                var projectFile = MemoryPackSerializer.Deserialize<ProjectFile>(file.StreamToByteArray());
+                if (projectFile == null)
+                {
+                    ProjectFile.CurrentProject.SaveProject(projectPath);
+                    return;
+                }
+                ProjectFile.CurrentProject = projectFile;
+                if (ProjectFile.CurrentProject.LastLoadedScenePath != null &&
+                    File.Exists(ProjectFile.CurrentProject.LastLoadedScenePath))
+                {
+                    await TaskQueue.Enqueue(SceneManager.LoadScene, ProjectFile.CurrentProject.LastLoadedScenePath);
+                    SceneSnapshot.DeleteSnapshot();
+                }
             }
-            catch (Exception ex)
+            catch
             {
-                Logger.LogError($"Error executing dispatched action: {ex.Message}");
+                ProjectFile.CurrentProject.SaveProject(projectPath);
             }
         }
+        else
+            ProjectFile.CurrentProject.SaveProject(projectPath);
     }
 
-    private static void OnLoad()
+    private static string? GetProjectPath()
     {
-        TaskQueue.Enqueue(Scripts.CompileScriptsAsync, "Compiling scripts");
-        TaskQueue.Enqueue(Assets.LoadModelsAsync, "Loading models");
-        TaskQueue.Enqueue(EditorAssets.LoadAssetsAsync, "Loading assets");
+        if (CurrentProjectPath == null) return null;
+        var projectName = Path.GetFileName(CurrentProjectPath);
+        return Path.Combine(CurrentProjectPath, projectName + ".fly");
     }
 
     private static void OnFocusChanged(bool value)
@@ -130,7 +153,6 @@ public static class Editor
 
     private static void OnUpdate(double deltaTime)
     {
-        ExecuteDispatchedActions();
         foreach (var system in Systems)
             system.OnUpdate(deltaTime);
     }

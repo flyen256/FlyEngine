@@ -20,9 +20,12 @@ public static class ImGui
             minSize
         );
         var style = ImGuiNET.ImGui.GetStyle();
-        style.WindowRounding = 10f;
-        style.FrameRounding = 5f;
-        style.FramePadding = new Vector2(7f);
-        style.WindowPadding = new Vector2(10f);
+        var padding = new Vector2(8f, 4f);
+        style.FramePadding = padding;
+        style.WindowPadding = padding;
+        style.FrameRounding = 4f;
+        style.WindowRounding = 8f;
+        style.TabRounding = 4f;
+        style.ChildRounding = 8f;
     }
 }

@@ -1,4 +1,5 @@
 using FlyEngine.Core.Assets;
+using FlyEngine.Core.Debugging;
 using FlyEngine.Core.Serialization;
 using MemoryPack;
 
@@ -9,16 +10,20 @@ public static class SceneManager
     public static Scene? CurrentScene { get; private set; }
     public static bool IsLoading { get; private set; }
     public static float LoadingProgress { get; private set; }
-    public delegate void OnLoadProgressDelegate(float progress);
-    public static event OnLoadProgressDelegate? OnLoadProgress;
+
+    public static event Action<Scene?>? OnLoaded;
+    public static event Action<float>? OnLoadProgress;
 
     public static void LoadScene(Scene scene)
     {
+        CurrentScene?.UnloadScene();
         CurrentScene = scene;
+        OnLoaded?.Invoke(CurrentScene);
     }
 
     public static async Task LoadScene(string path)
     {
+        CurrentScene?.UnloadScene();
         IsLoading = true;
         var name = Path.GetFileName(path).Replace(".scene", "");
         Scene? scene;
@@ -33,17 +38,21 @@ public static class SceneManager
             scene = await MemoryPackSerializer.DeserializeAsync<Scene>(stream);
         }
         if (scene == null)
-            throw new Exception("Deserialize failed");
+        {
+            IsLoading = false;
+            Debug.LogError($"Failed to load scene: {path}");
+            return;
+        }
         scene.Path = path;
         scene.Name = name;
         CurrentScene = scene;
         IsLoading = false;
+        OnLoaded?.Invoke(CurrentScene);
     }
 
     public static void UnloadScene()
     {
-        if (CurrentScene != null)
-            AssetsManager.UnloadAsset(CurrentScene);
+        CurrentScene?.UnloadScene();
         CurrentScene = null;
     }
 }
