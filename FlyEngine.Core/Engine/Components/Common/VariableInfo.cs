@@ -1,7 +1,7 @@
 ﻿using System.Reflection;
 using System.Text;
 
-namespace FlyEngine.Editor.Systems;
+namespace FlyEngine.Core.Components;
 
 public class VariableInfo(MemberInfo memberInfo)
 {

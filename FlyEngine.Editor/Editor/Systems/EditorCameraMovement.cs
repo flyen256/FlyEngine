@@ -11,7 +11,7 @@ public class EditorCameraMovement : EditorSystem
 {
     private Vector3 _rotation = Vector3.Zero;
     
-    public override void OnUpdate(double deltaTime)
+    public override void OnUpdate(float deltaTime)
     {
         if (!EditorScene.ScenePressed) return;
         _rotation.X += Input.MouseInput.Y * 0.1f;

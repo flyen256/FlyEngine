@@ -16,23 +16,21 @@ public class EditorNavBar : EditorGuiWindow
 
     protected override async void OnRender(double deltaTime)
     {
-        if (ImGui.Button(Application.IsRunning ? "+" : "-"))
+        if (!ImGui.Button(Application.IsRunning ? "+" : "-")) return;
+        if (Editor.Scripts.CompileError)
         {
-            if (Editor.Scripts.CompileError)
-            {
-                await Editor.TaskQueue.Enqueue(Editor.Scripts.CompileScriptsAsync, "Compiling scripts");
-                return;
-            }
-            if (Application.IsRunning)
-            {
-                Application.Stop();
-                await Editor.TaskQueue.Enqueue(SceneSnapshot.RestoreSnapshotAsync, "Restoring scene snapshot");
-            }
-            else if (SceneManager.CurrentScene != null)
-            {
-                await Editor.TaskQueue.Enqueue(SceneSnapshot.CreateSnapshotAsync, SceneManager.CurrentScene, "Creating scene snapshot");
-                Application.Run();
-            }
+            await Editor.TaskQueue.Enqueue(Editor.Scripts.CompileScriptsAsync, "Compiling scripts");
+            return;
+        }
+        if (Application.IsRunning)
+        {
+            Application.Stop();
+            await Editor.TaskQueue.Enqueue(SceneSnapshot.RestoreSnapshotAsync, "Restoring scene snapshot");
+        }
+        else if (SceneManager.CurrentScene != null)
+        {
+            await Editor.TaskQueue.Enqueue(SceneSnapshot.CreateSnapshotAsync, SceneManager.CurrentScene, "Creating scene snapshot");
+            Application.Run();
         }
     }
 }

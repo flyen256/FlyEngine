@@ -9,6 +9,7 @@ using FlyEngine.Core.Windowing;
 using FlyEngine.Editor.Assets;
 using FlyEngine.Editor.SceneManagement;
 using FlyEngine.Editor.Scripting;
+using FlyEngine.Editor.Storage;
 using FlyEngine.Editor.Systems;
 using FlyEngine.Editor.TaskQueue;
 using MemoryPack;
@@ -68,10 +69,7 @@ public static class Editor
     private static string? _tempPath;
     
     private static FileSystemWatcher? _assetsWatcher;
-    private static readonly List<EditorSystem> Systems = [
-        new EditorGui(),
-        new EditorInput(),
-        new EditorCameraMovement()];
+    private static readonly List<EditorSystem> Systems = [];
 
     public static void Start(Window window)
     {
@@ -88,7 +86,16 @@ public static class Editor
     
     private static void OnLoad()
     {
+        AddSystem<EditorGui>();
+        AddSystem<EditorInput>();
+        AddSystem<EditorCameraMovement>();
         _ = LoadProject();
+    }
+
+    private static void AddSystem<T>() where T : EditorSystem
+    {
+        var instance = Activator.CreateInstance<T>();
+        Systems.Add(instance);
     }
 
     private static void OnClosing()
@@ -151,13 +158,13 @@ public static class Editor
             TaskQueue.Enqueue(Scripts.CompileScriptsAsync, "Compiling scripts");
     }
 
-    private static void OnUpdate(double deltaTime)
+    private static void OnUpdate(float deltaTime)
     {
         foreach (var system in Systems)
             system.OnUpdate(deltaTime);
     }
 
-    private static void OnRender(double deltaTime)
+    private static void OnRender(float deltaTime)
     {
         foreach (var system in Systems)
             system.OnRender(deltaTime);

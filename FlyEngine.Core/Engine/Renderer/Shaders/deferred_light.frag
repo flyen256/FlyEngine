@@ -30,8 +30,6 @@ uniform vec4 uPack2[MAX_LIGHTS];
 uniform vec4 uPack3[MAX_LIGHTS];
 uniform vec4 uPack4[MAX_LIGHTS];
 
-uniform int uNumShadowLights;
-uniform int uShadowLightIndices[MAX_SHADOW_LIGHTS];
 uniform vec4 uShadowUVRect[MAX_SHADOW_LIGHTS];
 uniform mat4 uShadowMatrices[MAX_SHADOW_LIGHTS];
 
@@ -109,51 +107,45 @@ float hash(vec2 p)
 float shadowVisibility(int lightIndex, vec3 worldPos, vec3 N, vec3 lightDir, int type)
 {
     if (uShadowEnabled == 0) return 1.0;
+    int s = lightIndex;
 
-    for (int s = 0; s < uNumShadowLights; s++)
+    vec4 rect = uShadowUVRect[s];
+    mat4 lightSpace = uShadowMatrices[s];
+
+    float normalBias = 0.002;
+    vec3 biasedWorldPos = worldPos + N * normalBias;
+
+    vec4 ls = lightSpace * vec4(biasedWorldPos, 1.0);
+    vec3 proj = ls.xyz / ls.w;
+    proj = proj * 0.5 + 0.5;
+
+    vec2 baseShadowUV = proj.xy * rect.zw + rect.xy;
+    float zReceiver = proj.z;
+
+    float depthBias = (type == LT_SPOT) ? 0.0002 : 0.0001;
+
+    vec2 texelSize = 1.0 / vec2(textureSize(uShadowMap, 0));
+    float shadow = 0.0;
+    const int radius = 2;
+
+    float angle = hash(proj.xy) * 6.2831853;
+    mat2 rot = mat2(cos(angle), -sin(angle), sin(angle), cos(angle));
+
+    for (int x = -radius; x <= radius; x++)
     {
-        if (uShadowLightIndices[s] != lightIndex) continue;
-
-        vec4 rect = uShadowUVRect[s];
-        mat4 lightSpace = uShadowMatrices[s];
-
-        float normalBias = 0.002;
-        vec3 biasedWorldPos = worldPos + N * normalBias;
-
-        vec4 ls = lightSpace * vec4(biasedWorldPos, 1.0);
-        vec3 proj = ls.xyz / ls.w;
-        proj = proj * 0.5 + 0.5;
-
-        vec2 baseShadowUV = proj.xy * rect.zw + rect.xy;
-        float zReceiver = proj.z;
-
-        float depthBias = (type == LT_SPOT) ? 0.0002 : 0.0001;
-
-        vec2 texelSize = 1.0 / vec2(textureSize(uShadowMap, 0));
-        float shadow = 0.0;
-        const int radius = 2;
-
-        float angle = hash(proj.xy) * 6.2831853;
-        mat2 rot = mat2(cos(angle), -sin(angle), sin(angle), cos(angle));
-
-        for (int x = -radius; x <= radius; x++)
+        for (int y = -radius; y <= radius; y++)
         {
-            for (int y = -radius; y <= radius; y++)
-            {
-                vec2 offset = vec2(x, y) * texelSize;
-                offset = rot * offset;
+            vec2 offset = vec2(x, y) * texelSize;
+            offset = rot * offset;
 
-                vec2 sampleUV = baseShadowUV + offset;
+            vec2 sampleUV = baseShadowUV + offset;
 
-                float depth = texture(uShadowMap, sampleUV).r;
-                shadow += (zReceiver <= depth + depthBias) ? 1.0 : 0.0;
-            }
+            float depth = texture(uShadowMap, sampleUV).r;
+            shadow += (zReceiver <= depth + depthBias) ? 1.0 : 0.0;
         }
-
-        return shadow;
     }
 
-    return 1.0;
+    return shadow;
 }
 
 vec3 worldRayDir(vec2 uv)
@@ -277,11 +269,6 @@ void main()
         vec3 sunColor = vec3(1.0, 0.9, 0.6) * 30.0;
         sky += sunColor * (sunDisk);
 
-//        float moonDot = dot(rd, -normalize(uSunDirWorld));
-//        float moonDisk = smoothstep(0.998, 1.0, moonDot);
-//
-//        vec3 moonColor = vec3(1.0, 0.9, 0.6) * 30.0;
-//        sky += moonColor * (moonDisk);
         out_color = vec4(sky, 1.0);
         return;
     }

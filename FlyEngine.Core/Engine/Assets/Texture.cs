@@ -1,91 +1,85 @@
 using FlyEngine.Core.Renderer;
-using Silk.NET.Assimp;
+using MemoryPack;
 using Silk.NET.OpenGL;
-using StbImageSharp;
 
 namespace FlyEngine.Core.Assets;
 
-public class Texture : Asset
+public enum TextureType
 {
-    public AssimpString? AssimpPath { get; private set; }
-    public TextureType Type { get; }
+    Texture2D = 3553
+}
 
-    private uint _handle;
-    private readonly OpenGl _gl;
+[MemoryPackable]
+public partial class Texture : Asset
+{
+    [MemoryPackInclude]
+    public TextureType TextureType { get; set; } = TextureType.Texture2D;
+    [MemoryPackInclude]
+    public string? AssimpPath { get; }
+
+    private readonly uint _width, _height;
+    private readonly byte[] _data;
+    private readonly OpenGl _openGl;
     
-    public Texture(Guid guid, TextureType type, AssimpString path, OpenGl gl) : base(guid)
+    public uint Handle { get; private set; }
+    public ulong BindlessHandle { get; private set; }
+    
+    [MemoryPackConstructor]
+    public Texture(Guid guid): base(guid) { }
+
+    public Texture(
+        Guid guid,
+        byte[] data,
+        uint width,
+        uint height,
+        OpenGl openGl,
+        string assimpPath) : base(guid)
     {
-        AssimpPath = path;
-        Type = type;
-        _gl = gl;
+        _data = data;
+        _width = width;
+        _height = height;
+        _openGl = openGl;
+        AssimpPath = assimpPath;
+        AssetsManager.AddAsset(this);
     }
 
-    public Texture(Guid guid, TextureType type, string path, OpenGl gl) : base(guid)
+    public override unsafe void Load(GL? gl = null)
     {
-        Path = path;
-        Type = type;
-        _gl = gl;
-    }
+        if (gl == null) return;
+        Handle = gl.CreateTexture((TextureTarget)TextureType);
+        gl.TextureStorage2D(Handle, 1, SizedInternalFormat.Rgba8, 1, 1);
 
-    public override unsafe void Load(GL? _ = null)
-    {
-        var gl = _gl.Gl;
-        _handle = gl.GenTexture();
-        gl.BindTexture(TextureTarget.Texture2D, _handle);
-        var imageResult = LoadImage() ?? LoadAssimpImage();
-        if (imageResult != null)
-        {
-            gl.BindTexture(TextureTarget.Texture2D, 0);
-            fixed (byte* ptr = imageResult.Data)
-                gl.TexImage2D(TextureTarget.Texture2D, 0, InternalFormat.Rgba, (uint)imageResult.Width, (uint)imageResult.Height, 0, PixelFormat.Rgba, PixelType.UnsignedByte, ptr);
-            SetParameters();
-        }
+        SetParameters();
+        
+        fixed (void* ptr = _data)
+            gl.TextureSubImage2D(
+                Handle, 
+                0, 0, 0,
+                _width, _height,
+                PixelFormat.Rgba, PixelType.UnsignedByte,
+                ptr);
 
-        gl.BindTexture(TextureTarget.Texture2D, 0);
+        var bindless = _openGl.BindlessTexture.GetTextureHandle(Handle);
+        _openGl.BindlessTexture.MakeTextureHandleResident(bindless);
+        BindlessHandle = bindless;
+
         base.Load(gl);
-    }
-    
-    public void Bind(TextureUnit textureSlot = TextureUnit.Texture0)
-    {
-        _gl.Gl.ActiveTexture(textureSlot);
-        _gl.Gl.BindTexture(TextureTarget.Texture2D, _handle);
-    }
-
-    private ImageResult? LoadImage()
-    {
-        if (Path == null) return null;
-        var assembly = typeof(OpenGl).Assembly;
-        var names = assembly.GetManifestResourceNames();
-        var findName = names.ToList().Find(s => s.Contains(Path));
-        if (findName == null)
-            return null;
-        var stream = assembly.GetManifestResourceStream(findName);
-        return stream == null ?
-            throw new Exception($"Resource {findName} not found!") :
-            ImageResult.FromStream(stream, ColorComponents.RedGreenBlueAlpha);
-    }
-    
-    private ImageResult? LoadAssimpImage()
-    {
-        if (AssimpPath == null) return null;
-        return null;
     }
     
     private void SetParameters()
     {
-        _gl.Gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int) GLEnum.ClampToEdge);
-        _gl.Gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int) GLEnum.ClampToEdge);
-        _gl.Gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int) GLEnum.LinearMipmapLinear);
-        _gl.Gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int) GLEnum.Linear);
-        _gl.Gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureBaseLevel, 0);
-        _gl.Gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMaxLevel, 8);
-        _gl.Gl.GenerateMipmap(TextureTarget.Texture2D);
+        _openGl.Gl.TextureParameter(Handle, TextureParameterName.TextureWrapS, (int) GLEnum.ClampToEdge);
+        _openGl.Gl.TextureParameter(Handle, TextureParameterName.TextureWrapT, (int) GLEnum.ClampToEdge);
+        _openGl.Gl.TextureParameter(Handle, TextureParameterName.TextureMinFilter, (int) TextureMinFilter.Linear);
+        _openGl.Gl.TextureParameter(Handle, TextureParameterName.TextureMagFilter, (int) TextureMagFilter.Linear);
+        _openGl.Gl.TextureParameter(Handle, TextureParameterName.TextureBaseLevel, 0);
+        _openGl.Gl.TextureParameter(Handle, TextureParameterName.TextureMaxLevel, 8);
+        _openGl.Gl.GenerateTextureMipmap(Handle);
     }
 
     public override void Unload()
     {
-        var gl = _gl.Gl;
-        gl.DeleteTexture(_handle);
+        _openGl.Gl.DeleteTexture(Handle);
         base.Unload();
     }
 }

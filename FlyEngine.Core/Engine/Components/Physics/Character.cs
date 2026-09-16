@@ -31,7 +31,7 @@ public class Character : Behaviour
 			Up = Vector3.UnitY,
 			PredictiveContactDistance = 0.1f
 		};
-		_character = new CharacterVirtual(settings, Transform.Position, Transform.Rotation, 0, Core.Physics.Physics.System);
+		_character = new CharacterVirtual(settings, Transform.Position, Transform.Rotation, 0, Physics.Physics.System);
 	}
 
 	public override void OnUpdate(float deltaTime)
@@ -41,8 +41,8 @@ public class Character : Behaviour
 		_character.ExtendedUpdate(
 			(float)deltaTime,
 			new ExtendedUpdateSettings(),
-			Core.Physics.Physics.Layers.Moving,
-			Core.Physics.Physics.System
+			Physics.Physics.Layers.Moving,
+			Physics.Physics.System
 		);
 		Transform.Position = _character.Position;
     }

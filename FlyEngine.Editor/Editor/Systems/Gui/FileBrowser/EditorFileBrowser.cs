@@ -1,4 +1,5 @@
-﻿using FlyEngine.Core.SceneManagement;
+﻿using System.Reflection;
+using FlyEngine.Core.SceneManagement;
 using FlyEngine.Editor.SceneManagement;
 using ImGuiNET;
 using MemoryPack;
@@ -17,10 +18,12 @@ public class EditorFileBrowser : EditorGuiWindow
     protected override string Title => "File Browser";
 
     private bool _createFile;
+    private bool _createFolder;
 
     private Type? _currentCreateType;
 
     private string _fileName = string.Empty;
+    private string _folderName = string.Empty;
 
     protected override void BeforeBegin()
     {
@@ -56,12 +59,13 @@ public class EditorFileBrowser : EditorGuiWindow
         
         if (ImGuiNet.BeginChild("Files"))
         {
+            CreateContextWindow();
             foreach (var dir in Directory.GetDirectories(_currentDirectory))
             {
                 if (ImGuiNet.Selectable($"[Folder] {Path.GetFileName(dir)}", false))
                     _currentDirectory = dir;
+                FolderContextWindow(dir);
             }
-            CreateFileContextWindow();
 
             foreach (var file in Directory.GetFiles(_currentDirectory))
             {
@@ -80,7 +84,19 @@ public class EditorFileBrowser : EditorGuiWindow
 
                 if (ImGuiNet.InputText("New " + _currentCreateType.Name, ref _fileName, 100, ImGuiInputTextFlags.EnterReturnsTrue))
                 {
-                    ExecuteFileCreation(_fileName);
+                    ExecuteCreation(_fileName);
+                    StopCreation();
+                }
+                else if (ImGuiNet.IsItemDeactivated() && !ImGuiNet.IsKeyPressed(ImGuiKey.Enter) && !ImGuiNet.IsKeyPressed(ImGuiKey.KeypadEnter))
+                    StopCreation();
+            }
+            else if (_createFolder)
+            {
+                ImGuiNet.SetKeyboardFocusHere();
+
+                if (ImGuiNet.InputText("New Folder", ref _folderName, 100, ImGuiInputTextFlags.EnterReturnsTrue))
+                {
+                    ExecuteCreation(_folderName);
                     StopCreation();
                 }
                 else if (ImGuiNet.IsItemDeactivated() && !ImGuiNet.IsKeyPressed(ImGuiKey.Enter) && !ImGuiNet.IsKeyPressed(ImGuiKey.KeypadEnter))
@@ -93,16 +109,30 @@ public class EditorFileBrowser : EditorGuiWindow
     private void StopCreation()
     {
         _createFile = false;
+        _createFolder = false;
         _fileName = string.Empty;
+        _folderName = string.Empty;
         _currentCreateType = null;
     }
     
-    private void ExecuteFileCreation(string name)
+    private void ExecuteCreation(string name)
     {
-        if (string.IsNullOrWhiteSpace(name) || _currentDirectory == null) return;
+        string fullPath;
+        if (!string.IsNullOrWhiteSpace(name) && _createFolder && _currentDirectory != null)
+        {
+            fullPath = Path.Combine(_currentDirectory, name);
+            Directory.CreateDirectory(fullPath);
+            return;
+        }
+        if (string.IsNullOrWhiteSpace(name) || _currentDirectory == null || _currentCreateType == null) return;
 
-        var extension = _currentCreateType == typeof(Scene) ? ".scene" : ".data";
-        var fullPath = Path.Combine(_currentDirectory, name + extension);
+        var extension = ".asset";
+        
+        var fieldInfo = _currentCreateType.GetField("Extension", BindingFlags.Static | BindingFlags.Public);
+        if (fieldInfo != null)
+            extension = (string)fieldInfo.GetValue(null)!;
+        
+        fullPath = Path.Combine(_currentDirectory, name + extension);
 
         if (File.Exists(fullPath))
         {
@@ -112,19 +142,16 @@ public class EditorFileBrowser : EditorGuiWindow
 
         try
         {
-            if (_currentCreateType == typeof(Scene))
-            {
-                var newScene = new Scene(Guid.NewGuid());
+            var instance = Activator.CreateInstance(_currentCreateType);
 
-                var bin = MemoryPackSerializer.Serialize(newScene);
-                File.WriteAllBytes(fullPath, bin);
-            }
+            var bin = MemoryPackSerializer.Serialize(instance);
+            File.WriteAllBytes(fullPath, bin);
         
-            _logger.LogInformation($"Successfully created: {fullPath}");
+            _logger.LogInformation("Successfully created: {FullPath}", fullPath);
         }
         catch (Exception ex)
         {
-            _logger.LogError($"Failed to create file: {ex.Message}");
+            _logger.LogError("Failed to create file: {ExMessage}", ex.Message);
         }
     }
 
@@ -138,11 +165,11 @@ public class EditorFileBrowser : EditorGuiWindow
                 try 
                 {
                     File.Delete(file);
-                    _logger.LogInformation($"Deleted: {file}");
+                    _logger.LogInformation("Deleted: {File}", file);
                 }
                 catch (Exception ex) 
                 {
-                    _logger.LogError($"Delete failed: {ex.Message}");
+                    _logger.LogError("Delete failed: {ExMessage}", ex.Message);
                 }
             }
             if (ImGuiNet.MenuItem("Rename")) { }
@@ -150,14 +177,41 @@ public class EditorFileBrowser : EditorGuiWindow
         }
     }
 
-    private void CreateFileContextWindow()
+    private void FolderContextWindow(string path)
+    {
+        if (ImGuiNet.BeginPopupContextItem("FolderContextMenu" + path))
+        {
+            if (ImGuiNet.MenuItem("Delete Folder"))
+            {
+                try 
+                {
+                    Directory.Delete(path);
+                    _logger.LogInformation("Deleted: {Path}", path);
+                }
+                catch (Exception ex) 
+                {
+                    _logger.LogError("Delete failed: {ExMessage}", ex.Message);
+                }
+            }
+            if (ImGuiNet.MenuItem("Rename")) { }
+            ImGuiNet.EndPopup();
+        }
+    }
+
+    private void CreateContextWindow()
     {
         if (ImGuiNet.BeginPopupContextWindow("CreateFileContextMenu"))
         {
-            if (ImGuiNet.MenuItem("New Scene"))
+            if (ImGuiNet.MenuItem("New Folder"))
+                _createFolder = true;
+            ImGuiNet.Separator();
+            foreach (var type in EditorGui.CreateFileMenuTypes)
             {
-                _currentCreateType = typeof(Scene);
-                _createFile = true;
+                if (ImGuiNet.MenuItem("New " + type.Name))
+                {
+                    _currentCreateType = type;
+                    _createFile = true;
+                }
             }
             
             ImGuiNet.EndPopup();
@@ -166,7 +220,7 @@ public class EditorFileBrowser : EditorGuiWindow
     
     private async Task HandleFileOpen(string path)
     {
-        if (path.EndsWith(".scene")) 
+        if (path.EndsWith(".scene"))
         {
             try
             {

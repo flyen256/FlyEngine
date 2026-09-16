@@ -115,6 +115,16 @@ public static class Physics
         var body = BodyInterface.CreateAndAddBody(settings, Activation.Activate);
         return body.ID;
     }
+    
+    public static void DestroyBody(BodyID bodyId)
+    {
+        if (bodyId.IsInvalid) return;
+
+        var bodyInterface = System.BodyInterface;
+
+        bodyInterface.RemoveBody(bodyId);
+        bodyInterface.DestroyBody(bodyId);
+    }
 
     public static bool Raycast(Vector3 origin, Vector3 direction, float maxDistance, out RaycastHit hit)
     {

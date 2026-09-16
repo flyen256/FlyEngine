@@ -5,7 +5,7 @@
         <TargetFramework>net9.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
-        <LangVersion>13</LangVersion>
+        <LangVersion>14</LangVersion>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     </PropertyGroup>
     
@@ -25,6 +25,13 @@
       <None Update="lib\imguizmo.dll">
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       </None>
+    </ItemGroup>
+    
+    <ItemGroup>
+      <None Remove="Assets\Locales\ru.json" />
+      <EmbeddedResource Include="Assets\Locales\ru.json" />
+      <None Remove="Assets\Locales\en.json" />
+      <EmbeddedResource Include="Assets\Locales\en.json" />
     </ItemGroup>
 
 </Project>

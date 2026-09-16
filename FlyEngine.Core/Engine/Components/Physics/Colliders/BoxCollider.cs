@@ -9,7 +9,7 @@ public class BoxCollider : Collider
 
     protected override void CreateBody(MotionType motionType)
     {
-        BodyId = Core.Physics.Physics.CreateBody(new BoxShape(HalfExtent), Transform.Position, Transform.Rotation,
-            Core.Physics.Physics.Layers.Moving, motionType);
+        BodyId = Physics.Physics.CreateBody(new BoxShape(HalfExtent), Transform.Position, Transform.Rotation,
+            Physics.Physics.Layers.Moving, motionType);
     }
 }

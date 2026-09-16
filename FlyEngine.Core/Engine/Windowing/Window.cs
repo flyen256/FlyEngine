@@ -11,6 +11,7 @@ using FlyEngine.Core.SceneManagement;
 using FlyEngine.Core.Threading;
 using Silk.NET.Maths;
 using Silk.NET.Windowing;
+using TinyDialogsNet;
 
 namespace FlyEngine.Core.Windowing;
 
@@ -27,8 +28,8 @@ public class Window
     protected readonly ApplicationWindowOptions WindowOptions;
 
     public event Action? OnLoadEvent;
-    public event Action<double>? OnUpdateEvent;
-    public event Action<double>? OnRenderEvent;
+    public event Action<float>? OnUpdateEvent;
+    public event Action<float>? OnRenderEvent;
     public event Action<bool>? OnFocusChanged;
     public event Action? OnClosingEvent;
     
@@ -127,8 +128,18 @@ public class Window
     private void OnLoad()
     {
         OpenGl = new OpenGl(Handle);
-        OpenGl.Initialize();
-        OpenGl.ProcessShaders();
+        if (!OpenGl.Initialize(out var message))
+        {
+            TinyDialogs.MessageBox(
+                "Failed to initialize OpenGL",
+                message,
+                MessageBoxDialogType.Ok,
+                MessageBoxIconType.Error,
+                MessageBoxButton.Ok);
+            Console.WriteLine("Failed to initialize opengl: " + message);
+            Application.Quit();
+            return;
+        }
 
         OpenAl = new OpenAl();
         OpenAl.Initialize();
@@ -168,27 +179,30 @@ public class Window
         }
         ApplyProjectSettings();
         TimeManager.DeltaTime = (float)deltaTime * TimeManager.TimeScale;
-        Input.Input.Update(deltaTime);
+        TimeManager.UnscaledDeltaTime = (float)deltaTime;
+        Input.Input.Update(TimeManager.UnscaledDeltaTime);
         Dispatcher.ExecuteDispatchedActions();
-        OnUpdateEvent?.Invoke(deltaTime);
+        OnUpdateEvent?.Invoke(TimeManager.UnscaledDeltaTime);
         if (!Application.IsRunning) return;
-        TimeManager.Timer += (float)deltaTime;
+        TimeManager.Timer += TimeManager.UnscaledDeltaTime;
         if (_lastLoadedScene != Scene && Scene != null && !SceneManager.IsLoading)
         {
             _lastLoadedScene = Scene;
             _lastLoadedScene.OnLoad();
         }
-        Physics.Physics.System.Update((float)deltaTime * TimeManager.TimeScale, 1, Physics.Physics.JobSystem);
+        Physics.Physics.System.Update(TimeManager.DeltaTime, 1, Physics.Physics.JobSystem);
         if (Scene == null) return;
         foreach (var behaviour in Scene.Behaviours.Where(behaviour => behaviour.IsActive()))
-            behaviour.OnUpdate((float)deltaTime * TimeManager.TimeScale);
-        Scene.EcsWorld.Update((float)deltaTime);
+            behaviour.OnUpdate(TimeManager.DeltaTime);
+        Scene.EcsWorld.Update(TimeManager.UnscaledDeltaTime);
     }
 
-    private void OnRender(double deltaTime)
+    private void OnRender(double dt)
     {
         if (Profiler.Enabled)
             Profiler.Stopwatch.Restart();
+        var deltaTime = (float)dt;
+        var scaledDeltaTime = deltaTime * TimeManager.TimeScale;
         var activeCameras = Scene?.Cameras.Where(camera => camera.IsActive()).ToList();
         Camera? camera = null;
         if (activeCameras != null)
@@ -204,15 +218,15 @@ public class Window
         
         if (OpenGl == null) return;
 
-        OpenGl.RenderPipeline.Render((float)deltaTime * TimeManager.TimeScale, IsEditorSceneOpened);
+        OpenGl.RenderPipeline.Render(scaledDeltaTime, IsEditorSceneOpened);
         if (Profiler.Enabled || Profiler.Stopwatch.IsRunning)
         {
             Profiler.Stopwatch.Stop();
-            Profiler.RenderMetrics((float)deltaTime);
+            Profiler.RenderMetrics(deltaTime);
         }
 
         if (!ImGui.Initialized || ImGui.Controller == null) return;
-        ImGui.Controller.Update((float)deltaTime);
+        ImGui.Controller.Update(deltaTime);
         if (Scene != null)
         {
             var renderers = CollectionsMarshal.AsSpan(Scene.GuiWindows.ToList());
@@ -223,8 +237,8 @@ public class Window
                 renderer.Render();
             }
         }
-        Scene?.Update(deltaTime * TimeManager.TimeScale);
-        OnRenderEvent?.Invoke(deltaTime * TimeManager.TimeScale);
+        Scene?.Update(scaledDeltaTime);
+        OnRenderEvent?.Invoke(scaledDeltaTime);
         ImGui.Controller.Render();
     }
 

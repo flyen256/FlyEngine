@@ -3,38 +3,28 @@ using System.Reflection;
 using FlyEngine.Core.Assets;
 using FlyEngine.Core.Components;
 using FlyEngine.Core.CustomAttributes;
+using FlyEngine.Core.Debugging;
 using FlyEngine.Core.Renderer;
-using FlyEngine.Core.Serialization;
-using Microsoft.Extensions.Logging;
 using ImGuiNet = ImGuiNET.ImGui;
 
 namespace FlyEngine.Editor.Systems;
 
 public class PropertyRenderer
 {
-    private static readonly ILogger Logger = new Logger<PropertyRenderer>(LoggerFactory.Create(b => b.AddConsole()));
-    
     private delegate bool PropertyRendererDelegate(VariableInfo variableInfo, Component component, out bool changed);
     
-    private readonly Dictionary<Type, PropertyRendererDelegate> _types;
-    private readonly EditorInspector _inspector;
-
-    public PropertyRenderer(EditorInspector inspector)
+    private readonly Dictionary<Type, PropertyRendererDelegate> _types = new()
     {
-        _inspector = inspector;
-        _types = new Dictionary<Type, PropertyRendererDelegate>
-        {
-            { typeof(float), RenderFloat },
-            { typeof(int), RenderInt },
-            { typeof(Enum), RenderEnum },
-            { typeof(Vector2), RenderVector2 },
-            { typeof(Vector3), RenderVector3 },
-            { typeof(Color), RenderColor },
-            { typeof(Asset), RenderAsset },
-            { typeof(bool), RenderBool },
-            { typeof(ComponentRef<>), RenderComponentRef }
-        };
-    }
+        { typeof(float), RenderFloat },
+        { typeof(int), RenderInt },
+        { typeof(Enum), RenderEnum },
+        { typeof(Vector2), RenderVector2 },
+        { typeof(Vector3), RenderVector3 },
+        { typeof(Color), RenderColor },
+        { typeof(Asset), RenderAsset },
+        { typeof(bool), RenderBool },
+        { typeof(ComponentRef<>), RenderComponentRef }
+    };
 
     public void Render(VariableInfo variableInfo, Component component)
     {
@@ -153,24 +143,28 @@ public class PropertyRenderer
     {
         changed = false;
         if (variableInfo.GetValue(component) is not Color c) return false;
-        var vec = c.ToVector3();
-        changed = ImGuiNet.ColorPicker3(variableInfo.DisplayName + $"##{component.GetType().Name}", ref vec);
-        if (variableInfo.GetValue(component) is not Color cc || cc.ToVector3() == vec) return false;
-        variableInfo.SetValue(component, Color.FromVector3(vec));
+        var vec = c.ToVector4();
+        changed = ImGuiNet.ColorPicker4(variableInfo.DisplayName + $"##{component.GetType().Name}", ref vec);
+        if (variableInfo.GetValue(component) is not Color cc || cc.ToVector4() == vec) return false;
+        variableInfo.SetValue(component, Color.FromVector4(vec));
         EditorAction.MarkDirty();
         return false;
     }
 
-    private bool RenderAsset(VariableInfo variableInfo, Component component, out bool changed)
+    private static bool RenderAsset(VariableInfo variableInfo, Component component, out bool changed)
     {
         changed = false;
         var label = $"Select Asset##{variableInfo.Name}{component.GetType().Name}";
         if (variableInfo.GetValue(component) is Asset asset)
             label = asset.Name + $"##{variableInfo.Name}{component.GetType().Name}";
-        if (ImGuiNet.Button(label))
+        
+        if (ImGuiNet.Button(label) &&
+            EditorGui.Instance != null &&
+            EditorGui.Instance.Popups.Find(p => p is AssetSelectorPopup) is AssetSelectorPopup popup)
         {
-            _inspector.OpenAssetSelector(variableInfo, component);
-            _inspector.CurrentAssetsType = variableInfo.VariableType;
+            popup.VariableInfo = variableInfo;
+            popup.Object = component;
+            popup.Open();
         }
         ImGuiNet.SameLine();
         ImGuiNet.Text(variableInfo.DisplayName);
@@ -224,11 +218,11 @@ public class PropertyRenderer
                 {
                     var draggedOuter = *(GameObject*)payload.Data;
                     var foundComponent = draggedOuter.GetComponent(componentType);
-            
+                    
                     if (foundComponent != null)
                     {
                         var valueProperty = refType.GetProperty("Value");
-
+                        
                         if (currentRefInstance == null)
                         {
                             currentRefInstance = Activator.CreateInstance(
@@ -237,7 +231,7 @@ public class PropertyRenderer
                                 null,
                                 [foundComponent], 
                                 null);
-
+                            
                             if (currentRefInstance != null) variableInfo.SetValue(component, currentRefInstance);
                         }
                         else

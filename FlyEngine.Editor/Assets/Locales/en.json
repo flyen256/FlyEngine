@@ -1,0 +1,22 @@
+{
+    "settings": {
+        "general": {
+            "name": "General",
+            "title": "General settings",
+            "project_name": "Project name"
+        },
+        "video": {
+            "name": "Video",
+            "title": "Video settings"
+        },
+        "cpu": {
+            "name": "Cpu",
+            "title": "Cpu settings"
+        },
+        "editor": {
+            "name": "Editor",
+            "title": "Editor settings",
+            "language": "Language"
+        }
+    }
+}

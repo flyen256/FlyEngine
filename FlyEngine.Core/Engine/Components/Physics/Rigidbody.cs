@@ -28,7 +28,7 @@ public class Rigidbody : Behaviour
         }
         if (MotionType != MotionType.Dynamic || IsKinematic)
         {
-            Core.Physics.Physics.SetPosition(_collider.BodyId, Transform.Position);
+            Physics.Physics.SetPosition(_collider.BodyId, Transform.Position);
             return;
         }
 
@@ -39,25 +39,25 @@ public class Rigidbody : Behaviour
     public void AddForce(Vector3 force)
     {
         if (CanApplyPhysics())
-            Core.Physics.Physics.BodyInterface.AddForce(_collider!.BodyId, force);
+            Physics.Physics.BodyInterface.AddForce(_collider!.BodyId, force);
     }
     
     public void AddImpulse(Vector3 impulse)
     {
         if (CanApplyPhysics())
-            Core.Physics.Physics.BodyInterface.AddImpulse(_collider!.BodyId, impulse);
+            Physics.Physics.BodyInterface.AddImpulse(_collider!.BodyId, impulse);
     }
     
     public void AddForce(Vector3 force, Vector3 worldPosition)
     {
         if (CanApplyPhysics())
-            Core.Physics.Physics.BodyInterface.AddForce(_collider!.BodyId, force, worldPosition);
+            Physics.Physics.BodyInterface.AddForce(_collider!.BodyId, force, worldPosition);
     }
 
     public void AddImpulse(Vector3 impulse, Vector3 worldPosition)
     {
         if (CanApplyPhysics())
-            Core.Physics.Physics.BodyInterface.AddImpulse(_collider!.BodyId, impulse, worldPosition);
+            Physics.Physics.BodyInterface.AddImpulse(_collider!.BodyId, impulse, worldPosition);
     }
 
     private bool CanApplyPhysics()
@@ -71,14 +71,14 @@ public class Rigidbody : Behaviour
     private Vector3 GetPosition()
     {
         return _collider != null && _collider.IsValid() ?
-            Core.Physics.Physics.GetPosition(_collider.BodyId) :
+            Physics.Physics.GetPosition(_collider.BodyId) :
             Vector3.Zero;
     }
     
     private Quaternion GetRotation()
     {
         return _collider != null && _collider.IsValid() ?
-            Core.Physics.Physics.GetRotation(_collider.BodyId) :
+            Physics.Physics.GetRotation(_collider.BodyId) :
             Quaternion.Identity;
     }
 }

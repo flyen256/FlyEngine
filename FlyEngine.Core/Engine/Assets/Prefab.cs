@@ -2,5 +2,5 @@
 
 public class Prefab(Guid guid) : Asset(guid)
 {
-    
+    public static string Extension => ".prefab";
 }

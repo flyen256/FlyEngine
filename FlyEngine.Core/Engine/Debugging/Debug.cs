@@ -28,6 +28,11 @@ public static class Debug
         Log(LogLevel.Error, message);
     }
 
+    public static void LogDebug(string message)
+    {
+        Log(LogLevel.Debug, message);
+    }
+
     public static void ClearLogs()
     {
         Logs.Clear();

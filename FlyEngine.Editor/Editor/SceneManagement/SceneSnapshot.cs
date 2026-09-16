@@ -41,7 +41,6 @@ public static class SceneSnapshot
         if (SnapshotPath == null || !Editor.FileExists(SnapshotPath)) return;
         try
         {
-            SceneManager.UnloadScene();
             Scene? scene;
             await using (var snapshotFile = File.Open(SnapshotPath, FileMode.Open))
                 scene = await MemoryPackSerializer.DeserializeAsync<Scene>(snapshotFile);

@@ -1,5 +1,6 @@
 ﻿using System.Text.Json;
 using System.Text.Json.Serialization;
+using FlyEngine.Core.Components;
 
 namespace FlyEngine.Core.Serialization.Json;
 

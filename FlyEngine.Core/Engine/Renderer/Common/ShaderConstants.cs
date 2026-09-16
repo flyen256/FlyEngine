@@ -2,7 +2,6 @@
 
 public static class ShaderConstants
 {
-    public const string Model = "uModel";
     public const string Projection = "uProjection";
     public const string View = "uView";
     public const string LightMatrix = "uLightMatrix";
@@ -11,7 +10,6 @@ public static class ShaderConstants
     public const string Skybox = "uSkybox";
     public const string ShadowEnabled = "uShadowEnabled";
     public const string ShadowDirIndex = "uShadowDirIndex";
-    public const string LightSpaceMatrix = "uLightSpaceMatrix";
     public const string SunDirWorld = "uSunDirWorld";
     
     public const string FogDensity = "uFogDensity";
@@ -36,16 +34,10 @@ public static class ShaderConstants
     public const string CameraPosition = "uCameraPos";
     public const string AmbientColor = "uAmbientColor";
     public const string DitherStrength = "uDitherStrength";
-    public const string AlbedoTint = "uAlbedoTint";
-    public const string Metallic = "uMetallic";
-    public const string Smoothness = "uSmoothness";
-    public const string GizmoColor = "uGizmoColor";
-    public const string NumShadowLights = "uNumShadowLights";
 
     public static string Pack(int packIndex, int index) => $"uPack{packIndex}[{index}]";
-		public static string ShadowUVRect(int index) => $"uShadowUVRect[{index}]";
-		public static string ShadowLightIndex(int index) => $"uShadowLightIndices[{index}]";
-		public static string ShadowMatrix(int index) => $"uShadowMatrices[{index}]";
+	public static string ShadowUvRect(int index) => $"uShadowUVRect[{index}]";
+	public static string ShadowMatrix(int index) => $"uShadowMatrices[{index}]";
 
     public static class PostProcess
     {

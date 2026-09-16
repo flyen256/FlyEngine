@@ -1,13 +1,30 @@
-#version 330 core
+#version 460 core
+#extension GL_ARB_shader_draw_parameters : enable
+#extension GL_ARB_bindless_texture : require
 
 layout (location = 0) in vec3 aPosition;
-layout (location = 1) in vec2 aTextureCoord;
-layout (location = 2) in vec3 aNormal;
 
-uniform mat4 uModel;
+struct ObjectMaterialData {
+    mat4 modelMatrix;
+    vec4 albedoTint;
+    sampler2D albedo;
+    float metallic;
+    float smoothness;
+    float padding1;
+    float padding2;
+};
+
+layout(std430, binding = 0) buffer MaterialBuffer {
+    ObjectMaterialData objects[];
+};
+
 uniform mat4 uLightMatrix;
 
 void main()
 {
-    gl_Position = uLightMatrix * uModel * vec4(aPosition, 1.0);
+    int drawID = gl_DrawIDARB;
+
+    mat4 model = objects[drawID].modelMatrix;
+
+    gl_Position = uLightMatrix * model * vec4(aPosition, 1.0);
 }

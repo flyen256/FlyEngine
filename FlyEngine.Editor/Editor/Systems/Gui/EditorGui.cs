@@ -1,4 +1,6 @@
 ﻿using System.Numerics;
+using FlyEngine.Core.Assets;
+using FlyEngine.Core.SceneManagement;
 using ImGuiNET;
 using ImGuiNet = ImGuiNET.ImGui;
 
@@ -6,11 +8,17 @@ namespace FlyEngine.Editor.Systems;
 
 public class EditorGui : EditorSystem
 {
+    public static readonly List<Type> CreateFileMenuTypes = [
+        typeof(Scene),
+        typeof(Material)
+    ];
+    
     public static EditorGui? Instance { get; private set; }
     
     private readonly List<EditorGuiWindow> _windows = [];
 
     public readonly List<string> OpenedWindows = [];
+    public readonly List<Popup> Popups = [];
 
     private bool _initialized;
     
@@ -25,6 +33,9 @@ public class EditorGui : EditorSystem
     public EditorGui()
     {
         Instance = this;
+        
+        #region Windows
+        
         AddWindow<EditorGame>();
         AddWindow<EditorScene>();
         AddWindow<EditorFileBrowser>();
@@ -33,36 +44,55 @@ public class EditorGui : EditorSystem
         AddWindow<EditorConsoleGui>();
         AddWindow<EditorNavBar>();
         AddWindow<EditorProfiler>();
-        
         AddWindow<EditorSettings>();
+        
+        #endregion
+
+        #region Popups
+        
+        AddPopup<AssetSelectorPopup>();
+
+        #endregion
     }
 
-    public override void OnUpdate(double deltaTime)
+    public override void OnUpdate(float deltaTime)
     {
         foreach (var window in _windows)
             window.OnUpdate(deltaTime);
     }
 
-    public override void OnRender(double deltaTime)
+    public override void OnRender(float deltaTime)
     {
         var io = ImGuiNet.GetIO();
         io.ConfigFlags |= ImGuiConfigFlags.DockingEnable;
         io.ConfigFlags |= ImGuiConfigFlags.ViewportsEnable;
+    
         DockSpaceId = ImGuiNet.DockSpaceOverViewport(0, ImGuiNet.GetMainViewport(),
             ImGuiDockNodeFlags.PassthruCentralNode |
             ImGuiDockNodeFlags.NoDockingOverCentralNode |
             ImGuiDockNodeFlags.NoUndocking);
+        
         if (!_initialized)
         {
             SetupDefaultLayout(DockSpaceId);
             _initialized = true;
         }
+    
         RenderMainMenuBar();
+    
         foreach (var window in _windows)
         {
-            if (!window.IsVisible) continue;
-            window.Render(deltaTime);
+            if (window.IsVisible)
+                window.Render(deltaTime);
         }
+
+        ImGuiNet.PushID("GlobalPopupContext");
+        foreach (var popup in Popups)
+        {
+            popup.Render(deltaTime);
+        }
+        ImGuiNet.PopID();
+
         RenderTaskModal();
     }
     
@@ -147,6 +177,13 @@ public class EditorGui : EditorSystem
     {
         var instance = Activator.CreateInstance<T>();
         _windows.Add(instance);
+        instance.OnLoad();
+    }
+
+    private void AddPopup<T>() where T : Popup
+    {
+        var instance = Activator.CreateInstance<T>();
+        Popups.Add(instance);
         instance.OnLoad();
     }
 

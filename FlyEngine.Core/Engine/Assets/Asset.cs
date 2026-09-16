@@ -1,5 +1,4 @@
-﻿using FlyEngine.Core.SceneManagement;
-using MemoryPack;
+﻿using MemoryPack;
 using Silk.NET.OpenGL;
 
 namespace FlyEngine.Core.Assets;

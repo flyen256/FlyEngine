@@ -15,6 +15,8 @@ namespace FlyEngine.Core.SceneManagement;
 [MemoryPackable]
 public partial class Scene(Guid guid) : Asset(guid)
 {
+    public static string Extension => ".scene";
+    
     [MemoryPackInclude]
     private List<GameObject> _gameObjects = [];
     [MemoryPackIgnore]
@@ -174,7 +176,7 @@ public partial class Scene(Guid guid) : Asset(guid)
         _colliders.Clear();
     }
 
-    public void Update(double deltaTime)
+    public void Update(float deltaTime)
     {
         var gameObjects = CollectionsMarshal.AsSpan(_gameObjects);
         for (var i = gameObjects.Length - 1; i >= 0; i--)

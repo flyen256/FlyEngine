@@ -25,34 +25,34 @@ internal class ImGuiTexture : IDisposable
     bool generateMipmaps = false,
     bool srgb = false)
   {
-    this._gl = gl;
+    _gl = gl;
     MaxAniso.GetValueOrDefault();
     if (!MaxAniso.HasValue)
       MaxAniso = new float?(gl.GetFloat(GLEnum.MaxTextureMaxAnisotropy));
-    this.Width = (uint) width;
-    this.Height = (uint) height;
-    this.InternalFormat = srgb ? SizedInternalFormat.Srgb8Alpha8 : SizedInternalFormat.Rgba8;
-    this.MipmapLevels = !generateMipmaps ? 1U : (uint) (int) System.Math.Floor(System.Math.Log((double) System.Math.Max(this.Width, this.Height), 2.0));
-    this.GlTexture = this._gl.GenTexture();
-    this.Bind();
+    Width = (uint) width;
+    Height = (uint) height;
+    InternalFormat = srgb ? SizedInternalFormat.Srgb8Alpha8 : SizedInternalFormat.Rgba8;
+    MipmapLevels = !generateMipmaps ? 1U : (uint) (int) System.Math.Floor(System.Math.Log((double) System.Math.Max(Width, Height), 2.0));
+    GlTexture = _gl.GenTexture();
+    Bind();
     var format = PixelFormat.Bgra;
-    this._gl.TexStorage2D(GLEnum.Texture2D, this.MipmapLevels, this.InternalFormat, this.Width, this.Height);
-    this._gl.TexSubImage2D(GLEnum.Texture2D, 0, 0, 0, this.Width, this.Height, format, PixelType.UnsignedByte, (void*) data);
+    _gl.TexStorage2D(GLEnum.Texture2D, MipmapLevels, InternalFormat, Width, Height);
+    _gl.TexSubImage2D(GLEnum.Texture2D, 0, 0, 0, Width, Height, format, PixelType.UnsignedByte, (void*) data);
     if (generateMipmaps)
-      this._gl.GenerateTextureMipmap(this.GlTexture);
-    this.SetWrap(TextureCoordinate.S, TextureWrapMode.Repeat);
-    this.SetWrap(TextureCoordinate.T, TextureWrapMode.Repeat);
-    var gl1 = this._gl;
-    var num = this.MipmapLevels - 1U;
+      _gl.GenerateTextureMipmap(GlTexture);
+    SetWrap(TextureCoordinate.S, TextureWrapMode.Repeat);
+    SetWrap(TextureCoordinate.T, TextureWrapMode.Repeat);
+    var gl1 = _gl;
+    var num = MipmapLevels - 1U;
     ref var local = ref num;
     gl1.TexParameterI(GLEnum.Texture2D, TextureParameterName.TextureMaxLevel, ref local);
   }
 
-  public void Bind() => this._gl.BindTexture(GLEnum.Texture2D, this.GlTexture);
+  public void Bind() => _gl.BindTexture(GLEnum.Texture2D, GlTexture);
 
   public void SetMinFilter(TextureMinFilter filter)
   {
-    var gl = this._gl;
+    var gl = _gl;
     var num = (int) filter;
     ref var local = ref num;
     gl.TexParameterI(GLEnum.Texture2D, TextureParameterName.TextureMinFilter, ref local);
@@ -60,7 +60,7 @@ internal class ImGuiTexture : IDisposable
 
   public void SetMagFilter(TextureMagFilter filter)
   {
-    var gl = this._gl;
+    var gl = _gl;
     var num = (int) filter;
     ref var local = ref num;
     gl.TexParameterI(GLEnum.Texture2D, TextureParameterName.TextureMagFilter, ref local);
@@ -68,24 +68,24 @@ internal class ImGuiTexture : IDisposable
 
   public void SetAnisotropy(float level)
   {
-    this._gl.TexParameter(GLEnum.Texture2D, GLEnum.TextureMaxAnisotropy, Util.Clamp(level, 1f, MaxAniso.GetValueOrDefault()));
+    _gl.TexParameter(GLEnum.Texture2D, GLEnum.TextureMaxAnisotropy, Util.Clamp(level, 1f, MaxAniso.GetValueOrDefault()));
   }
 
   public void SetLod(int @base, int min, int max)
   {
-    this._gl.TexParameterI(GLEnum.Texture2D, TextureParameterName.TextureLodBias, ref @base);
-    this._gl.TexParameterI(GLEnum.Texture2D, TextureParameterName.TextureMinLod, ref min);
-    this._gl.TexParameterI(GLEnum.Texture2D, TextureParameterName.TextureMaxLod, ref max);
+    _gl.TexParameterI(GLEnum.Texture2D, TextureParameterName.TextureLodBias, ref @base);
+    _gl.TexParameterI(GLEnum.Texture2D, TextureParameterName.TextureMinLod, ref min);
+    _gl.TexParameterI(GLEnum.Texture2D, TextureParameterName.TextureMaxLod, ref max);
   }
 
   public void SetWrap(TextureCoordinate coord, TextureWrapMode mode)
   {
-    var gl = this._gl;
+    var gl = _gl;
     var pname = (int) coord;
     var num = (int) mode;
     ref var local = ref num;
     gl.TexParameterI(GLEnum.Texture2D, (TextureParameterName) pname, ref local);
   }
 
-  public void Dispose() => this._gl.DeleteTexture(this.GlTexture);
+  public void Dispose() => _gl.DeleteTexture(GlTexture);
 }

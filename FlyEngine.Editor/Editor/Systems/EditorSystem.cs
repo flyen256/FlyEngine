@@ -2,6 +2,6 @@
 
 public abstract class EditorSystem
 {
-    public virtual void OnUpdate(double deltaTime) { }
-    public virtual void OnRender(double deltaTime) { }
+    public virtual void OnUpdate(float deltaTime) { }
+    public virtual void OnRender(float deltaTime) { }
 }

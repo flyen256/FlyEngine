@@ -24,7 +24,7 @@ public class GameObjectInspector(EditorInspector editorInspector) : Inspector(ed
     
     public override void Initialize()
     {
-        _propertyRenderer = new PropertyRenderer(EditorInspector);
+        _propertyRenderer = new PropertyRenderer();
     }
 
     public override void Render()

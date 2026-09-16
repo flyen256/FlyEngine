@@ -1,4 +1,7 @@
-﻿using Silk.NET.Maths;
+﻿using System.Numerics;
+using FlyEngine.Core.Assets;
+using FlyEngine.Core.Components;
+using Silk.NET.Maths;
 using Silk.NET.OpenGL;
 
 namespace FlyEngine.Core.Renderer;
@@ -16,9 +19,9 @@ public abstract class RenderPipeline(OpenGl openGl)
     public uint FinalTexture { get; protected set; }
     public uint DepthTexture { get; protected set; }
     
+    public abstract void Initialize(string vertexCode);
     public abstract void Render(float deltaTime, bool editor = false);
-    public abstract Shader GetRenderShader();
-    public abstract void ProcessShaders(string vertexCode);
+    public abstract void Submit(MeshRenderer renderer, SubMesh mesh, Matrix4x4 model);
     public abstract void CreateFinalFramebuffer(Vector2D<int> viewport);
     public abstract void ResizeGBuffer(Vector2D<int> viewport);
 }

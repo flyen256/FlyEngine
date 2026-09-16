@@ -1,5 +1,6 @@
 ﻿using System.Numerics;
 using System.Runtime.InteropServices;
+using FlyEngine.Core.Assets;
 using FlyEngine.Core.Components;
 using FlyEngine.Core.Debugging;
 using FlyEngine.Core.SceneManagement;
@@ -32,13 +33,65 @@ public class DefaultDeferredRenderPipeline(OpenGl openGl) : RenderPipeline(openG
 
     private uint _skyCubemap;
 
+    private uint _activeCommandsCount;
+
+    private uint _indirectCommandBuffer;
+    private uint _materialsStorageBuffer;
+
+    private readonly struct RenderQueueItem(
+        MeshRenderer renderer,
+        SubMesh subMesh,
+        Matrix4x4 model)
+    {
+        public readonly MeshRenderer Renderer = renderer;
+        public readonly SubMesh SubMesh = subMesh;
+        public readonly Matrix4x4 Model = model;
+    }
+    
+    private readonly List<RenderQueueItem> _renderQueue = [];
+
 	private class ShadowAtlasEntry
 	{
 		public int LightIndex;
 		public Vector4 UvRect;
 		public Matrix4x4 LightSpaceMatrix;
 	}
+    
+    [StructLayout(LayoutKind.Sequential)]
+    private struct DrawElementsIndirectCommand
+    {
+        public uint Count;
+        public uint InstanceCount;
+        public uint FirstIndex;
+        public int  BaseVertex;
+        public uint BaseInstance;
+    }
+
+    [StructLayout(LayoutKind.Sequential, Pack = 16)]
+    private struct ObjectMaterialData
+    {
+        public Matrix4x4 ModelMatrix;
+        public Vector4 AlbedoTint;
+        public ulong AlbedoTexture;
+        public float Metallic;
+        public float Smoothness;
+        private float _padding1;
+        private float _padding2;
+    }
+    
 	private readonly List<ShadowAtlasEntry> _shadowEntries = [];
+    
+    public override void Initialize(string vertexCode)
+    {
+        _indirectCommandBuffer = Gl.CreateBuffer();
+        _materialsStorageBuffer = Gl.CreateBuffer();
+        BuildDeferredPrograms(vertexCode);
+        BuildShadowProgram();
+        CreateShadowAtlas();
+        CreateDeferredLightQuad();
+        CreateFinalFramebuffer(OpenGl.Window.Size);
+        ResizeGBuffer(OpenGl.Window.Size);
+    }
 
     public override void Render(float deltaTime, bool editor = false)
     {
@@ -57,14 +110,9 @@ public class DefaultDeferredRenderPipeline(OpenGl openGl) : RenderPipeline(openG
         var view = editor ?
             Application.Window.EditorCameraViewMatrix :
             currentCam!.ViewMatrix;
-        BeginDeferredGeometryPass(projection, view);
-        var behaviours = CollectionsMarshal.AsSpan(Application.Scene.Behaviours.ToList());
-        for (var i = 0; i < behaviours.Length; i++)
-        {
-            var behaviour = behaviours[i];
-            if (!behaviour.IsActive()) continue;
-            behaviour.OnRender(deltaTime);
-        }
+        GatherGeometry(deltaTime);
+        
+        UploadMeshBuffersToGpu();
 
         var camPos = editor ? Application.Window.EditorCameraPosition : currentCam!.Transform.Position;
         var camPosSys = new Vector3(camPos.X, camPos.Y, camPos.Z);
@@ -106,16 +154,11 @@ public class DefaultDeferredRenderPipeline(OpenGl openGl) : RenderPipeline(openG
 						lightBuf[sunLightIndex].LightMatrix = lightSpace;
         }
 
-        RenderShadowPass(lightSpace, lightBuf[..lightCount], dt =>
-        {
-            var behaviours = CollectionsMarshal.AsSpan(Application.Scene.Behaviours.ToList());
-            for (var i = 0; i < behaviours.Length; i++)
-            {
-                var behaviour = behaviours[i];
-                if (!behaviour.IsActive()) continue;
-                behaviour.OnRender(deltaTime);
-            }
-        }, deltaTime, sunLightIndex);
+        RenderShadowPassMdi(lightSpace, lightBuf[..lightCount], sunLightIndex);
+        
+        BeginDeferredGeometryPass(projection, view);
+        
+        ExecuteMultiDraw();
 
         FinishDeferredLightingPass(
             projection,
@@ -133,18 +176,93 @@ public class DefaultDeferredRenderPipeline(OpenGl openGl) : RenderPipeline(openG
         Gl.GetQueryObject(queryId, QueryObjectParameterName.QueryResult, out ulong timeElapsed);
         Profiler.GpuLatencyMilliseconds = timeElapsed / 1000000.0;
     }
-
-    public override void ProcessShaders(string vertexCode)
+    
+    public unsafe void UploadMeshBuffersToGpu()
     {
-        BuildDeferredPrograms(vertexCode);
-        BuildShadowProgram();
-		CreateShadowAtlas();
-        CreateDeferredLightQuad();
-        CreateFinalFramebuffer(OpenGl.Window.Size);
-        ResizeGBuffer(OpenGl.Window.Size);
+        _activeCommandsCount = (uint)_renderQueue.Count;
+        if (_activeCommandsCount == 0) return;
+
+        var commands = new DrawElementsIndirectCommand[_activeCommandsCount];
+        var materials = new ObjectMaterialData[_activeCommandsCount];
+
+        for (var i = 0; i < _activeCommandsCount; i++)
+        {
+            var item = _renderQueue[i];
+            commands[i] = new DrawElementsIndirectCommand
+            {
+                Count = item.SubMesh.IndexCount,
+                InstanceCount = 1,
+                FirstIndex = item.SubMesh.GlobalFirstIndexOffset, 
+                BaseVertex = item.SubMesh.GlobalBaseVertexOffset,
+                BaseInstance = (uint)i 
+            };
+
+            materials[i] = new ObjectMaterialData
+            {
+                ModelMatrix = item.Model,
+                AlbedoTint = item.Renderer.AlbedoTint.ToVector4(),
+                AlbedoTexture = item.Renderer.Material?.Albedo?.BindlessHandle ?? OpenGl.DefaultWhiteTexture,
+                Metallic = item.Renderer.Metallic,
+                Smoothness = item.Renderer.Smoothness
+            };
+        }
+
+        Gl.BindBuffer(BufferTargetARB.DrawIndirectBuffer, _indirectCommandBuffer);
+        fixed (DrawElementsIndirectCommand* ptr = commands)
+        {
+            Gl.BufferData(BufferTargetARB.DrawIndirectBuffer, (nuint)(_activeCommandsCount * sizeof(DrawElementsIndirectCommand)), ptr, BufferUsageARB.StreamDraw);
+        }
+
+        Gl.BindBuffer(BufferTargetARB.ShaderStorageBuffer, _materialsStorageBuffer);
+        fixed (ObjectMaterialData* ptr = materials)
+        {
+            var matSize = (nuint)(_activeCommandsCount * Marshal.SizeOf<ObjectMaterialData>());
+            Gl.BufferData(BufferTargetARB.ShaderStorageBuffer, matSize, ptr, BufferUsageARB.StreamDraw);
+        }
+        Gl.BindBufferBase(BufferTargetARB.ShaderStorageBuffer, 0, _materialsStorageBuffer);
+    }
+    
+    public unsafe void ExecuteMultiDraw()
+    {
+        if (_activeCommandsCount == 0) return;
+
+        Gl.BindVertexArray(OpenGl.MeshBudgetManager.Vao);
+        Gl.BindBuffer(BufferTargetARB.DrawIndirectBuffer, _indirectCommandBuffer);
+        Gl.BindBufferBase(BufferTargetARB.ShaderStorageBuffer, 0, _materialsStorageBuffer);
+
+        Gl.MultiDrawElementsIndirect(PrimitiveType.Triangles, DrawElementsType.UnsignedInt, null, _activeCommandsCount, 0);
+    
+        Gl.BindVertexArray(0);
+    }
+    
+    private void GatherGeometry(float deltaTime)
+    {
+        if (Application.Scene == null) return;
+
+        _renderQueue.Clear();
+    
+        var behaviours = CollectionsMarshal.AsSpan(Application.Scene.Behaviours.ToList());
+        for (var i = 0; i < behaviours.Length; i++)
+        {
+            var behaviour = behaviours[i];
+            if (!behaviour.IsActive()) continue;
+
+            behaviour.OnRender(deltaTime);
+        }
     }
 
-	private unsafe void CreateShadowAtlas()
+    private void DrawMeshes(float deltaTime)
+    {
+        UploadMeshBuffersToGpu();
+        ExecuteMultiDraw();
+    }
+
+    public override void Submit(MeshRenderer renderer, SubMesh mesh, Matrix4x4 model)
+    {
+        _renderQueue.Add(new RenderQueueItem(renderer, mesh, model));
+    }
+
+    private unsafe void CreateShadowAtlas()
 	{
 		_shadowAtlasTex = Gl.GenTexture();
 		Gl.BindTexture(TextureTarget.Texture2D, _shadowAtlasTex);
@@ -205,7 +323,7 @@ public class DefaultDeferredRenderPipeline(OpenGl openGl) : RenderPipeline(openG
         Gl.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
     }
 
-    public override Shader GetRenderShader()
+    protected virtual Shader GetRenderShader()
     {
         return IsShadowPass
             ? ShadowDepthShader
@@ -333,85 +451,85 @@ public class DefaultDeferredRenderPipeline(OpenGl openGl) : RenderPipeline(openG
         return sky;
     }
 
-    public void RenderShadowPass(
-        in Matrix4x4 lightSpaceMatrix,
+    public void RenderShadowPassMdi(
+        in Matrix4x4 sunLightSpaceMatrix,
         ReadOnlySpan<DeferredLightPacked> lights,
-        Action<double> drawMeshes,
-        double deltaTime,
         int sunLightIndex)
-	{
-		if (_shadowFbo == 0) return;
+    {
+        if (_shadowFbo == 0) return;
 
         Gl.CullFace(GLEnum.Front);
-		Gl.BindFramebuffer(FramebufferTarget.Framebuffer, _shadowFbo);
-		Gl.Clear(ClearBufferMask.DepthBufferBit);
-		IsShadowPass = true;
-		ShadowDepthShader.Use();
+        Gl.BindFramebuffer(FramebufferTarget.Framebuffer, _shadowFbo);
+        Gl.Clear(ClearBufferMask.DepthBufferBit);
+        IsShadowPass = true;
+        ShadowDepthShader.Use();
 
-		_shadowEntries.Clear();
-		var shadowLightCount = 0;
+        _shadowEntries.Clear();
+        var shadowLightCount = 0;
 
-		Gl.Enable(EnableCap.ScissorTest);
+        Gl.Enable(EnableCap.ScissorTest);
 
-		if (sunLightIndex >= 0)
-		{
-			Gl.Viewport(0, 0, OpenGl.ShadowMapResolution, OpenGl.ShadowMapResolution);
-			Gl.Scissor(0, 0, OpenGl.ShadowMapResolution, OpenGl.ShadowMapResolution);
-			Gl.Clear(ClearBufferMask.DepthBufferBit);
+        if (sunLightIndex >= 0)
+        {
+            Gl.Viewport(0, 0, OpenGl.ShadowMapResolution, OpenGl.ShadowMapResolution);
+            Gl.Scissor(0, 0, OpenGl.ShadowMapResolution, OpenGl.ShadowMapResolution);
+            Gl.Clear(ClearBufferMask.DepthBufferBit);
 
-			ShadowDepthShader.SetUniform(ShaderConstants.LightMatrix, lightSpaceMatrix);
-			drawMeshes(deltaTime);
+            ShadowDepthShader.SetUniform(ShaderConstants.LightMatrix, sunLightSpaceMatrix);
 
-			_shadowEntries.Add(new ShadowAtlasEntry
-			{
-				LightIndex = sunLightIndex,
-				UvRect = new Vector4(0, 0, 1.0f, 1.0f),
-				LightSpaceMatrix = lightSpaceMatrix
-			});
-			shadowLightCount = 1;
-		}
+            ExecuteMultiDraw();
 
-		var tileSize = OpenGl.ShadowMapTileSize;
-		var n = MathF.Min(lights.Length, OpenGl.MaxDeferredLights);
+            _shadowEntries.Add(new ShadowAtlasEntry
+            {
+                LightIndex = sunLightIndex,
+                UvRect = new Vector4(0, 0, 1.0f, 1.0f),
+                LightSpaceMatrix = sunLightSpaceMatrix
+            });
+            shadowLightCount = 1;
+        }
 
-		for (var i = 0; i < n; i++)
-		{
-			var pk = lights[i];
-			if (!pk.CastShadows || i == sunLightIndex) continue;
+        var tileSize = OpenGl.ShadowMapTileSize;
+        var n = MathF.Min(lights.Length, OpenGl.MaxDeferredLights);
 
-			var tileX = shadowLightCount % 4;
-			var tileY = shadowLightCount / 4;
+        for (var i = 0; i < n; i++)
+        {
+            var pk = lights[i];
+            if (!pk.CastShadows || i == sunLightIndex) continue;
 
-			var x = (int)(tileX * tileSize);
-			var y = (int)(tileY * tileSize);
+            var tileX = shadowLightCount % 4;
+            var tileY = shadowLightCount / 4;
 
-			Gl.Viewport(x, y, tileSize, tileSize);
-			Gl.Scissor(x, y, tileSize, tileSize);
-			Gl.Clear(ClearBufferMask.DepthBufferBit);
+            var x = (int)(tileX * tileSize);
+            var y = (int)(tileY * tileSize);
 
-			ShadowDepthShader.SetUniform(ShaderConstants.LightMatrix, pk.LightMatrix);
-			drawMeshes(deltaTime);
+            Gl.Viewport(x, y, tileSize, tileSize);
+            Gl.Scissor(x, y, tileSize, tileSize);
+            Gl.Clear(ClearBufferMask.DepthBufferBit);
 
-			_shadowEntries.Add(new ShadowAtlasEntry
-			{
-				LightIndex = i,
-				UvRect = new Vector4(
-					(float)x / OpenGl.ShadowMapResolution,
-					(float)y / OpenGl.ShadowMapResolution,
-					(float)tileSize / OpenGl.ShadowMapResolution,
-					(float)tileSize / OpenGl.ShadowMapResolution),
-				LightSpaceMatrix = pk.LightMatrix
-			});
+            ShadowDepthShader.SetUniform(ShaderConstants.LightMatrix, pk.LightMatrix);
 
-			shadowLightCount++;
-			if (shadowLightCount >= 16) break;
-		}
+            ExecuteMultiDraw();
 
-		Gl.Disable(EnableCap.ScissorTest);
-		Gl.CullFace(GLEnum.Back); 
-		IsShadowPass = false;
-		Gl.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
-	}
+            _shadowEntries.Add(new ShadowAtlasEntry
+            {
+                LightIndex = i,
+                UvRect = new Vector4(
+                    (float)x / OpenGl.ShadowMapResolution,
+                    (float)y / OpenGl.ShadowMapResolution,
+                    (float)tileSize / OpenGl.ShadowMapResolution,
+                    (float)tileSize / OpenGl.ShadowMapResolution),
+                LightSpaceMatrix = pk.LightMatrix
+            });
+
+            shadowLightCount++;
+            if (shadowLightCount >= 16) break;
+        }
+
+        Gl.Disable(EnableCap.ScissorTest);
+        Gl.CullFace(GLEnum.Back); 
+        IsShadowPass = false;
+        Gl.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
+    }
 
     private unsafe void CreateDeferredLightQuad()
     {
@@ -604,14 +722,12 @@ public class DefaultDeferredRenderPipeline(OpenGl openGl) : RenderPipeline(openG
             DeferredLightShader.SetUniform(ShaderConstants.Pack(3, i), p3);
             DeferredLightShader.SetUniform(ShaderConstants.Pack(4, i), p4);
         }
-        DeferredLightShader.SetUniform(ShaderConstants.NumShadowLights, _shadowEntries.Count);
 
         for (var i = 0; i < _shadowEntries.Count; i++)
         {
             var entry = _shadowEntries[i];
-            DeferredLightShader.SetUniform(ShaderConstants.ShadowLightIndex(i), entry.LightIndex);
             DeferredLightShader.SetUniform(ShaderConstants.ShadowMatrix(i), entry.LightSpaceMatrix);
-            DeferredLightShader.SetUniform(ShaderConstants.ShadowUVRect(i), entry.UvRect);
+            DeferredLightShader.SetUniform(ShaderConstants.ShadowUvRect(i), entry.UvRect);
         }
 
         Gl.BindVertexArray(DeferredLightVao);

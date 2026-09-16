@@ -1,9 +1,8 @@
 ﻿using System.Text.Json.Serialization;
 using FlyEngine.Core.SceneManagement;
 using FlyEngine.Core.Serialization.Json;
-using Component = FlyEngine.Core.Components.Component;
 
-namespace FlyEngine.Core.Serialization;
+namespace FlyEngine.Core.Components;
 
 [JsonConverter(typeof(ComponentRefConverterFactory))]
 public class ComponentRef<T> where T : Component
@@ -40,6 +39,6 @@ public class ComponentRef<T> where T : Component
         Value = component;
     }
 
-    public static implicit operator T?(ComponentRef<T> @ref) => @ref?.Value;
+    public static implicit operator T?(ComponentRef<T> @ref) => @ref.Value;
     public static implicit operator ComponentRef<T>(T? component) => new(component);
 }
